@@ -140,7 +140,8 @@ class EmailChannel(NotificationChannel):
 class NotificationEngine:
     """Multi-channel notification engine"""
     
-    def __init__(self):
+    def __init__(self, config: Dict[str, Any] = None):
+        self.config = config or {}
         self.channels: Dict[str, NotificationChannel] = {}
         self.pending_notifications: List[Notification] = []
         self.sent_notifications: List[Notification] = []

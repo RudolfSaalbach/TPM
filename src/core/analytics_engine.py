@@ -16,7 +16,8 @@ from src.core.database import db_service
 class AnalyticsEngine:
     """Database-powered analytics engine - NO MORE IN-MEMORY"""
     
-    def __init__(self):
+    def __init__(self, config: Dict[str, Any] = None):
+        self.config = config or {}
         self.logger = logging.getLogger(__name__)
         self.logger.info("Analytics Engine initialized with database persistence")
     

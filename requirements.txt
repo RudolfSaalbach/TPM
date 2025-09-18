@@ -17,15 +17,16 @@ aiofiles==23.2.1
 # Date and time handling
 python-dateutil==2.8.2
 
-# DATABASE INTEGRATION - NEW
+# DATABASE INTEGRATION
 sqlalchemy==2.0.23
 alembic==1.12.1
 aiosqlite==0.19.0
 
-# Google Calendar API (uncomment for production)
-# google-auth==2.23.4
-# google-auth-oauthlib==1.1.0
-# google-api-python-client==2.108.0
+# GOOGLE CALENDAR API INTEGRATION - PRODUCTION READY
+google-auth==2.23.4
+google-auth-oauthlib==1.1.0
+google-api-python-client==2.108.0
+google-auth-httplib2==0.1.1
 
 # Development and testing
 pytest==7.4.3
@@ -37,3 +38,6 @@ typing-extensions==4.8.0
 
 # Import utilities
 importlib-metadata==6.8.0
+
+# PERFORMANCE MONITORING
+psutil==5.9.6

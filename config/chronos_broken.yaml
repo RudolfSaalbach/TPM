@@ -1,4 +1,4 @@
-# Chronos Engine Configuration File
+﻿# Chronos Engine Configuration File
 
 general:
   timezone: "UTC"

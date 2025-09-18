@@ -10,13 +10,24 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
-# Real Google Calendar API imports
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google.oauth2 import service_account
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+# Real Google Calendar API imports - with fallback
+try:
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+    from google.oauth2 import service_account
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+    from googleapiclient.errors import HttpError
+    GOOGLE_AVAILABLE = True
+except ImportError:
+    # Google Calendar dependencies not installed - fallback to mock
+    GOOGLE_AVAILABLE = False
+    Request = None
+    Credentials = None
+    service_account = None
+    InstalledAppFlow = None
+    build = None
+    HttpError = Exception
 
 # If modifying these scopes, delete the token file.
 SCOPES = [
@@ -60,6 +71,10 @@ class GoogleCalendarClient:
     async def authenticate(self) -> bool:
         """Authenticate with Google Calendar API"""
         try:
+            if not GOOGLE_AVAILABLE:
+                self.logger.warning("Google Calendar API not available - using mock implementation")
+                return await self._use_mock_implementation()
+
             if self.auth_mode == "service_account":
                 return await self._authenticate_service_account()
             elif self.auth_mode == "oauth2":

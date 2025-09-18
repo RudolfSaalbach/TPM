@@ -83,13 +83,84 @@ class CalendarSyncError(ChronosException):
 
 class DatabaseError(ChronosException):
     """Raised when database operations fail."""
-    
+
     def __init__(self, detail: str):
         super().__init__(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Database error: {detail}",
             error_code="DATABASE_ERROR"
         )
+
+
+class CalendarConnectionError(ChronosException):
+    """Raised when calendar connection fails."""
+
+    def __init__(self, detail: str = "Calendar connection failed"):
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=detail,
+            error_code="CALENDAR_CONNECTION_ERROR"
+        )
+
+
+class EventParsingError(ChronosException):
+    """Raised when event parsing fails."""
+
+    def __init__(self, detail: str = "Event parsing failed"):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail,
+            error_code="EVENT_PARSING_ERROR"
+        )
+
+
+class AnalyticsError(ChronosException):
+    """Raised when analytics operations fail."""
+
+    def __init__(self, detail: str = "Analytics operation failed"):
+        super().__init__(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=detail,
+            error_code="ANALYTICS_ERROR"
+        )
+
+
+class PluginError(ChronosException):
+    """Raised when plugin operations fail."""
+
+    def __init__(self, detail: str = "Plugin operation failed"):
+        super().__init__(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=detail,
+            error_code="PLUGIN_ERROR"
+        )
+
+
+class TaskQueueError(ChronosException):
+    """Raised when task queue operations fail."""
+
+    def __init__(self, detail: str = "Task queue operation failed"):
+        super().__init__(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=detail,
+            error_code="TASK_QUEUE_ERROR"
+        )
+
+
+class ChronosErrorHandler:
+    """Global error handler for the application."""
+
+    @staticmethod
+    def handle_error(error: Exception) -> ChronosException:
+        """Convert any exception to a ChronosException."""
+        if isinstance(error, ChronosException):
+            return error
+        else:
+            return ChronosException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(error),
+                error_code="UNKNOWN_ERROR"
+            )
 
 
 def handle_api_errors(func):

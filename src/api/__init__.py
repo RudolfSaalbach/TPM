@@ -3,7 +3,7 @@ Chronos Engine API Module
 Complete API package initialization
 """
 
-from .routes import ChronosAPI, SyncService
+from .routes import ChronosAPIRoutes
 from .dashboard import ChronosDashboard
 from .exceptions import (
     ChronosException,
@@ -16,8 +16,7 @@ from .exceptions import (
 )
 
 __all__ = [
-    'ChronosAPI',
-    'SyncService', 
+    'ChronosAPIRoutes',
     'ChronosDashboard',
     'ChronosException',
     'CalendarConnectionError',
