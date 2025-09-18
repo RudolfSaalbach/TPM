@@ -89,12 +89,12 @@ class PluginManager:
     def __init__(self, context: Dict[str, Any]):
         self.context = context
         self.logger = logging.getLogger(__name__)
-        
+
         # Plugin storage
         self.plugins: Dict[str, PluginInfo] = {}
         self.event_processors: List[EventPlugin] = []
         self.scheduling_plugins: List[SchedulingPlugin] = []
-        
+
         # Plugin hooks
         self.hooks: Dict[str, List[Callable]] = {
             'event_created': [],
@@ -103,6 +103,41 @@ class PluginManager:
             'schedule_optimized': [],
             'conflict_detected': []
         }
+
+    async def initialize(self) -> bool:
+        """Initialize the plugin manager and load configured plugins"""
+        try:
+            self.logger.info("Initializing Plugin Manager...")
+
+            # Load plugins from custom directory if configured
+            config = self.context.get('plugins', {})
+            custom_dir = config.get('custom_dir', 'plugins/custom')
+
+            if Path(custom_dir).exists():
+                loaded_count = await self.load_plugins_from_directory(custom_dir)
+                self.logger.info(f"Loaded {loaded_count} plugins from {custom_dir}")
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to initialize Plugin Manager: {e}")
+            return False
+
+    async def cleanup(self):
+        """Cleanup all loaded plugins"""
+        try:
+            for plugin_info in self.plugins.values():
+                if plugin_info.loaded and plugin_info.instance:
+                    await plugin_info.instance.cleanup()
+
+            self.plugins.clear()
+            self.event_processors.clear()
+            self.scheduling_plugins.clear()
+
+            self.logger.info("Plugin Manager cleaned up")
+
+        except Exception as e:
+            self.logger.error(f"Error during Plugin Manager cleanup: {e}")
         
         self.logger.info("Plugin Manager initialized")
     

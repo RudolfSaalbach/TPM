@@ -38,7 +38,7 @@ class EnhancedTaskQueue:
         self.is_running = True
         self.worker_task = asyncio.create_task(self._worker_loop())
         
-        self.logger.info("✅ Enhanced Task Queue worker started with recovery")
+        self.logger.info("Enhanced Task Queue worker started with recovery")
     
     async def stop(self):
         """Stop the task queue worker gracefully"""
@@ -54,14 +54,14 @@ class EnhancedTaskQueue:
             except asyncio.CancelledError:
                 pass
         
-        self.logger.info("🔒 Enhanced Task Queue worker stopped")
+        self.logger.info("Enhanced Task Queue worker stopped")
     
     async def _perform_recovery(self):
         """Recover tasks after application restart"""
         if self.recovery_completed:
             return
         
-        self.logger.info("🔄 Performing task queue recovery...")
+        self.logger.info("Performing task queue recovery...")
         
         try:
             async with db_service.get_session() as session:
@@ -77,7 +77,7 @@ class EnhancedTaskQueue:
                     task.error_message = "Task interrupted by application restart"
                     task.completed_at = datetime.utcnow()
                     
-                    self.logger.info(f"❌ Marked interrupted task as failed: {task.name} ({task.id})")
+                    self.logger.info(f"Marked interrupted task as failed: {task.name} ({task.id})")
                 
                 # Find pending tasks
                 pending_result = await session.execute(
@@ -87,10 +87,10 @@ class EnhancedTaskQueue:
                 
                 await session.commit()
                 
-                self.logger.info(f"🔄 Recovery completed: {len(running_tasks)} interrupted, {len(pending_tasks)} pending")
+                self.logger.info(f"Recovery completed: {len(running_tasks)} interrupted, {len(pending_tasks)} pending")
                 
         except Exception as e:
-            self.logger.error(f"❌ Task recovery failed: {e}")
+            self.logger.error(f"Task recovery failed: {e}")
             # Continue anyway - don't block startup
         
         self.recovery_completed = True
@@ -111,7 +111,7 @@ class EnhancedTaskQueue:
                 await session.commit()
                 
         except Exception as e:
-            self.logger.error(f"❌ Failed to mark tasks as interrupted: {e}")
+            self.logger.error(f"Failed to mark tasks as interrupted: {e}")
     
     async def add_task(
         self,
@@ -137,7 +137,7 @@ class EnhancedTaskQueue:
             session.add(task.to_db_model())
             await session.commit()
         
-        self.logger.info(f"📝 Task added to persistent queue: {name} ({task.id})")
+        self.logger.info(f"Task added to persistent queue: {name} ({task.id})")
         return task.id
     
     async def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
@@ -204,7 +204,7 @@ class EnhancedTaskQueue:
                 await self._process_pending_tasks()
                 await asyncio.sleep(1)  # Check for new tasks every second
             except Exception as e:
-                self.logger.error(f"❌ Error in enhanced task worker loop: {e}")
+                self.logger.error(f"Error in enhanced task worker loop: {e}")
                 await asyncio.sleep(5)
     
     async def _process_pending_tasks(self):
@@ -242,13 +242,13 @@ class EnhancedTaskQueue:
                 task = db_task.to_domain_model()
                 asyncio.create_task(self._execute_task(task))
                 
-                self.logger.debug(f"🚀 Started task: {task.name} (Priority: {task.priority.name})")
+                self.logger.debug(f"Started task: {task.name} (Priority: {task.priority.name})")
     
     async def _execute_task(self, task: Task):
         """Execute individual task and update database with results"""
         
         try:
-            self.logger.info(f"⚡ Executing task: {task.name}")
+            self.logger.info(f"Executing task: {task.name}")
             
             # Update progress
             await self._update_task_progress(task.id, 10)
@@ -273,10 +273,10 @@ class EnhancedTaskQueue:
                     db_task.completed_at = datetime.utcnow()
                     await session.commit()
             
-            self.logger.info(f"✅ Task completed successfully: {task.name}")
+            self.logger.info(f"Task completed successfully: {task.name}")
             
         except Exception as e:
-            self.logger.error(f"❌ Task execution failed: {task.name} - {e}")
+            self.logger.error(f"Task execution failed: {task.name} - {e}")
             
             # Update database with error
             async with db_service.get_session() as session:
@@ -302,7 +302,7 @@ class EnhancedTaskQueue:
                 )
                 await session.commit()
         except Exception as e:
-            self.logger.warning(f"⚠️ Failed to update task progress: {e}")
+            self.logger.warning(f"Failed to update task progress: {e}")
     
     async def _dispatch_task_function(self, task: Task) -> Dict[str, Any]:
         """Dispatch task to appropriate function"""

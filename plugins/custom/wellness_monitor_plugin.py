@@ -53,7 +53,7 @@ class WellnessMonitorPlugin(EventPlugin):
 
     async def initialize(self, context: Dict[str, Any]) -> bool:
         """Initialize the plugin"""
-        self.logger.info("🌱 Wellness Monitor Plugin initialized")
+        self.logger.info("[WELLNESS] Wellness Monitor Plugin initialized")
         self.context = context
 
         # Load custom wellness rules from context
@@ -64,7 +64,7 @@ class WellnessMonitorPlugin(EventPlugin):
 
     async def cleanup(self):
         """Cleanup plugin resources"""
-        self.logger.info("🌱 Wellness Monitor Plugin cleaned up")
+        self.logger.info("[WELLNESS] Wellness Monitor Plugin cleaned up")
 
     async def process_event(self, event: ChronosEvent) -> ChronosEvent:
         """Process an event and add wellness-related insights"""
@@ -115,7 +115,7 @@ class WellnessMonitorPlugin(EventPlugin):
             return event
 
         except Exception as e:
-            self.logger.error(f"🌱 Error processing event {event.id}: {e}")
+            self.logger.error(f"[WELLNESS] Error processing event {event.id}: {e}")
             return event
 
     def calculate_event_wellness_score(self, event: ChronosEvent) -> float:
@@ -160,7 +160,7 @@ class WellnessMonitorPlugin(EventPlugin):
             return max(1.0, min(10.0, score))
 
         except Exception as e:
-            self.logger.error(f"🌱 Error calculating wellness score: {e}")
+            self.logger.error(f"[WELLNESS] Error calculating wellness score: {e}")
             return 5.0
 
     async def analyze_daily_wellness(self, events: List[ChronosEvent]) -> Dict[str, Any]:
@@ -282,7 +282,7 @@ class WellnessMonitorPlugin(EventPlugin):
             return metrics
 
         except Exception as e:
-            self.logger.error(f"🌱 Error analyzing daily wellness: {e}")
+            self.logger.error(f"[WELLNESS] Error analyzing daily wellness: {e}")
             return {"error": str(e)}
 
     async def generate_wellness_alerts(self, events: List[ChronosEvent]) -> List[Dict[str, Any]]:
@@ -366,11 +366,11 @@ class WellnessMonitorPlugin(EventPlugin):
                 weekly_alerts = self.analyze_weekly_wellness_patterns()
                 alerts.extend(weekly_alerts)
 
-            self.logger.info(f"🌱 Generated {len(alerts)} wellness alerts")
+            self.logger.info(f"[WELLNESS] Generated {len(alerts)} wellness alerts")
             return alerts
 
         except Exception as e:
-            self.logger.error(f"🌱 Error generating wellness alerts: {e}")
+            self.logger.error(f"[WELLNESS] Error generating wellness alerts: {e}")
             return []
 
     def analyze_weekly_wellness_patterns(self) -> List[Dict[str, Any]]:
@@ -415,5 +415,5 @@ class WellnessMonitorPlugin(EventPlugin):
             return alerts
 
         except Exception as e:
-            self.logger.error(f"🌱 Error analyzing weekly patterns: {e}")
+            self.logger.error(f"[WELLNESS] Error analyzing weekly patterns: {e}")
             return []

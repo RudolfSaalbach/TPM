@@ -9,10 +9,10 @@ from typing import Dict, List, Any, Optional
 import json
 
 from src.core.models import ChronosEvent, Priority, EventType, EventStatus
-from src.core.plugin_manager import AnalyticsPlugin
+from src.core.plugin_manager import EventPlugin
 
 
-class ProductivityTrackerPlugin(AnalyticsPlugin):
+class ProductivityTrackerPlugin(EventPlugin):
     """Advanced productivity tracking and analytics plugin"""
 
     def __init__(self):
@@ -34,7 +34,7 @@ class ProductivityTrackerPlugin(AnalyticsPlugin):
 
     async def initialize(self, context: Dict[str, Any]) -> bool:
         """Initialize the plugin"""
-        self.logger.info("📊 Productivity Tracker Plugin initialized")
+        self.logger.info("Productivity Tracker Plugin initialized")
         self.context = context
         self.load_historical_data()
         return True
@@ -42,7 +42,7 @@ class ProductivityTrackerPlugin(AnalyticsPlugin):
     async def cleanup(self):
         """Cleanup plugin resources"""
         self.save_productivity_data()
-        self.logger.info("📊 Productivity Tracker Plugin cleaned up")
+        self.logger.info("Productivity Tracker Plugin cleaned up")
 
     def load_historical_data(self):
         """Load historical productivity data"""
@@ -50,17 +50,37 @@ class ProductivityTrackerPlugin(AnalyticsPlugin):
             # In a real implementation, load from database or file
             self.productivity_data = {}
             self.daily_metrics = {}
-            self.logger.debug("📊 Historical productivity data loaded")
+            self.logger.debug("Historical productivity data loaded")
         except Exception as e:
-            self.logger.warning(f"📊 Could not load historical data: {e}")
+            self.logger.warning(f"Could not load historical data: {e}")
 
     def save_productivity_data(self):
         """Save productivity data for persistence"""
         try:
             # In a real implementation, save to database or file
-            self.logger.debug("📊 Productivity data saved")
+            self.logger.debug("Productivity data saved")
         except Exception as e:
-            self.logger.error(f"📊 Error saving productivity data: {e}")
+            self.logger.error(f"Error saving productivity data: {e}")
+
+    async def process_event(self, event: ChronosEvent) -> ChronosEvent:
+        """Process event for productivity tracking (required by EventPlugin)"""
+        try:
+            # Track the event for analytics
+            if event.id not in self.productivity_data:
+                self.productivity_data[event.id] = {
+                    'first_seen': datetime.utcnow().isoformat(),
+                    'last_updated': datetime.utcnow().isoformat(),
+                    'process_count': 1
+                }
+            else:
+                self.productivity_data[event.id]['last_updated'] = datetime.utcnow().isoformat()
+                self.productivity_data[event.id]['process_count'] += 1
+
+            # Return the event unchanged
+            return event
+        except Exception as e:
+            self.logger.error(f"Error processing event for productivity tracking: {e}")
+            return event
 
     async def analyze_events(self, events: List[ChronosEvent]) -> Dict[str, Any]:
         """Analyze productivity metrics from events"""
@@ -148,11 +168,11 @@ class ProductivityTrackerPlugin(AnalyticsPlugin):
             # Store daily metrics
             self.daily_metrics[today.isoformat()] = metrics
 
-            self.logger.info(f"📊 Productivity analysis complete: {metrics['productivity_score']}/10")
+            self.logger.info(f"Productivity analysis complete: {metrics['productivity_score']}/10")
             return metrics
 
         except Exception as e:
-            self.logger.error(f"📊 Error analyzing productivity: {e}")
+            self.logger.error(f"Error analyzing productivity: {e}")
             return {"error": str(e)}
 
     async def generate_insights(self, events: List[ChronosEvent]) -> List[Dict[str, Any]]:
@@ -253,11 +273,11 @@ class ProductivityTrackerPlugin(AnalyticsPlugin):
                             "suggestion": "Take breaks and reassess your schedule"
                         })
 
-            self.logger.info(f"📊 Generated {len(insights)} productivity insights")
+            self.logger.info(f"Generated {len(insights)} productivity insights")
             return insights
 
         except Exception as e:
-            self.logger.error(f"📊 Error generating insights: {e}")
+            self.logger.error(f"Error generating insights: {e}")
             return [{
                 "type": "error",
                 "title": "Insight Generation Error",
@@ -300,5 +320,5 @@ class ProductivityTrackerPlugin(AnalyticsPlugin):
             return summary
 
         except Exception as e:
-            self.logger.error(f"📊 Error generating weekly summary: {e}")
+            self.logger.error(f"Error generating weekly summary: {e}")
             return {"error": str(e)}

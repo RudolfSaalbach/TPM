@@ -6,6 +6,7 @@ Initializes database and starts all services
 import asyncio
 import logging
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, Any
 
@@ -39,6 +40,27 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Global app instance for lifespan access
+app_instance = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """FastAPI lifespan context manager for startup and shutdown"""
+    global app_instance
+
+    # Startup
+    logger.info("Starting Chronos Engine v2.1...")
+    await app_instance.startup()
+    logger.info("Chronos Engine v2.1 started successfully")
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down Chronos Engine v2.1...")
+    await app_instance.shutdown()
+    logger.info("Chronos Engine v2.1 shutdown complete")
+
 
 class ChronosApp:
     """Main Chronos Engine Application with Database Integration"""
@@ -47,11 +69,12 @@ class ChronosApp:
         self.config = config
         self.scheduler = ChronosScheduler(config)
         
-        # Create FastAPI app
+        # Create FastAPI app with lifespan
         self.app = FastAPI(
             title="Chronos Engine v2.1",
             description="Advanced Calendar Management with AI-powered optimization and Database Persistence",
-            version="2.1.0"
+            version="2.1.0",
+            lifespan=lifespan
         )
         
         # Configure CORS
@@ -124,12 +147,12 @@ class ChronosApp:
             </head>
             <body>
                 <div class="container">
-                    <div class="logo">⚡ Chronos Engine</div>
+                    <div class="logo">Chronos Engine</div>
                     <div class="version">Version 2.1.0 - Database Edition</div>
                     <div class="links">
-                        <a href="/dashboard">📊 Dashboard</a>
-                        <a href="/docs">📚 API Docs</a>
-                        <a href="/health">💚 Health Check</a>
+                        <a href="/dashboard">Dashboard</a>
+                        <a href="/docs">API Docs</a>
+                        <a href="/health">Health Check</a>
                     </div>
                     <p><strong>New in v2.1:</strong> Full SQLite database persistence, OAuth2 Google Calendar integration</p>
                 </div>
@@ -178,21 +201,12 @@ app_instance = None
 def create_app(config: Dict[str, Any] = None) -> FastAPI:
     """Create and configure the FastAPI application"""
     global app_instance
-    
+
     if config is None:
         config = load_config()
-    
+
     app_instance = ChronosApp(config)
-    
-    # Register startup and shutdown events
-    @app_instance.app.on_event("startup")
-    async def startup_event():
-        await app_instance.startup()
-    
-    @app_instance.app.on_event("shutdown")
-    async def shutdown_event():
-        await app_instance.shutdown()
-    
+
     return app_instance.app
 
 

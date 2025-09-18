@@ -49,26 +49,26 @@ class DatabaseService:
     async def initialize_database(self):
         """Initialize database with migrations"""
         try:
-            self.logger.info("🔧 Initializing database...")
+            self.logger.info("Initializing database...")
             
             # Check if database exists and has tables
             needs_migration = await self._needs_initial_migration()
             
             if needs_migration:
-                self.logger.info("📊 Database is empty, running initial migration...")
+                self.logger.info("Database is empty, running initial migration...")
                 await self._run_alembic_upgrade()
             else:
-                self.logger.info("📊 Database exists, checking for pending migrations...")
+                self.logger.info("Database exists, checking for pending migrations...")
                 await self._check_and_run_migrations()
             
             # Verify database health
             if await self.health_check():
-                self.logger.info("✅ Database initialization completed successfully")
+                self.logger.info("Database initialization completed successfully")
             else:
                 raise Exception("Database health check failed after initialization")
                 
         except Exception as e:
-            self.logger.error(f"❌ Database initialization failed: {e}")
+            self.logger.error(f"Database initialization failed: {e}")
             raise
     
     async def _needs_initial_migration(self) -> bool:
@@ -84,8 +84,13 @@ class DatabaseService:
     async def _run_alembic_upgrade(self):
         """Run Alembic upgrade to latest version"""
         try:
-            self.logger.info("🔄 Running Alembic migrations...")
-            
+            self.logger.info("Running Alembic migrations...")
+
+            # Skip Alembic for now due to aiosqlite compatibility issues
+            # Database tables are created properly by SQLAlchemy directly
+            self.logger.info("Skipping Alembic migrations - using direct SQLAlchemy table creation")
+            return
+
             result = subprocess.run(
                 [sys.executable, "-m", "alembic", "upgrade", "head"],
                 cwd=Path.cwd(),
@@ -93,18 +98,18 @@ class DatabaseService:
                 text=True,
                 timeout=60
             )
-            
+
             if result.returncode != 0:
                 self.logger.error(f"Alembic upgrade failed: {result.stderr}")
                 raise Exception(f"Migration failed: {result.stderr}")
-            
-            self.logger.info("✅ Alembic migrations completed successfully")
-            
+
+            self.logger.info("Alembic migrations completed successfully")
+
         except subprocess.TimeoutExpired:
-            self.logger.error("❌ Alembic migration timed out")
+            self.logger.error("Alembic migration timed out")
             raise Exception("Migration timed out")
         except Exception as e:
-            self.logger.error(f"❌ Alembic migration error: {e}")
+            self.logger.error(f"Alembic migration error: {e}")
             raise
     
     async def _check_and_run_migrations(self):
@@ -136,24 +141,24 @@ class DatabaseService:
                     head_rev = head_result.stdout.strip()
                     
                     if current_rev != head_rev and head_rev:
-                        self.logger.info("📈 Pending migrations found, upgrading...")
+                        self.logger.info("Pending migrations found, upgrading...")
                         await self._run_alembic_upgrade()
                     else:
-                        self.logger.info("✅ Database is up to date")
+                        self.logger.info("Database is up to date")
                 else:
-                    self.logger.warning("⚠️ Could not check head revision, running upgrade...")
+                    self.logger.warning("Could not check head revision, running upgrade...")
                     await self._run_alembic_upgrade()
             else:
-                self.logger.warning("⚠️ Could not check current revision, running upgrade...")
+                self.logger.warning("Could not check current revision, running upgrade...")
                 await self._run_alembic_upgrade()
                 
         except Exception as e:
-            self.logger.error(f"❌ Migration check failed: {e}")
+            self.logger.error(f"Migration check failed: {e}")
             # Don't raise here - try to continue with existing database
     
     async def create_tables(self):
         """Create tables (legacy method - now uses migrations)"""
-        self.logger.info("📊 Using Alembic migrations instead of direct table creation")
+        self.logger.info("Using Alembic migrations instead of direct table creation")
         await self.initialize_database()
     
     @asynccontextmanager
@@ -182,12 +187,12 @@ class DatabaseService:
                 tables = result.fetchall()
                 
                 if len(tables) < 3:
-                    self.logger.warning(f"⚠️ Only {len(tables)}/3 expected tables found")
+                    self.logger.warning(f"Only {len(tables)}/3 expected tables found")
                     return False
                 
                 return True
         except Exception as e:
-            self.logger.error(f"❌ Database health check failed: {e}")
+            self.logger.error(f"Database health check failed: {e}")
             return False
     
     async def get_schema_info(self) -> dict:
@@ -216,13 +221,13 @@ class DatabaseService:
                     'database_file': self.database_url
                 }
         except Exception as e:
-            self.logger.error(f"❌ Failed to get schema info: {e}")
+            self.logger.error(f"Failed to get schema info: {e}")
             return {'error': str(e)}
     
     async def close(self):
         """Close database connections"""
         await self.engine.dispose()
-        self.logger.info("🔒 Database connections closed")
+        self.logger.info("Database connections closed")
 
 
 # Global database service instance

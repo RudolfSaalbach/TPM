@@ -31,13 +31,13 @@ class SampleEventPlugin(EventPlugin):
     
     async def initialize(self, context: Dict[str, Any]) -> bool:
         """Initialize the plugin"""
-        self.logger.info("🔌 Sample Event Plugin initialized")
+        self.logger.info("[SAMPLE_EVENT] Sample Event Plugin initialized")
         self.context = context
         return True
     
     async def cleanup(self):
         """Cleanup plugin resources"""
-        self.logger.info("🔌 Sample Event Plugin cleaned up")
+        self.logger.info("[SAMPLE_EVENT] Sample Event Plugin cleaned up")
     
     async def process_event(self, event: ChronosEvent) -> ChronosEvent:
         """Process an event - Add sample enhancements"""
@@ -103,11 +103,11 @@ class SampleEventPlugin(EventPlugin):
                 
                 event.productivity_score = min(5.0, max(1.0, score))
             
-            self.logger.debug(f"🔌 Processed event: {event.title} (tags: {event.tags})")
+            self.logger.debug(f"[SAMPLE_EVENT] Processed event: {event.title} (tags: {event.tags})")
             return event
             
         except Exception as e:
-            self.logger.error(f"🔌 Error processing event {event.title}: {e}")
+            self.logger.error(f"[SAMPLE_EVENT] Error processing event {event.title}: {e}")
             return event  # Return original event if processing fails
 
 
@@ -131,13 +131,13 @@ class SampleSchedulingPlugin(SchedulingPlugin):
     
     async def initialize(self, context: Dict[str, Any]) -> bool:
         """Initialize the plugin"""
-        self.logger.info("🔌 Sample Scheduling Plugin initialized")
+        self.logger.info("[SAMPLE_SCHED] Sample Scheduling Plugin initialized")
         self.context = context
         return True
     
     async def cleanup(self):
         """Cleanup plugin resources"""
-        self.logger.info("🔌 Sample Scheduling Plugin cleaned up")
+        self.logger.info("[SAMPLE_SCHED] Sample Scheduling Plugin cleaned up")
     
     async def suggest_schedule(
         self, 
@@ -253,11 +253,11 @@ class SampleSchedulingPlugin(SchedulingPlugin):
                         "affected_events": [e.id for e in tasks]
                     })
             
-            self.logger.info(f"🔌 Generated {len(suggestions)} scheduling suggestions")
+            self.logger.info(f"[SAMPLE_SCHED] Generated {len(suggestions)} scheduling suggestions")
             return suggestions
             
         except Exception as e:
-            self.logger.error(f"🔌 Error generating suggestions: {e}")
+            self.logger.error(f"[SAMPLE_SCHED] Error generating suggestions: {e}")
             return [{
                 "type": "error",
                 "priority": "low",

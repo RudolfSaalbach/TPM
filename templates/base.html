@@ -24,19 +24,19 @@
         
         <div class="navbar-menu">
             <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
-                📊 Dashboard
+                Dashboard
             </a>
             <a href="/docs" class="nav-link" target="_blank">
-                📚 API Docs
+                API Docs
             </a>
-            <a href="/sync/health" class="nav-link" target="_blank">
-                💓 Health
+            <a href="/api/v1/sync/health" class="nav-link" target="_blank">
+                Health
             </a>
         </div>
         
         <div class="navbar-actions">
             <button class="btn btn-primary" onclick="syncCalendar()">
-                🔄 Sync
+                Sync
             </button>
             <div class="status-badge" id="connectionStatus">
                 <span class="status-dot status-online"></span>
@@ -78,8 +78,8 @@
             <div class="footer-section">
                 <h4>Quick Links</h4>
                 <div class="footer-actions">
-                    <button class="btn btn-sm" onclick="refreshDashboard()">🔄 Refresh</button>
-                    <button class="btn btn-sm" onclick="exportData()">📊 Export</button>
+                    <button class="btn btn-sm" onclick="refreshDashboard()">Refresh</button>
+                    <button class="btn btn-sm" onclick="exportData()">Export</button>
                     <button class="btn btn-sm" onclick="showHelp()">❓ Help</button>
                 </div>
             </div>

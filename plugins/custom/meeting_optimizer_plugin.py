@@ -46,7 +46,7 @@ class MeetingOptimizerPlugin(SchedulingPlugin):
 
     async def initialize(self, context: Dict[str, Any]) -> bool:
         """Initialize the plugin"""
-        self.logger.info("📅 Meeting Optimizer Plugin initialized")
+        self.logger.info("[MEETING_OPT] Meeting Optimizer Plugin initialized")
         self.context = context
 
         # Load custom rules from context if provided
@@ -57,7 +57,7 @@ class MeetingOptimizerPlugin(SchedulingPlugin):
 
     async def cleanup(self):
         """Cleanup plugin resources"""
-        self.logger.info("📅 Meeting Optimizer Plugin cleaned up")
+        self.logger.info("[MEETING_OPT] Meeting Optimizer Plugin cleaned up")
 
     def analyze_meeting_efficiency(self, meeting: ChronosEvent) -> Dict[str, Any]:
         """Analyze a single meeting for efficiency metrics"""
@@ -150,7 +150,7 @@ class MeetingOptimizerPlugin(SchedulingPlugin):
             return analysis
 
         except Exception as e:
-            self.logger.error(f"📅 Error analyzing meeting {meeting.id}: {e}")
+            self.logger.error(f"[MEETING_OPT] Error analyzing meeting {meeting.id}: {e}")
             analysis["issues"].append("Analysis error occurred")
             return analysis
 
@@ -302,11 +302,11 @@ class MeetingOptimizerPlugin(SchedulingPlugin):
             if recurring_patterns:
                 suggestions.extend(recurring_patterns)
 
-            self.logger.info(f"📅 Generated {len(suggestions)} meeting optimization suggestions")
+            self.logger.info(f"[MEETING_OPT] Generated {len(suggestions)} meeting optimization suggestions")
             return suggestions
 
         except Exception as e:
-            self.logger.error(f"📅 Error generating meeting suggestions: {e}")
+            self.logger.error(f"[MEETING_OPT] Error generating meeting suggestions: {e}")
             return [{
                 "type": "error",
                 "priority": "low",
@@ -353,7 +353,7 @@ class MeetingOptimizerPlugin(SchedulingPlugin):
             return suggestions
 
         except Exception as e:
-            self.logger.error(f"📅 Error analyzing recurring patterns: {e}")
+            self.logger.error(f"[MEETING_OPT] Error analyzing recurring patterns: {e}")
             return []
 
     async def optimize_meeting_schedule(
@@ -390,5 +390,5 @@ class MeetingOptimizerPlugin(SchedulingPlugin):
             return optimizations
 
         except Exception as e:
-            self.logger.error(f"📅 Error optimizing meeting schedule: {e}")
+            self.logger.error(f"[MEETING_OPT] Error optimizing meeting schedule: {e}")
             return []
