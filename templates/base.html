@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chronos Dashboard{% endblock %}</title>
+    
+    <!-- CSS - GUARANTEED LOADING -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dashboard.css') }}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <span class="status-indicator status-online"></span>
+            <h1>Chronos Engine</h1>
+            <span class="version">v2.0.0</span>
+        </div>
+        
+        <div class="navbar-menu">
+            <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+                📊 Dashboard
+            </a>
+            <a href="/docs" class="nav-link" target="_blank">
+                📚 API Docs
+            </a>
+            <a href="/sync/health" class="nav-link" target="_blank">
+                💓 Health
+            </a>
+        </div>
+        
+        <div class="navbar-actions">
+            <button class="btn btn-primary" onclick="syncCalendar()">
+                🔄 Sync
+            </button>
+            <div class="status-badge" id="connectionStatus">
+                <span class="status-dot status-online"></span>
+                Online
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Chronos Engine v2.0.0</h4>
+                <p>Advanced Calendar Management System</p>
+                <p>Powered by AI-driven optimization</p>
+            </div>
+            
+            <div class="footer-section">
+                <h4>System Status</h4>
+                <div class="status-list">
+                    <div class="status-item">
+                        <span class="status-dot status-online"></span>
+                        Calendar Sync: Active
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot status-online"></span>
+                        Analytics: Running
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot status-online"></span>
+                        AI Optimizer: Ready
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-section">
+                <h4>Quick Links</h4>
+                <div class="footer-actions">
+                    <button class="btn btn-sm" onclick="refreshDashboard()">🔄 Refresh</button>
+                    <button class="btn btn-sm" onclick="exportData()">📊 Export</button>
+                    <button class="btn btn-sm" onclick="showHelp()">❓ Help</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2025 Chronos Engine. Intelligent Calendar Management.</p>
+            <p>Last updated: <span id="lastUpdate">{{ generated_at or "Loading..." }}</span></p>
+        </div>
+    </footer>
+
+    <!-- JavaScript - GUARANTEED LOADING -->
+    <script src="{{ url_for('static', path='js/main.js') }}"></script>
+    <script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+    
+    <!-- Toast notifications container -->
+    <div id="toastContainer" class="toast-container"></div>
+    
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" style="display: none;">
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                    background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; z-index: 9999;">
+            ⏳ Loading...
+        </div>
+    </div>
+</body>
+</html>

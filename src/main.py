@@ -1,0 +1,232 @@
+﻿"""
+Main entry point for Chronos Engine v2.1 - Database Integration
+Initializes database and starts all services
+"""
+
+import asyncio
+import logging
+import sys
+from pathlib import Path
+from typing import Dict, Any
+
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+# Import configuration
+from src.config.config_loader import load_config
+
+# Import core components
+from src.core.database import db_service
+from src.core.scheduler import ChronosScheduler
+
+# Import API routes
+from src.api.routes import ChronosAPIRoutes
+from src.api.dashboard import ChronosDashboard
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/chronos.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+
+class ChronosApp:
+    """Main Chronos Engine Application with Database Integration"""
+    
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.scheduler = ChronosScheduler(config)
+        
+        # Create FastAPI app
+        self.app = FastAPI(
+            title="Chronos Engine v2.1",
+            description="Advanced Calendar Management with AI-powered optimization and Database Persistence",
+            version="2.1.0"
+        )
+        
+        # Configure CORS
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=config.get('api', {}).get('cors_origins', ["*"]),
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"]
+        )
+        
+        # Initialize API routes
+        api_routes = ChronosAPIRoutes(
+            scheduler=self.scheduler,
+            api_key=config.get('api', {}).get('api_key', 'development-key')
+        )
+        
+        # Initialize dashboard
+        dashboard = ChronosDashboard(
+            analytics_engine=self.scheduler.analytics,
+            timebox_engine=self.scheduler.timebox,
+            replan_engine=self.scheduler.replan
+        )
+        
+        # Register routes
+        self.app.include_router(api_routes.router, prefix="/api/v1")
+        self.app.include_router(dashboard.router)
+        
+        # Serve static files
+        static_dir = Path("static")
+        if static_dir.exists():
+            self.app.mount("/static", StaticFiles(directory="static"), name="static")
+        
+        # Health check endpoint
+        @self.app.get("/health")
+        async def health_check():
+            """Health check endpoint"""
+            try:
+                scheduler_status = await self.scheduler.get_health_status()
+                return {
+                    "status": "healthy",
+                    "version": "2.1.0",
+                    "database": "sqlite",
+                    "scheduler": scheduler_status
+                }
+            except Exception as e:
+                raise HTTPException(status_code=503, detail=f"Service unhealthy: {e}")
+        
+        # Root endpoint
+        @self.app.get("/", response_class=HTMLResponse)
+        async def root():
+            """Root endpoint - redirect to dashboard"""
+            return '''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Chronos Engine v2.1</title>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                    .container { max-width: 600px; margin: 0 auto; }
+                    .logo { font-size: 2.5em; color: #667eea; margin-bottom: 20px; }
+                    .version { color: #666; margin-bottom: 30px; }
+                    .links a { display: inline-block; margin: 10px; padding: 10px 20px; 
+                              background: #667eea; color: white; text-decoration: none; 
+                              border-radius: 5px; }
+                    .links a:hover { background: #5a6fd8; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="logo">⚡ Chronos Engine</div>
+                    <div class="version">Version 2.1.0 - Database Edition</div>
+                    <div class="links">
+                        <a href="/dashboard">📊 Dashboard</a>
+                        <a href="/docs">📚 API Docs</a>
+                        <a href="/health">💚 Health Check</a>
+                    </div>
+                    <p><strong>New in v2.1:</strong> Full SQLite database persistence, OAuth2 Google Calendar integration</p>
+                </div>
+            </body>
+            </html>
+            '''
+    
+    async def startup(self):
+        """Application startup"""
+        logger.info("Starting Chronos Engine v2.1...")
+        
+        # Create necessary directories
+        Path("logs").mkdir(exist_ok=True)
+        Path("data").mkdir(exist_ok=True)
+        Path("config").mkdir(exist_ok=True)
+        
+        # Initialize database
+        await db_service.create_tables()
+        logger.info("Database initialized")
+        
+        # Start scheduler
+        await self.scheduler.start()
+        logger.info("Scheduler started")
+        
+        logger.info("Chronos Engine v2.1 started successfully")
+    
+    async def shutdown(self):
+        """Application shutdown"""
+        logger.info("Shutting down Chronos Engine...")
+        
+        # Stop scheduler
+        await self.scheduler.stop()
+        logger.info("Scheduler stopped")
+        
+        # Close database
+        await db_service.close()
+        logger.info("Database closed")
+        
+        logger.info("Chronos Engine shutdown complete")
+
+
+# Global app instance
+app_instance = None
+
+
+def create_app(config: Dict[str, Any] = None) -> FastAPI:
+    """Create and configure the FastAPI application"""
+    global app_instance
+    
+    if config is None:
+        config = load_config()
+    
+    app_instance = ChronosApp(config)
+    
+    # Register startup and shutdown events
+    @app_instance.app.on_event("startup")
+    async def startup_event():
+        await app_instance.startup()
+    
+    @app_instance.app.on_event("shutdown")
+    async def shutdown_event():
+        await app_instance.shutdown()
+    
+    return app_instance.app
+
+
+def main():
+    """Main entry point"""
+    try:
+        # Load configuration
+        config = load_config()
+        
+        # Create app
+        app = create_app(config)
+        
+        # Get server config
+        api_config = config.get('api', {})
+        host = api_config.get('host', '0.0.0.0')
+        port = api_config.get('port', 8080)
+        
+        logger.info(f"Starting Chronos Engine v2.1 on {host}:{port}")
+        
+        # Run server
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level="info",
+            access_log=True
+        )
+        
+    except KeyboardInterrupt:
+        logger.info("Received shutdown signal")
+    except Exception as e:
+        logger.error(f"Failed to start Chronos Engine: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

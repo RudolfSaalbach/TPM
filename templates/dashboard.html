@@ -1,0 +1,229 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Dashboard - Chronos Engine{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>📊 Dashboard Overview</h1>
+    <p>Real-time insights into your calendar management and productivity</p>
+    <div class="header-stats">
+        <div class="stat-item">
+            <span class="stat-value">{{ productivity_metrics.total_events or 0 }}</span>
+            <span class="stat-label">Total Events</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">{{ "%.1f" | format(productivity_metrics.completion_rate * 100) if productivity_metrics.completion_rate else 0 }}%</span>
+            <span class="stat-label">Completion Rate</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">{{ "%.1f" | format(productivity_metrics.total_hours) if productivity_metrics.total_hours else 0 }}h</span>
+            <span class="stat-label">Total Hours</span>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Productivity Metrics Card -->
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3>📈 Productivity Metrics</h3>
+            <div class="card-actions">
+                <button class="btn btn-sm btn-icon" onclick="refreshMetrics()" title="Refresh">
+                    🔄
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="metrics-grid">
+                <div class="metric">
+                    <span class="metric-label">Total Events</span>
+                    <span class="metric-value">{{ productivity_metrics.total_events or 0 }}</span>
+                </div>
+                
+                <div class="metric">
+                    <span class="metric-label">Completion Rate</span>
+                    <span class="metric-value">{{ "%.1f%%" | format((productivity_metrics.completion_rate or 0) * 100) }}</span>
+                </div>
+                
+                <div class="metric">
+                    <span class="metric-label">Average Productivity</span>
+                    <span class="metric-value">{{ "%.1f/5.0" | format(productivity_metrics.average_productivity or 0) }}</span>
+                </div>
+                
+                <div class="metric">
+                    <span class="metric-label">Events per Day</span>
+                    <span class="metric-value">{{ "%.1f" | format(productivity_metrics.events_per_day or 0) }}</span>
+                </div>
+            </div>
+            
+            <!-- Progress bar for completion rate -->
+            <div class="progress-section">
+                <label class="progress-label">Completion Progress</label>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ (productivity_metrics.completion_rate or 0) * 100 }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Priority Distribution Card -->
+    <div class="card card-secondary">
+        <div class="card-header">
+            <h3>🎯 Priority Distribution</h3>
+        </div>
+        <div class="card-body">
+            <div class="priority-list">
+                {% for priority, count in priority_distribution.items() %}
+                <div class="priority-item">
+                    <div class="priority-info">
+                        <span class="priority-badge priority-{{ priority.lower() }}">{{ priority }}</span>
+                    </div>
+                    <span class="priority-count">{{ count }} events</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Distribution Chart -->
+    <div class="card card-chart">
+        <div class="card-header">
+            <h3>⏰ Time Distribution</h3>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="timeDistributionChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Status Card -->
+    <div class="card card-status">
+        <div class="card-header">
+            <h3>🔧 System Status</h3>
+        </div>
+        <div class="card-body">
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-indicator status-online"></span>
+                    <span class="status-label">Calendar Sync</span>
+                    <span class="status-value">Active</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-indicator status-online"></span>
+                    <span class="status-label">Analytics Engine</span>
+                    <span class="status-value">Running</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-indicator status-online"></span>
+                    <span class="status-label">AI Optimizer</span>
+                    <span class="status-value">Ready</span>
+                </div>
+                
+                <div class="status-item">
+                    <span class="status-indicator status-online"></span>
+                    <span class="status-label">Plugin System</span>
+                    <span class="status-value">Loaded</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Card -->
+    <div class="card card-actions">
+        <div class="card-header">
+            <h3>⚡ Quick Actions</h3>
+        </div>
+        <div class="card-body">
+            <div class="action-grid">
+                <button class="btn btn-primary btn-block" onclick="syncCalendar()">
+                    🔄 Sync Calendar
+                </button>
+                
+                <button class="btn btn-success btn-block" onclick="optimizeSchedule()">
+                    🤖 Optimize Schedule
+                </button>
+                
+                <button class="btn btn-info btn-block" onclick="generateReport()">
+                    📊 Generate Report
+                </button>
+                
+                <button class="btn btn-warning btn-block" onclick="detectConflicts()">
+                    ⚠️ Detect Conflicts
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Card -->
+    <div class="card card-activity">
+        <div class="card-header">
+            <h3>📋 Recent Activity</h3>
+        </div>
+        <div class="card-body">
+            <div class="activity-feed" id="activityFeed">
+                <!-- Activity items will be populated by JavaScript -->
+                <div class="activity-item">
+                    <span class="activity-time">{{ generated_at or "Just now" }}</span>
+                    <span class="activity-text">Dashboard loaded successfully</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommendations Section -->
+{% if recommendations %}
+<div class="recommendations-section">
+    <div class="card card-recommendations">
+        <div class="card-header">
+            <h3>💡 AI Recommendations</h3>
+            <span class="badge">{{ recommendations|length }} suggestions</span>
+        </div>
+        <div class="card-body">
+            <div class="recommendations-list">
+                {% for recommendation in recommendations %}
+                <div class="recommendation recommendation-{{ recommendation.priority or 'low' }}">
+                    <div class="recommendation-header">
+                        <span class="recommendation-type">{{ recommendation.type|title }}</span>
+                        <span class="recommendation-priority priority-{{ recommendation.priority or 'low' }}">
+                            {{ recommendation.priority|title }}
+                        </span>
+                    </div>
+                    <p class="recommendation-message">{{ recommendation.message }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Initialize dashboard-specific functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeTimeChart();
+        loadRecentActivity();
+        startAutoRefresh();
+    });
+    
+    function initializeTimeChart() {
+        // Time distribution chart would be implemented here
+        // Using Chart.js or similar library
+    }
+    
+    function loadRecentActivity() {
+        // Load recent system activity
+        // This would fetch from an API endpoint
+    }
+    
+    function startAutoRefresh() {
+        // Refresh dashboard data every 5 minutes
+        setInterval(refreshDashboard, 300000);
+    }
+</script>
+{% endblock %}

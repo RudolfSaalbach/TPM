@@ -1,0 +1,123 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Error - Chronos Engine{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-content">
+        <div class="error-icon">
+            {% if error_code == 404 %}
+                🔍
+            {% elif error_code == 500 %}
+                ⚠️
+            {% elif error_code == 403 %}
+                🔒
+            {% else %}
+                ❌
+            {% endif %}
+        </div>
+        
+        <h1 class="error-title">
+            {% if error_code == 404 %}
+                Page Not Found
+            {% elif error_code == 500 %}
+                Server Error
+            {% elif error_code == 403 %}
+                Access Denied
+            {% else %}
+                Error {{ error_code or "Unknown" }}
+            {% endif %}
+        </h1>
+        
+        <p class="error-message">
+            {% if error_message %}
+                {{ error_message }}
+            {% elif error_code == 404 %}
+                The page you're looking for doesn't exist.
+            {% elif error_code == 500 %}
+                Something went wrong on our end. Please try again later.
+            {% elif error_code == 403 %}
+                You don't have permission to access this resource.
+            {% else %}
+                An unexpected error occurred.
+            {% endif %}
+        </p>
+        
+        <div class="error-actions">
+            <button class="btn btn-primary" onclick="history.back()">
+                ← Go Back
+            </button>
+            
+            <button class="btn btn-secondary" onclick="location.href='/'">
+                🏠 Home
+            </button>
+            
+            <button class="btn btn-info" onclick="location.reload()">
+                🔄 Retry
+            </button>
+        </div>
+        
+        {% if error_details and request.app.debug %}
+        <details class="error-details">
+            <summary>Technical Details</summary>
+            <pre><code>{{ error_details }}</code></pre>
+        </details>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.error-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 2rem;
+}
+
+.error-content {
+    text-align: center;
+    max-width: 500px;
+}
+
+.error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.error-title {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.error-message {
+    font-size: 1.1rem;
+    color: #666;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.error-details {
+    margin-top: 2rem;
+    text-align: left;
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 1rem;
+}
+
+.error-details pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+</style>
+{% endblock %}

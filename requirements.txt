@@ -1,0 +1,39 @@
+﻿# Core FastAPI dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# Template engine
+jinja2==3.1.2
+
+# Configuration
+python-dotenv==1.0.0
+PyYAML==6.0.1
+
+# Async and HTTP
+httpx==0.25.2
+aiofiles==23.2.1
+
+# Date and time handling
+python-dateutil==2.8.2
+
+# DATABASE INTEGRATION - NEW
+sqlalchemy==2.0.23
+alembic==1.12.1
+aiosqlite==0.19.0
+
+# Google Calendar API (uncomment for production)
+# google-auth==2.23.4
+# google-auth-oauthlib==1.1.0
+# google-api-python-client==2.108.0
+
+# Development and testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.11.1
+
+# Type hints
+typing-extensions==4.8.0
+
+# Import utilities
+importlib-metadata==6.8.0

@@ -1,0 +1,77 @@
+﻿# Chronos Engine Configuration File
+
+general:
+  timezone: "UTC"
+  working_hours:
+    start: 9
+    end: 18
+    break_start: 12
+    break_end: 13
+    working_days: [0, 1, 2, 3, 4]  # Monday=0 to Friday=4
+
+calendar:
+  credentials_file: "config/credentials.json"
+  token_file: "config/token.json"
+  default_calendar_id: "primary"
+  sync_interval_minutes: 5
+
+api:
+  host: "0.0.0.0"
+  port: 8080
+  api_key: "development-key-change-in-production"
+  cors_origins: ["*"]
+
+scheduler:
+  sync_interval: 300  # 5 minutes
+  replan:
+    enabled: true
+    time: "06:00"
+    strategy: "priority_first"
+  auto_conflict_resolution: false
+
+analytics:
+  cache_dir: "data/analytics"
+  retention_days: 365
+  enable_metrics: true
+
+ai:
+  optimization:
+    enabled: true
+    confidence_threshold: 0.7
+    max_suggestions: 10
+  timebox:
+    enabled: true
+    min_block_minutes: 15
+    max_block_hours: 4
+    focus_block_min_hours: 2
+
+notifications:
+  enabled: true
+  channels:
+    webhook:
+      enabled: true
+      retry_attempts: 3
+    email:
+      enabled: false
+      smtp_host: ""
+      smtp_port: 587
+      username: ""
+      password: ""
+
+plugins:
+  enabled: ["timebox", "replan", "analytics"]
+  custom_dir: "plugins/custom"
+  auto_load: true
+
+task_queue:
+  max_concurrent: 5
+  poll_interval_seconds: 1.0
+  task_timeout_seconds: 300
+  max_retries: 3
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/chronos.log"
+  max_size_mb: 50
+  backup_count: 5
