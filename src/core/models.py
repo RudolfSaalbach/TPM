@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional
 import uuid
 import json
 
-from sqlalchemy import Column, String, DateTime, Integer, Float, Text, Boolean, JSON
+from sqlalchemy import Column, String, DateTime, Integer, Float, Text, Boolean, JSON, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TypeDecorator, VARCHAR
@@ -92,6 +92,9 @@ class ChronosEventDB(Base):
     start_utc = Column(DateTime, nullable=True, index=True)
     end_utc = Column(DateTime, nullable=True, index=True)
     all_day_date = Column(String(10), nullable=True, index=True)  # YYYY-MM-DD format
+
+    # v2.2 Feature: Sub-tasks checklist support
+    sub_tasks = Column(JSON, nullable=True)
     
     # Categorization
     priority = Column(String(10), nullable=False, default="MEDIUM")
@@ -133,9 +136,9 @@ class ChronosEventDB(Base):
             description=self.description,
             start_time=self.start_time,
             end_time=self.end_time,
-            priority=Priority[self.priority],
-            event_type=EventType[self.event_type],
-            status=EventStatus[self.status],
+            priority=Priority[self.priority] if isinstance(self.priority, str) else self.priority,
+            event_type=next((et for et in EventType if et.value == self.event_type), EventType.TASK),
+            status=next((es for es in EventStatus if es.value == self.status), EventStatus.SCHEDULED),
             calendar_id=self.calendar_id,
             attendees=self.attendees or [],
             location=self.location,
@@ -150,7 +153,8 @@ class ChronosEventDB(Base):
             min_duration=self.min_duration or timedelta(minutes=15),
             max_duration=self.max_duration or timedelta(hours=4),
             flexible_timing=self.flexible_timing,
-            requires_focus=self.requires_focus
+            requires_focus=self.requires_focus,
+            sub_tasks=[SubTask.from_dict(task) for task in self.sub_tasks] if self.sub_tasks else []
         )
 
 
@@ -327,6 +331,9 @@ class ChronosEvent:
     max_duration: timedelta = field(default_factory=lambda: timedelta(hours=4))
     flexible_timing: bool = True
     requires_focus: bool = False
+
+    # v2.2 Features
+    sub_tasks: List['SubTask'] = field(default_factory=list)
     
     @property
     def duration(self) -> Optional[timedelta]:
@@ -366,7 +373,8 @@ class ChronosEvent:
             min_duration=self.min_duration,
             max_duration=self.max_duration,
             flexible_timing=self.flexible_timing,
-            requires_focus=self.requires_focus
+            requires_focus=self.requires_focus,
+            sub_tasks=[task.to_dict() for task in self.sub_tasks] if self.sub_tasks else None
         )
 
 
@@ -558,6 +566,36 @@ class URLPayloadDB(Base):
     processed = Column(Boolean, default=False, index=True)
 
 
+# v2.2 Feature Tables
+
+class EventLinkDB(Base):
+    """Database model for event links (n:m relationships)"""
+    __tablename__ = 'event_links'
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_event_id = Column(String(36), nullable=False, index=True)
+    target_event_id = Column(String(36), nullable=False, index=True)
+    link_type = Column(String(50), nullable=False, default='related', index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(String(100), nullable=True)
+
+
+class ActionWorkflowDB(Base):
+    """Database model for ACTION command workflows"""
+    __tablename__ = 'action_workflows'
+
+    id = Column(Integer, primary_key=True, index=True)
+    trigger_command = Column(String(100), nullable=False, index=True)
+    trigger_system = Column(String(100), nullable=False, index=True)
+    follow_up_command = Column(String(100), nullable=False)
+    follow_up_system = Column(String(100), nullable=False)
+    follow_up_params = Column(JSON, nullable=True)
+    delay_seconds = Column(Integer, default=0)
+    enabled = Column(Boolean, default=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # Domain Models for Command Layer
 
 @dataclass
@@ -635,4 +673,89 @@ class URLPayload:
             calendar_id=self.calendar_id,
             created_at=self.created_at,
             processed=self.processed
+        )
+
+
+# v2.2 Domain Models
+
+@dataclass
+class EventLink:
+    """Event link domain model for n:m relationships"""
+    id: Optional[int] = None
+    source_event_id: str = ""
+    target_event_id: str = ""
+    link_type: str = "related"
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_by: Optional[str] = None
+
+    def to_db_model(self) -> EventLinkDB:
+        """Convert to SQLAlchemy model"""
+        return EventLinkDB(
+            id=self.id,
+            source_event_id=self.source_event_id,
+            target_event_id=self.target_event_id,
+            link_type=self.link_type,
+            created_at=self.created_at,
+            created_by=self.created_by
+        )
+
+
+@dataclass
+class ActionWorkflow:
+    """Action workflow domain model"""
+    id: Optional[int] = None
+    trigger_command: str = ""
+    trigger_system: str = ""
+    follow_up_command: str = ""
+    follow_up_system: str = ""
+    follow_up_params: Optional[Dict[str, Any]] = None
+    delay_seconds: int = 0
+    enabled: bool = True
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    def to_db_model(self) -> ActionWorkflowDB:
+        """Convert to SQLAlchemy model"""
+        return ActionWorkflowDB(
+            id=self.id,
+            trigger_command=self.trigger_command,
+            trigger_system=self.trigger_system,
+            follow_up_command=self.follow_up_command,
+            follow_up_system=self.follow_up_system,
+            follow_up_params=self.follow_up_params,
+            delay_seconds=self.delay_seconds,
+            enabled=self.enabled,
+            created_at=self.created_at,
+            updated_at=self.updated_at
+        )
+
+
+@dataclass
+class SubTask:
+    """Sub-task model for event checklists"""
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    text: str = ""
+    completed: bool = False
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON storage"""
+        return {
+            'id': self.id,
+            'text': self.text,
+            'completed': self.completed,
+            'created_at': self.created_at.isoformat(),
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'SubTask':
+        """Create from dictionary"""
+        return cls(
+            id=data.get('id', str(uuid.uuid4())),
+            text=data.get('text', ''),
+            completed=data.get('completed', False),
+            created_at=datetime.fromisoformat(data.get('created_at', datetime.utcnow().isoformat())),
+            completed_at=datetime.fromisoformat(data['completed_at']) if data.get('completed_at') else None
         )

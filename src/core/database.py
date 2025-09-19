@@ -164,7 +164,7 @@ class DatabaseService:
         try:
             async with self.engine.begin() as conn:
                 # Import all models to ensure they're registered
-                from src.core.models import ChronosEventDB, AnalyticsDataDB, TaskDB, TemplateDB, TemplateUsageDB, NoteDB, ExternalCommandDB, URLPayloadDB
+                from src.core.models import ChronosEventDB, AnalyticsDataDB, TaskDB, TemplateDB, TemplateUsageDB, NoteDB, ExternalCommandDB, URLPayloadDB, EventLinkDB, ActionWorkflowDB
                 from src.database.models import PendingSync
 
                 # Create all tables defined in Base.metadata
@@ -181,7 +181,7 @@ class DatabaseService:
         try:
             async with self.engine.begin() as conn:
                 # Import all models to ensure they're registered
-                from src.core.models import ChronosEventDB, AnalyticsDataDB, TaskDB, TemplateDB, TemplateUsageDB, NoteDB, ExternalCommandDB, URLPayloadDB
+                from src.core.models import ChronosEventDB, AnalyticsDataDB, TaskDB, TemplateDB, TemplateUsageDB, NoteDB, ExternalCommandDB, URLPayloadDB, EventLinkDB, ActionWorkflowDB
                 from src.database.models import PendingSync
 
                 # Create all tables

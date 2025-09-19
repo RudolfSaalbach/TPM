@@ -12,9 +12,10 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 from contextlib import asynccontextmanager
 
-from src.core.models import ChronosEvent, Note, URLPayload, ExternalCommand, CommandStatus
+from src.core.models import ChronosEvent, Note, URLPayload, ExternalCommand, CommandStatus, ActionWorkflowDB
 from src.core.plugin_manager import EventPlugin
 from src.core.database import db_service
+from sqlalchemy import select
 
 
 class CommandHandlerPlugin(EventPlugin):
@@ -246,11 +247,58 @@ class CommandHandlerPlugin(EventPlugin):
                 self.logger.info(f"[CMD_HANDLER] External command saved with ID: {command_db.id}")
                 self.logger.info(f"[CMD_HANDLER] Command: {command} -> {target_system} (PENDING)")
 
+                # Trigger workflows after successful command save
+                await self._trigger_workflows(command, target_system, command_db.id)
+
                 return True
 
         except Exception as e:
             self.logger.error(f"[CMD_HANDLER] Failed to process ACTION command: {e}")
             return False
+
+    async def _trigger_workflows(self, command: str, target_system: str, command_id: int):
+        """Trigger workflows based on completed ACTION commands"""
+        try:
+            self.logger.info(f"[CMD_HANDLER] Checking workflows for {command} -> {target_system}")
+
+            async with db_service.get_session() as session:
+                # Find matching workflows
+                query = select(ActionWorkflowDB).where(
+                    ActionWorkflowDB.trigger_command == command,
+                    ActionWorkflowDB.trigger_system == target_system,
+                    ActionWorkflowDB.enabled == True
+                )
+                result = await session.execute(query)
+                workflows = result.scalars().all()
+
+                if not workflows:
+                    self.logger.debug(f"[CMD_HANDLER] No workflows found for {command} -> {target_system}")
+                    return
+
+                for workflow in workflows:
+                    self.logger.info(f"[CMD_HANDLER] Triggering workflow: {workflow.follow_up_command} -> {workflow.follow_up_system}")
+
+                    # Create follow-up command
+                    follow_up_params = workflow.follow_up_params or {}
+                    follow_up_params['triggered_by_command_id'] = command_id
+                    follow_up_params['trigger_timestamp'] = datetime.utcnow().isoformat()
+
+                    follow_up_command = ExternalCommand(
+                        target_system=workflow.follow_up_system,
+                        command=workflow.follow_up_command,
+                        parameters=follow_up_params,
+                        status=CommandStatus.PENDING
+                    )
+
+                    # Save follow-up command
+                    follow_up_db = follow_up_command.to_db_model()
+                    session.add(follow_up_db)
+                    await session.flush()
+
+                    self.logger.info(f"[CMD_HANDLER] Workflow follow-up command created with ID: {follow_up_db.id}")
+
+        except Exception as e:
+            self.logger.error(f"[CMD_HANDLER] Error triggering workflows: {e}")
 
 
 # Plugin registration

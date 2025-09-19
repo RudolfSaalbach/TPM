@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import zoneinfo
 
-from src.core.models import ChronosEvent, Priority, EventType, EventStatus
+from src.core.models import ChronosEvent, Priority, EventType, EventStatus, SubTask
 
 
 class EventParser:
@@ -60,7 +60,10 @@ class EventParser:
             
             # Extract tags from description
             tags = self._extract_tags(description)
-            
+
+            # Parse sub-tasks from description (v2.2 feature)
+            sub_tasks = self._parse_sub_tasks(description)
+
             # Calculate estimated duration
             estimated_duration = None
             if start_time and end_time:
@@ -80,7 +83,8 @@ class EventParser:
                 attendees=attendees,
                 location=location,
                 tags=tags,
-                estimated_duration=estimated_duration
+                estimated_duration=estimated_duration,
+                sub_tasks=sub_tasks
             )
             
             self.logger.debug(f"Parsed event: {title} [{priority.name}]")
@@ -169,7 +173,43 @@ class EventParser:
         tags = re.findall(hashtag_pattern, description)
         
         return tags
-    
+
+    def _parse_sub_tasks(self, description: str) -> List[SubTask]:
+        """Parse checkbox-style sub-tasks from description (v2.2 feature)"""
+
+        if not description:
+            return []
+
+        sub_tasks = []
+
+        # Pattern for checkbox-style tasks: [ ] or [x] or [X] followed by text
+        checkbox_pattern = r'^\s*\[(.*?)\]\s*(.+)$'
+
+        for line in description.split('\n'):
+            line = line.strip()
+            match = re.match(checkbox_pattern, line)
+
+            if match:
+                checkbox_content = match.group(1).strip()
+                task_text = match.group(2).strip()
+
+                if task_text:  # Only create sub-task if there's actual text
+                    # Check if checkbox indicates completion (contains x or X)
+                    completed = 'x' in checkbox_content.lower()
+
+                    sub_task = SubTask(
+                        text=task_text,
+                        completed=completed,
+                        completed_at=datetime.utcnow() if completed else None
+                    )
+
+                    sub_tasks.append(sub_task)
+
+        if sub_tasks:
+            self.logger.debug(f"Parsed {len(sub_tasks)} sub-tasks from description")
+
+        return sub_tasks
+
     def parse_events_batch(self, calendar_events: List[Dict[str, Any]]) -> List[ChronosEvent]:
         """Parse multiple calendar events"""
         
@@ -214,9 +254,13 @@ class EventParser:
         # Re-analyze priority and type
         chronos_event.priority = self._detect_priority(chronos_event.title, chronos_event.description)
         chronos_event.event_type = self._detect_event_type(chronos_event.title, chronos_event.description)
-        
+
+        # Update sub-tasks (v2.2 feature)
+        chronos_event.sub_tasks = self._parse_sub_tasks(chronos_event.description)
+
         # Update timestamp
         chronos_event.updated_at = datetime.utcnow()
-        chronos_event.version += 1
+        if hasattr(chronos_event, 'version'):
+            chronos_event.version += 1
         
         return chronos_event

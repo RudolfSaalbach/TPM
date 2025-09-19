@@ -31,6 +31,17 @@ class EventStatusEnum(str, Enum):
     RESCHEDULED = "rescheduled"
 
 
+class SubTaskSchema(BaseModel):
+    id: str
+    text: str
+    completed: bool = False
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class EventCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
@@ -42,6 +53,7 @@ class EventCreate(BaseModel):
     tags: List[str] = Field(default_factory=list)
     attendees: List[str] = Field(default_factory=list)
     location: Optional[str] = None
+    sub_tasks: Optional[List[SubTaskSchema]] = None
 
 
 class EventUpdate(BaseModel):
@@ -55,6 +67,7 @@ class EventUpdate(BaseModel):
     tags: Optional[List[str]] = None
     attendees: Optional[List[str]] = None
     location: Optional[str] = None
+    sub_tasks: Optional[List[SubTaskSchema]] = None
 
 
 class EventResponse(BaseModel):
@@ -72,6 +85,8 @@ class EventResponse(BaseModel):
     calendar_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    sub_tasks: Optional[List[SubTaskSchema]] = None
+    linked_events: Optional[List[Dict[str, Any]]] = None
 
     class Config:
         from_attributes = True
@@ -181,3 +196,83 @@ class EventDirection(str, Enum):
     PAST = "past"
     FUTURE = "future"
     ALL = "all"
+
+
+# v2.2 Feature Schemas
+
+class EventLinkCreate(BaseModel):
+    source_event_id: str
+    target_event_id: str
+    link_type: str = "related"
+
+    class Config:
+        from_attributes = True
+
+
+class EventLinkResponse(BaseModel):
+    id: int
+    source_event_id: str
+    target_event_id: str
+    link_type: str
+    created_at: datetime
+    created_by: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AvailabilityRequest(BaseModel):
+    start_time: datetime
+    end_time: datetime
+    attendees: List[str] = Field(default_factory=list)
+    calendar_ids: List[str] = Field(default_factory=list)
+
+    class Config:
+        from_attributes = True
+
+
+class AvailabilitySlot(BaseModel):
+    start_time: datetime
+    end_time: datetime
+    available: bool
+    conflicts: List[str] = Field(default_factory=list)
+
+    class Config:
+        from_attributes = True
+
+
+class AvailabilityResponse(BaseModel):
+    attendee: str
+    slots: List[AvailabilitySlot]
+
+    class Config:
+        from_attributes = True
+
+
+class WorkflowCreate(BaseModel):
+    trigger_command: str
+    trigger_system: str
+    follow_up_command: str
+    follow_up_system: str
+    follow_up_params: Optional[Dict[str, Any]] = None
+    delay_seconds: int = 0
+    enabled: bool = True
+
+    class Config:
+        from_attributes = True
+
+
+class WorkflowResponse(BaseModel):
+    id: int
+    trigger_command: str
+    trigger_system: str
+    follow_up_command: str
+    follow_up_system: str
+    follow_up_params: Optional[Dict[str, Any]] = None
+    delay_seconds: int
+    enabled: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
