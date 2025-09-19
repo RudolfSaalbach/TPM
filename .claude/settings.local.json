@@ -15,7 +15,8 @@
       "Bash(taskkill:*)",
       "Bash(set API_PORT=8082)",
       "Bash(dir)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
