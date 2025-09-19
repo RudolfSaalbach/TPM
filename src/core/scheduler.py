@@ -7,7 +7,6 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
-from sqlalchemy import select, and_
 
 from src.core.models import ChronosEvent, ChronosEventDB, Priority, EventStatus
 from src.core.database import db_service
@@ -125,34 +124,35 @@ class ChronosScheduler:
             for event_data in events:
                 try:
                     # Parse event
-                    chronos_event = self.event_parser.parse_event(event_data)
+                    parsed_event = self.event_parser.parse_event(event_data)
 
                     # Process through plugins
-                    chronos_event = await self.plugins.process_event_through_plugins(chronos_event)
+                    processed_event = await self.plugins.process_event_through_plugins(parsed_event)
 
                     # Check if event was processed as command (None return = delete event)
-                    if chronos_event is None:
-                        self.logger.info(f"Event processed as command - skipping database save")
+                    if processed_event is None:
+                        await self._consume_calendar_event(parsed_event)
                         processed_count += 1
                         continue
 
+                    chronos_event = processed_event
+
                     # Save to database
                     async with db_service.get_session() as session:
-                        # Check if event exists
-                        result = await session.execute(
-                            select(ChronosEventDB).where(ChronosEventDB.calendar_id == chronos_event.calendar_id)
-                        )
-                        existing = result.scalar_one_or_none()
+                        existing = None
+                        if chronos_event.id:
+                            existing = await session.get(ChronosEventDB, chronos_event.id)
+
+                        db_event = chronos_event.to_db_model()
 
                         if existing:
                             # Update existing
-                            for key, value in chronos_event.to_db_model().__dict__.items():
+                            for key, value in db_event.__dict__.items():
                                 if not key.startswith('_') and key != 'id':
                                     setattr(existing, key, value)
                             updated_count += 1
                         else:
                             # Create new
-                            db_event = chronos_event.to_db_model()
                             session.add(db_event)
                             created_count += 1
 
@@ -188,7 +188,10 @@ class ChronosScheduler:
         """Create a new event"""
         try:
             # Process through plugins
-            event = await self.plugins.process_event(event)
+            processed_event = await self.plugins.process_event_through_plugins(event)
+            if processed_event is None:
+                raise ValueError("Event was consumed by plugins and cannot be created")
+            event = processed_event
 
             # Save to database
             async with db_service.get_session() as session:
@@ -208,6 +211,30 @@ class ChronosScheduler:
         except Exception as e:
             self.logger.error(f"Failed to create event: {e}")
             raise
+
+    async def _consume_calendar_event(self, event: ChronosEvent):
+        """Remove events that were transformed into commands"""
+        event_id = event.id
+        calendar_identifier = event.calendar_id or 'primary'
+
+        if event_id:
+            try:
+                async with db_service.get_session() as session:
+                    existing = await session.get(ChronosEventDB, event_id)
+                    if existing:
+                        await session.delete(existing)
+                        self.logger.info(f"Removed command event {event_id} from database")
+                    await session.commit()
+            except Exception as db_error:
+                self.logger.warning(f"Failed to remove command event {event_id} from database: {db_error}")
+
+            try:
+                await self.calendar_client.delete_event(event_id, calendar_id=calendar_identifier or 'primary')
+                self.logger.info(f"Removed command event {event_id} from calendar")
+            except Exception as api_error:
+                self.logger.warning(f"Failed to delete calendar event {event_id}: {api_error}")
+        else:
+            self.logger.debug("Command event without identifier received; skipping deletion")
 
     async def get_health_status(self) -> Dict[str, Any]:
         """Get scheduler health status"""
