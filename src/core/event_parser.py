@@ -19,10 +19,10 @@ class EventParser:
         
         # Priority keywords for automatic detection
         self.priority_keywords = {
-            Priority.URGENT: ['urgent', 'asap', 'emergency', 'critical', 'important'],
-            Priority.HIGH: ['high', 'priority', 'deadline', 'due'],
-            Priority.MEDIUM: ['medium', 'normal', 'regular'],
-            Priority.LOW: ['low', 'later', 'sometime', 'optional']
+            Priority.URGENT: ['urgent', 'asap', 'emergency', 'critical'],
+            Priority.HIGH: ['high priority', 'important', 'deadline', 'due soon', 'pressing'],
+            Priority.MEDIUM: ['medium priority', 'normal', 'regular'],
+            Priority.LOW: ['low priority', 'optional', 'sometime', 'later', 'casual']
         }
         
         # Event type keywords
@@ -254,6 +254,20 @@ class EventParser:
         # Re-analyze priority and type
         chronos_event.priority = self._detect_priority(chronos_event.title, chronos_event.description)
         chronos_event.event_type = self._detect_event_type(chronos_event.title, chronos_event.description)
+
+        # Refresh tags based on updated description while preserving existing ones
+        try:
+            existing_tags = list(chronos_event.tags or [])
+        except AttributeError:
+            existing_tags = []
+
+        new_tags = self._extract_tags(chronos_event.description)
+        # Maintain insertion order while avoiding duplicates
+        combined_tags = []
+        for tag in existing_tags + new_tags:
+            if tag and tag not in combined_tags:
+                combined_tags.append(tag)
+        chronos_event.tags = combined_tags
 
         # Update sub-tasks (v2.2 feature)
         chronos_event.sub_tasks = self._parse_sub_tasks(chronos_event.description)

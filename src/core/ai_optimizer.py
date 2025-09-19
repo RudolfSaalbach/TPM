@@ -3,6 +3,7 @@ AI Optimizer for Chronos - Phase 2 Feature
 Provides intelligent scheduling recommendations
 """
 
+import inspect
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
@@ -15,13 +16,23 @@ from src.core.analytics_engine import AnalyticsEngine
 @dataclass
 class OptimizationSuggestion:
     """Optimization suggestion from AI"""
-    type: str  # 'reschedule', 'merge', 'split', 'prioritize'
+    suggestion_type: str  # 'reschedule', 'merge', 'split', 'prioritize', 'conflict'
     event_id: str
     original_time: Optional[datetime]
     suggested_time: Optional[datetime]
-    reason: str
+    description: str
     confidence: float
     impact_score: float
+
+    @property
+    def type(self) -> str:
+        """Backward compatible alias used by older code paths."""
+        return self.suggestion_type
+
+    @property
+    def reason(self) -> str:
+        """Alias maintained for compatibility with previous API."""
+        return self.description
 
 
 class AIOptimizer:
@@ -43,36 +54,82 @@ class AIOptimizer:
         self.logger.info("AI Optimizer initialized")
     
     async def optimize_schedule(
-        self, 
+        self,
         events: List[ChronosEvent],
         optimization_window_days: int = 7
     ) -> List[OptimizationSuggestion]:
         """Generate optimization suggestions for a list of events"""
-        
-        suggestions = []
-        
+
+        if not events:
+            return []
+
+        suggestions: List[OptimizationSuggestion] = []
+
         try:
             # Get productivity metrics for context
-            productivity_metrics = await self.analytics.get_productivity_metrics()
-            time_distribution = await self.analytics.get_time_distribution()
-            
+            productivity_metrics = await self._resolve_async(
+                self.analytics.get_productivity_metrics()
+            ) or {}
+
+            raw_time_distribution = await self._resolve_async(
+                self.analytics.get_time_distribution()
+            )
+
+            if isinstance(raw_time_distribution, dict) and raw_time_distribution:
+                time_distribution = {
+                    int(hour): float(value)
+                    for hour, value in raw_time_distribution.items()
+                }
+            else:
+                time_distribution = {
+                    hour: 1.0 if self.working_hours.start_hour <= hour <= self.working_hours.end_hour else 0.2
+                    for hour in range(24)
+                }
+
             # Generate different types of suggestions
             reschedule_suggestions = await self._suggest_reschedules(
                 events, time_distribution, optimization_window_days
             )
             suggestions.extend(reschedule_suggestions)
-            
+
             merge_suggestions = await self._suggest_merges(events)
             suggestions.extend(merge_suggestions)
-            
+
             priority_suggestions = await self._suggest_priority_adjustments(
                 events, productivity_metrics
             )
             suggestions.extend(priority_suggestions)
-            
+
+            # Detect conflicts and create follow-up suggestions
+            conflicts = self._detect_scheduling_conflicts(events)
+            event_map = {event.id: event for event in events}
+            for conflict in conflicts:
+                conflict_ids = conflict['events']
+                candidates = [event_map[eid] for eid in conflict_ids if eid in event_map]
+                if len(candidates) < 2:
+                    continue
+
+                # Move the lowest priority event first
+                target_event = min(candidates, key=lambda e: e.priority.value)
+                other_events = [eid for eid in conflict_ids if eid != target_event.id]
+                description = (
+                    f"Resolve conflict with {' and '.join(other_events)}"
+                    if other_events else "Resolve scheduling conflict"
+                )
+
+                suggestions.append(OptimizationSuggestion(
+                    suggestion_type='conflict',
+                    event_id=target_event.id,
+                    original_time=target_event.start_time,
+                    suggested_time=None,
+                    description=description,
+                    confidence=max(0.5, 0.6 * conflict['severity'] + 0.2),
+                    impact_score=5.0 * conflict['severity']
+                ))
+
             # Sort by impact score
             suggestions.sort(key=lambda x: x.impact_score, reverse=True)
-            
+
             self.logger.info(f"Generated {len(suggestions)} optimization suggestions")
             return suggestions[:10]  # Return top 10 suggestions
             
@@ -81,21 +138,27 @@ class AIOptimizer:
             return []
     
     async def _suggest_reschedules(
-        self, 
+        self,
         events: List[ChronosEvent],
         time_distribution: Dict[int, float],
         window_days: int
     ) -> List[OptimizationSuggestion]:
         """Suggest event reschedules based on productivity patterns"""
-        
+
         suggestions = []
-        
+
+        if not time_distribution:
+            return suggestions
+
         # Find peak productivity hours
         peak_hours = sorted(
-            time_distribution.items(), 
-            key=lambda x: x[1], 
+            time_distribution.items(),
+            key=lambda x: x[1],
             reverse=True
         )[:3]
+        if not peak_hours:
+            return suggestions
+
         peak_hour_set = {hour for hour, _ in peak_hours}
         
         for event in events:
@@ -122,16 +185,23 @@ class AIOptimizer:
                 # Ensure it's within working hours
                 if (self.working_hours.start_hour <= best_hour <= self.working_hours.end_hour):
                     suggestions.append(OptimizationSuggestion(
-                        type='reschedule',
+                        suggestion_type='reschedule',
                         event_id=event.id,
                         original_time=event.start_time,
                         suggested_time=suggested_start,
-                        reason=f"Move high-priority task to peak productivity hour ({best_hour}:00)",
+                        description=f"Move high-priority task to peak productivity hour ({best_hour}:00)",
                         confidence=0.8,
                         impact_score=3.0 * event.priority.value
                     ))
         
         return suggestions
+
+    async def _resolve_async(self, value: Any) -> Any:
+        """Await a value if required and return the resolved result."""
+
+        if inspect.isawaitable(value):
+            return await value
+        return value
     
     async def _suggest_merges(self, events: List[ChronosEvent]) -> List[OptimizationSuggestion]:
         """Suggest merging similar events"""
@@ -171,16 +241,54 @@ class AIOptimizer:
                     earliest_meeting = min(short_meetings, key=lambda x: x.start_time)
                     
                     suggestions.append(OptimizationSuggestion(
-                        type='merge',
+                        suggestion_type='merge',
                         event_id=earliest_meeting.id,
                         original_time=earliest_meeting.start_time,
                         suggested_time=earliest_meeting.start_time,
-                        reason=f"Consider merging {len(short_meetings)} short meetings into one session",
+                        description=f"Consider merging {len(short_meetings)} short meetings into one session",
                         confidence=0.6,
                         impact_score=2.0
                     ))
         
         return suggestions
+
+    def _calculate_priority_score(self, event: ChronosEvent) -> float:
+        """Score the event based on its priority enum."""
+
+        priority_scores = {
+            Priority.LOW: 1.0,
+            Priority.MEDIUM: 2.0,
+            Priority.HIGH: 3.0,
+            Priority.URGENT: 4.0,
+        }
+        return priority_scores.get(event.priority, 2.0)
+
+    def _detect_scheduling_conflicts(self, events: List[ChronosEvent]) -> List[Dict[str, Any]]:
+        """Return overlap conflicts between events."""
+
+        scheduled = [
+            event for event in events
+            if event.start_time and event.end_time
+        ]
+        scheduled.sort(key=lambda e: e.start_time)
+
+        conflicts: List[Dict[str, Any]] = []
+
+        for index, base_event in enumerate(scheduled):
+            for other_event in scheduled[index + 1:]:
+                if base_event.conflicts_with(other_event):
+                    overlap_start = max(base_event.start_time, other_event.start_time)
+                    overlap_end = min(base_event.end_time, other_event.end_time)
+                    overlap_duration = max(timedelta(), overlap_end - overlap_start)
+
+                    severity = min(1.0, overlap_duration.total_seconds() / 3600)
+                    conflicts.append({
+                        'type': 'overlap',
+                        'events': [base_event.id, other_event.id],
+                        'severity': severity
+                    })
+
+        return conflicts
     
     async def _suggest_priority_adjustments(
         self, 
@@ -200,11 +308,11 @@ class AIOptimizer:
             
             for event in low_priority_events[:3]:  # Top 3 candidates
                 suggestions.append(OptimizationSuggestion(
-                    type='prioritize',
+                    suggestion_type='prioritize',
                     event_id=event.id,
                     original_time=event.start_time,
                     suggested_time=None,
-                    reason="Consider postponing or delegating low-priority tasks to focus on completion",
+                    description="Consider postponing or delegating low-priority tasks to focus on completion",
                     confidence=0.7,
                     impact_score=1.5
                 ))
@@ -212,17 +320,31 @@ class AIOptimizer:
         # Suggest promoting urgent tasks
         urgent_tasks = [e for e in events if e.priority == Priority.URGENT]
         for event in urgent_tasks:
-            if event.start_time and event.start_time > datetime.utcnow() + timedelta(days=1):
+            if not event.start_time:
+                continue
+
+            now = datetime.utcnow()
+            if event.start_time > now + timedelta(days=1):
                 suggestions.append(OptimizationSuggestion(
-                    type='prioritize',
+                    suggestion_type='prioritize',
                     event_id=event.id,
                     original_time=event.start_time,
-                    suggested_time=datetime.utcnow() + timedelta(hours=2),
-                    reason="Urgent task scheduled far in future - consider moving earlier",
+                    suggested_time=now + timedelta(hours=2),
+                    description="Urgent task scheduled far in future - consider moving earlier",
                     confidence=0.9,
                     impact_score=4.0
                 ))
-        
+            elif event.start_time < now:
+                suggestions.append(OptimizationSuggestion(
+                    suggestion_type='prioritize',
+                    event_id=event.id,
+                    original_time=event.start_time,
+                    suggested_time=now,
+                    description="Urgent task is overdue - address immediately",
+                    confidence=0.95,
+                    impact_score=4.5
+                ))
+
         return suggestions
     
     async def find_optimal_time_slot(
