@@ -154,7 +154,10 @@ class ChronosEventDB(Base):
             max_duration=self.max_duration or timedelta(hours=4),
             flexible_timing=self.flexible_timing,
             requires_focus=self.requires_focus,
-            sub_tasks=[SubTask.from_dict(task) for task in self.sub_tasks] if self.sub_tasks else []
+            sub_tasks=[SubTask.from_dict(task) for task in self.sub_tasks] if self.sub_tasks else [],
+            created_at=self.created_at or datetime.utcnow(),
+            updated_at=self.updated_at or self.created_at or datetime.utcnow(),
+            version=1
         )
 
 
@@ -296,36 +299,36 @@ class TimeSlot:
 @dataclass
 class ChronosEvent:
     """Enhanced event model with database persistence"""
-    
+
     # Core attributes
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     title: str = ""
     description: str = ""
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
-    
+
     # Categorization
     priority: Priority = Priority.MEDIUM
     event_type: EventType = EventType.TASK
     status: EventStatus = EventStatus.SCHEDULED
-    
+
     # Metadata
     calendar_id: str = ""
     attendees: List[str] = field(default_factory=list)
     location: str = ""
     tags: List[str] = field(default_factory=list)
-    
+
     # Duration fields
     estimated_duration: Optional[timedelta] = None
     actual_duration: Optional[timedelta] = None
     preparation_time: timedelta = field(default_factory=lambda: timedelta(minutes=5))
     buffer_time: timedelta = field(default_factory=lambda: timedelta(minutes=10))
-    
+
     # AI/Analytics
     productivity_score: Optional[float] = None
     completion_rate: Optional[float] = None
     stress_level: Optional[float] = None
-    
+
     # Scheduling constraints
     min_duration: timedelta = field(default_factory=lambda: timedelta(minutes=15))
     max_duration: timedelta = field(default_factory=lambda: timedelta(hours=4))
@@ -334,20 +337,166 @@ class ChronosEvent:
 
     # v2.2 Features
     sub_tasks: List['SubTask'] = field(default_factory=list)
-    
+
+    # Tracking metadata
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+    version: int = 1
+
     @property
     def duration(self) -> Optional[timedelta]:
         """Calculate duration from start and end times"""
         if self.start_time and self.end_time:
             return self.end_time - self.start_time
         return self.estimated_duration
-    
+
     @property
     def total_time_needed(self) -> timedelta:
         """Calculate total time including preparation and buffer"""
         base_duration = self.duration or self.estimated_duration or timedelta(hours=1)
         return base_duration + self.preparation_time + self.buffer_time
-    
+
+    def is_flexible(self) -> bool:
+        """Return True when the event can be safely moved."""
+        if not self.flexible_timing:
+            return False
+        # Meetings and appointments are typically fixed unless explicitly marked flexible
+        if self.event_type in {EventType.MEETING, EventType.APPOINTMENT}:
+            return False
+        return True
+
+    def get_time_slot(self) -> Optional[TimeSlot]:
+        """Return a TimeSlot representing the event window."""
+        if self.start_time and self.end_time:
+            return TimeSlot(self.start_time, self.end_time)
+        return None
+
+    def conflicts_with(self, other: 'ChronosEvent') -> bool:
+        """Determine whether two events overlap in time."""
+        my_slot = self.get_time_slot()
+        other_slot = other.get_time_slot()
+        if not my_slot or not other_slot:
+            return False
+        return my_slot.overlaps_with(other_slot)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize event to a dictionary."""
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'start_time': self.start_time.isoformat() if self.start_time else None,
+            'end_time': self.end_time.isoformat() if self.end_time else None,
+            'priority': self.priority.name,
+            'event_type': self.event_type.value,
+            'status': self.status.value,
+            'calendar_id': self.calendar_id,
+            'attendees': list(self.attendees),
+            'location': self.location,
+            'tags': list(self.tags),
+            'estimated_duration': self.estimated_duration.total_seconds() if self.estimated_duration else None,
+            'actual_duration': self.actual_duration.total_seconds() if self.actual_duration else None,
+            'preparation_time': self.preparation_time.total_seconds(),
+            'buffer_time': self.buffer_time.total_seconds(),
+            'productivity_score': self.productivity_score,
+            'completion_rate': self.completion_rate,
+            'stress_level': self.stress_level,
+            'min_duration': self.min_duration.total_seconds(),
+            'max_duration': self.max_duration.total_seconds(),
+            'flexible_timing': self.flexible_timing,
+            'requires_focus': self.requires_focus,
+            'sub_tasks': [task.to_dict() for task in self.sub_tasks],
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+            'version': self.version,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ChronosEvent':
+        """Deserialize event from a dictionary representation."""
+
+        def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
+            if not value:
+                return None
+            return datetime.fromisoformat(value)
+
+        def _parse_timedelta(seconds: Optional[float]) -> Optional[timedelta]:
+            if seconds is None:
+                return None
+            return timedelta(seconds=float(seconds))
+
+        priority_value = data.get('priority')
+        if isinstance(priority_value, Priority):
+            priority = priority_value
+        elif isinstance(priority_value, str):
+            try:
+                priority = Priority[priority_value.upper()]
+            except KeyError:
+                priority = Priority.MEDIUM
+        else:
+            priority = Priority.MEDIUM
+
+        event_type_value = data.get('event_type')
+        if isinstance(event_type_value, EventType):
+            event_type = event_type_value
+        elif isinstance(event_type_value, str):
+            event_type = next(
+                (et for et in EventType if et.value == event_type_value.lower() or et.name == event_type_value.upper()),
+                EventType.TASK
+            )
+        else:
+            event_type = EventType.TASK
+
+        status_value = data.get('status')
+        if isinstance(status_value, EventStatus):
+            status = status_value
+        elif isinstance(status_value, str):
+            status = next(
+                (es for es in EventStatus if es.value == status_value.lower() or es.name == status_value.upper()),
+                EventStatus.SCHEDULED
+            )
+        else:
+            status = EventStatus.SCHEDULED
+
+        sub_tasks_data = data.get('sub_tasks') or []
+        sub_tasks = [
+            task if isinstance(task, SubTask) else SubTask.from_dict(task)
+            for task in sub_tasks_data
+        ]
+
+        created_at = _parse_datetime(data.get('created_at')) or datetime.utcnow()
+        updated_at = _parse_datetime(data.get('updated_at')) or created_at
+
+        return cls(
+            id=data.get('id', str(uuid.uuid4())),
+            title=data.get('title', ''),
+            description=data.get('description', ''),
+            start_time=_parse_datetime(data.get('start_time')),
+            end_time=_parse_datetime(data.get('end_time')),
+            priority=priority,
+            event_type=event_type,
+            status=status,
+            calendar_id=data.get('calendar_id', ''),
+            attendees=list(data.get('attendees', [])),
+            location=data.get('location', ''),
+            tags=list(data.get('tags', [])),
+            estimated_duration=_parse_timedelta(data.get('estimated_duration')),
+            actual_duration=_parse_timedelta(data.get('actual_duration')),
+            preparation_time=_parse_timedelta(data.get('preparation_time')) or timedelta(minutes=5),
+            buffer_time=_parse_timedelta(data.get('buffer_time')) or timedelta(minutes=10),
+            productivity_score=data.get('productivity_score'),
+            completion_rate=data.get('completion_rate'),
+            stress_level=data.get('stress_level'),
+            min_duration=_parse_timedelta(data.get('min_duration')) or timedelta(minutes=15),
+            max_duration=_parse_timedelta(data.get('max_duration')) or timedelta(hours=4),
+            flexible_timing=data.get('flexible_timing', True),
+            requires_focus=data.get('requires_focus', False),
+            sub_tasks=sub_tasks,
+            created_at=created_at,
+            updated_at=updated_at,
+            version=int(data.get('version', 1)),
+        )
+
     def to_db_model(self) -> ChronosEventDB:
         """Convert to SQLAlchemy model"""
 
@@ -400,7 +549,9 @@ class ChronosEvent:
             max_duration=self.max_duration,
             flexible_timing=self.flexible_timing,
             requires_focus=self.requires_focus,
-            sub_tasks=[task.to_dict() for task in self.sub_tasks] if self.sub_tasks else None
+            sub_tasks=[task.to_dict() for task in self.sub_tasks] if self.sub_tasks else None,
+            created_at=self.created_at,
+            updated_at=self.updated_at
         )
 
 

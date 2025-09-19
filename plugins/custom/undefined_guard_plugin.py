@@ -107,8 +107,11 @@ class UndefinedGuardPlugin(EventPlugin):
             if self._is_system_event(event):
                 return event
 
-            # Loop prevention: Skip already marked UNDEFINED events
+            # Loop prevention: Skip already marked UNDEFINED events but restore original title
             if event.title.startswith("UNDEFINED:"):
+                cleaned_title = event.title[len("UNDEFINED:"):].strip()
+                if cleaned_title:
+                    event.title = cleaned_title
                 return event
 
             # Check for malformed command patterns

@@ -4,6 +4,7 @@ Replaces all in-memory storage with SQLite persistence
 """
 
 import asyncio
+import inspect
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
@@ -113,11 +114,10 @@ class AnalyticsEngine:
     
     async def get_productivity_metrics(self, days_back: int = 30) -> Dict[str, float]:
         """Get productivity metrics from database"""
-        
+
         start_date = datetime.utcnow() - timedelta(days=days_back)
-        
+
         async with db_service.get_session() as session:
-            # Get events in date range
             result = await session.execute(
                 select(ChronosEventDB).where(
                     and_(
@@ -126,42 +126,55 @@ class AnalyticsEngine:
                     )
                 )
             )
-            events = result.scalars().all()
-            
-            # Get analytics data for these events
+
+            event_scalars = result.scalars()
+            if inspect.isawaitable(event_scalars):
+                event_scalars = await event_scalars
+            events = event_scalars.all()
+            if inspect.isawaitable(events):
+                events = await events
+
             event_ids = [event.id for event in events]
+            if not event_ids:
+                return self._empty_metrics()
+
             analytics_result = await session.execute(
                 select(AnalyticsDataDB).where(AnalyticsDataDB.event_id.in_(event_ids))
             )
-            analytics_data = analytics_result.scalars().all()
-            
-            # Calculate metrics
+
+            analytics_scalars = analytics_result.scalars()
+            if inspect.isawaitable(analytics_scalars):
+                analytics_scalars = await analytics_scalars
+            analytics_data = analytics_scalars.all()
+            if inspect.isawaitable(analytics_data):
+                analytics_data = await analytics_data
+
             total_events = len(events)
             if total_events == 0:
                 return self._empty_metrics()
-            
+
             completed_events = len([e for e in events if e.status == EventStatus.COMPLETED.value])
             completion_rate = completed_events / total_events
-            
-            # Calculate total hours
-            total_minutes = sum([
-                (e.end_time - e.start_time).total_seconds() / 60 
-                for e in events 
+
+            total_minutes = sum(
+                (e.end_time - e.start_time).total_seconds() / 60
+                for e in events
                 if e.start_time and e.end_time
-            ])
+            )
             total_hours = total_minutes / 60
-            
-            # Average productivity from analytics data
+
             productivity_scores = [
-                data.metrics.get('productivity_score', 0) 
-                for data in analytics_data 
+                data.metrics.get('productivity_score', 0)
+                for data in analytics_data
                 if data.metrics.get('productivity_score') is not None
             ]
-            avg_productivity = sum(productivity_scores) / len(productivity_scores) if productivity_scores else 0.0
-            
-            # Events per day
-            events_per_day = total_events / days_back
-            
+            avg_productivity = (
+                sum(productivity_scores) / len(productivity_scores)
+                if productivity_scores else 0.0
+            )
+
+            events_per_day = total_events / days_back if days_back else total_events
+
             return {
                 'total_events': total_events,
                 'completed_events': completed_events,
@@ -189,11 +202,11 @@ class AnalyticsEngine:
             
             return distribution
     
-    async def get_time_distribution(self, days_back: int = 7) -> Dict[str, float]:
+    async def get_time_distribution(self, days_back: int = 7) -> Dict[int, float]:
         """Get hourly time distribution from database"""
-        
+
         start_date = datetime.utcnow() - timedelta(days=days_back)
-        
+
         async with db_service.get_session() as session:
             result = await session.execute(
                 select(ChronosEventDB).where(
@@ -206,16 +219,16 @@ class AnalyticsEngine:
             )
             events = result.scalars().all()
             
-            # Initialize hourly distribution
-            time_distribution = {str(hour): 0.0 for hour in range(24)}
-            
+            # Initialize hourly distribution using integer hour keys
+            time_distribution = {hour: 0.0 for hour in range(24)}
+
             # Calculate time spent per hour
             for event in events:
                 if event.start_time and event.end_time:
                     duration_hours = (event.end_time - event.start_time).total_seconds() / 3600
-                    start_hour = str(event.start_time.hour)
+                    start_hour = event.start_time.hour
                     time_distribution[start_hour] += duration_hours
-            
+
             return time_distribution
     
     async def generate_insights(self, days_back: int = 30) -> List[str]:

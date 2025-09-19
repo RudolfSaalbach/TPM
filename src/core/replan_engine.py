@@ -61,7 +61,7 @@ class ReplanEngine:
         self.logger.info("Replan Engine initialized")
     
     async def detect_conflicts(
-        self, 
+        self,
         events: List[ChronosEvent],
         target_date: Optional[datetime] = None
     ) -> List[Conflict]:
@@ -134,6 +134,14 @@ class ReplanEngine:
                     ))
         
         return conflicts
+
+    async def generate_replan_suggestions(self, events: List[ChronosEvent]) -> List[ReplanSuggestion]:
+        """Detect conflicts and return replanning suggestions."""
+
+        conflicts = await self.detect_conflicts(events)
+        if not conflicts:
+            return []
+        return await self.suggest_replanning(conflicts, events)
     
     async def _detect_overload_conflicts(self, events: List[ChronosEvent]) -> List[Conflict]:
         """Detect daily overload situations"""
@@ -506,9 +514,11 @@ class ReplanEngine:
             if not conflicts:
                 return {
                     'conflicts_found': 0,
+                    'conflicts_detected': 0,
                     'suggestions_generated': 0,
                     'suggestions_applied': 0,
-                    'message': 'No conflicts detected'
+                    'message': 'No conflicts detected',
+                    'suggestions': []
                 }
             
             # Generate suggestions
@@ -525,6 +535,7 @@ class ReplanEngine:
             
             return {
                 'conflicts_found': len(conflicts),
+                'conflicts_detected': len(conflicts),
                 'suggestions_generated': len(suggestions),
                 'suggestions_applied': applied_count,
                 'conflicts': [
@@ -540,7 +551,7 @@ class ReplanEngine:
                     {
                         'event_id': s.event_id,
                         'original_start': s.original_start.isoformat(),
-                        'suggested_start': s.suggested_start.isoformat(),
+                        'suggested_start': s.suggested_start.isoformat() if s.suggested_start else None,
                         'reason': s.reason,
                         'confidence': s.confidence
                     } for s in suggestions
@@ -552,6 +563,16 @@ class ReplanEngine:
             return {
                 'error': str(e),
                 'conflicts_found': 0,
+                'conflicts_detected': 0,
                 'suggestions_generated': 0,
                 'suggestions_applied': 0
             }
+
+    def _events_overlap(self, event_a: ChronosEvent, event_b: ChronosEvent) -> bool:
+        """Public helper primarily used for unit tests."""
+
+        if not event_a.start_time or not event_a.end_time:
+            return False
+        if not event_b.start_time or not event_b.end_time:
+            return False
+        return event_a.conflicts_with(event_b)
