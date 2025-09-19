@@ -1,112 +1,101 @@
-﻿"""
-Unit tests for GoogleCalendarClient - Mock Implementation Tests
-"""
+"""Unit tests for the GoogleCalendarClient abstraction."""
+
+import json
+from datetime import datetime, timezone, timedelta
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from datetime import datetime, timedelta
 
 from src.core.calendar_client import GoogleCalendarClient
 
 
-class TestGoogleCalendarClient:
-    """Test GoogleCalendarClient mock implementation"""
-    
-    @pytest.fixture
-    def calendar_client(self):
-        """Create calendar client for testing"""
-        return GoogleCalendarClient(
-            credentials_file="config/credentials.json",
-            token_file="config/token.json"
-        )
-    
-    @pytest.mark.asyncio
-    async def test_authentication(self, calendar_client):
-        """Test mock authentication"""
-        result = await calendar_client.authenticate()
-        assert result is True
-    
-    @pytest.mark.asyncio
-    async def test_fetch_events(self, calendar_client):
-        """Test fetching mock events"""
-        events = await calendar_client.fetch_events(days_ahead=7)
-        
-        assert isinstance(events, list)
-        assert len(events) > 0
-        
-        # Check first event structure
-        if events:
-            event = events[0]
-            assert 'id' in event
-            assert 'summary' in event
-            assert 'start' in event
-            assert 'end' in event
-    
-    @pytest.mark.asyncio
-    async def test_create_event(self, calendar_client):
-        """Test creating mock event"""
-        event_data = {
-            'summary': 'Test Event',
-            'description': 'Test Description',
-            'start': {'dateTime': datetime.utcnow().isoformat() + 'Z'},
-            'end': {'dateTime': (datetime.utcnow() + timedelta(hours=1)).isoformat() + 'Z'}
-        }
-        
-        created_event = await calendar_client.create_event(event_data)
-        
-        assert created_event['summary'] == 'Test Event'
-        assert created_event['description'] == 'Test Description'
-        assert 'id' in created_event
-    
-    @pytest.mark.asyncio
-    async def test_update_event(self, calendar_client):
-        """Test updating mock event"""
-        # First create an event
-        event_data = {
-            'summary': 'Original Event',
-            'description': 'Original Description'
-        }
-        
-        created_event = await calendar_client.create_event(event_data)
-        event_id = created_event['id']
-        
-        # Update the event
-        update_data = {
-            'summary': 'Updated Event',
-            'description': 'Updated Description'
-        }
-        
-        updated_event = await calendar_client.update_event(event_id, update_data)
-        
-        assert updated_event['summary'] == 'Updated Event'
-        assert updated_event['description'] == 'Updated Description'
-        assert updated_event['id'] == event_id
-    
-    @pytest.mark.asyncio
-    async def test_delete_event(self, calendar_client):
-        """Test deleting mock event"""
-        # First create an event
-        event_data = {
-            'summary': 'Event to Delete',
-            'description': 'Will be deleted'
-        }
-        
-        created_event = await calendar_client.create_event(event_data)
-        event_id = created_event['id']
-        
-        # Delete the event
-        result = await calendar_client.delete_event(event_id)
-        assert result is True
-    
-    def test_mock_event_count(self, calendar_client):
-        """Test mock event count"""
-        count = calendar_client.get_mock_event_count()
-        assert isinstance(count, int)
-        assert count > 0
-    
-    def test_reset_mock_events(self, calendar_client):
-        """Test resetting mock events"""
-        initial_count = calendar_client.get_mock_event_count()
-        calendar_client.reset_mock_events()
-        reset_count = calendar_client.get_mock_event_count()
-        
-        assert reset_count == initial_count  # Should restore initial state
+@pytest.fixture
+def credential_files(tmp_path):
+    credentials = tmp_path / "credentials.json"
+    token = tmp_path / "token.json"
+    return credentials, token
+
+
+def test_detect_auth_mode_defaults_to_mock(credential_files):
+    credentials, token = credential_files
+
+    client = GoogleCalendarClient(str(credentials), str(token))
+
+    assert client.auth_mode == "mock"
+
+
+def test_detect_auth_mode_service_account(credential_files):
+    credentials, token = credential_files
+    credentials.write_text(json.dumps({"type": "service_account"}))
+
+    client = GoogleCalendarClient(str(credentials), str(token))
+
+    assert client.auth_mode == "service_account"
+
+
+@pytest.mark.asyncio
+async def test_authenticate_uses_mock_when_google_unavailable(monkeypatch, credential_files):
+    credentials, token = credential_files
+    client = GoogleCalendarClient(str(credentials), str(token))
+
+    monkeypatch.setattr("src.core.calendar_client.GOOGLE_AVAILABLE", False)
+    mock_auth = AsyncMock(return_value=True)
+    monkeypatch.setattr(client, "_authenticate_mock", mock_auth)
+
+    assert await client.authenticate() is True
+    mock_auth.assert_awaited_once()
+
+
+def test_format_event_for_api_handles_datetimes(credential_files):
+    credentials, token = credential_files
+    client = GoogleCalendarClient(str(credentials), str(token))
+
+    start = datetime.now(timezone.utc)
+    end = start + timedelta(hours=2)
+    payload = {
+        "title": "Demo",
+        "description": "Walkthrough",
+        "location": "HQ",
+        "start_time": start,
+        "end_time": end,
+        "attendees": ["user@example.com"],
+    }
+
+    formatted = client._format_event_for_api(payload)
+
+    assert formatted["summary"] == "Demo"
+    assert formatted["start"]["dateTime"].startswith(start.isoformat())
+    assert formatted["attendees"] == [{"email": "user@example.com"}]
+
+
+@pytest.mark.asyncio
+async def test_health_check_reports_unhealthy_on_auth_failure(monkeypatch, credential_files):
+    credentials, token = credential_files
+    client = GoogleCalendarClient(str(credentials), str(token))
+
+    async def fake_authenticate():
+        return False
+
+    monkeypatch.setattr(client, "authenticate", fake_authenticate)
+
+    result = await client.health_check()
+
+    assert result["status"] == "unhealthy"
+    assert result["error"] == "Authentication failed"
+
+
+@pytest.mark.asyncio
+async def test_health_check_returns_details_for_success(monkeypatch, credential_files):
+    credentials, token = credential_files
+    client = GoogleCalendarClient(str(credentials), str(token))
+
+    fake_service = MagicMock()
+    fake_service.calendarList.return_value.list.return_value.execute.return_value = {"items": []}
+    monkeypatch.setattr(client, "_test_connection", AsyncMock())
+    monkeypatch.setattr(client, "authenticate", AsyncMock(return_value=True))
+    client.service = fake_service
+
+    result = await client.health_check()
+
+    assert result["status"] == "healthy"
+    assert result["auth_mode"] == client.auth_mode

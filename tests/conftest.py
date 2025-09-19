@@ -1,20 +1,25 @@
-﻿"""
-Pytest configuration and fixtures for Chronos Engine tests
-"""
+"""Common pytest fixtures for Chronos Engine tests."""
 
 import asyncio
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 
-from src.core.models import ChronosEvent, Priority, EventType, EventStatus
-from src.core.analytics_engine import AnalyticsEngine
+import pytest
+import pytest_asyncio
+
+from src.core.database import db_service
 from src.core.event_parser import EventParser
+from src.core.models import Base, ChronosEvent, EventStatus, EventType, Priority
+
+
+def _utc_now_naive() -> datetime:
+    """Return a timezone-naive UTC timestamp without using datetime.utcnow."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Create an instance of the default event loop for the test session."""
+    """Provide a dedicated event loop for async tests."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
@@ -22,83 +27,98 @@ def event_loop():
 
 @pytest.fixture
 def sample_calendar_event():
-    """Sample calendar event data"""
-    now = datetime.utcnow()
+    """Sample calendar event payload resembling Google Calendar output."""
+    now = _utc_now_naive()
     return {
-        'id': 'test_event_1',
-        'summary': 'Team Meeting',
-        'description': 'Weekly team sync #urgent',
-        'start': {'dateTime': now.isoformat() + 'Z'},
-        'end': {'dateTime': (now + timedelta(hours=1)).isoformat() + 'Z'},
-        'attendees': [{'email': 'team@example.com'}],
-        'location': 'Conference Room A'
+        "id": "test_event_1",
+        "summary": "Team Meeting",
+        "description": "Weekly team sync #urgent",
+        "start": {"dateTime": f"{now.isoformat()}Z"},
+        "end": {"dateTime": f"{(now + timedelta(hours=1)).isoformat()}Z"},
+        "attendees": [{"email": "team@example.com"}],
+        "location": "Conference Room A",
     }
 
 
 @pytest.fixture
-def sample_chronos_event():
-    """Sample ChronosEvent instance"""
-    now = datetime.utcnow()
+def sample_chronos_event() -> ChronosEvent:
+    """A pre-populated ChronosEvent instance for mutation tests."""
+    now = _utc_now_naive()
     return ChronosEvent(
-        id='test_chronos_1',
-        title='Sample Task',
-        description='Test task for unit testing',
+        id="test_chronos_1",
+        title="Sample Task",
+        description="Test task for unit testing",
         start_time=now,
         end_time=now + timedelta(hours=2),
         priority=Priority.HIGH,
         event_type=EventType.TASK,
         status=EventStatus.SCHEDULED,
-        tags=['test', 'sample']
+        tags=["test", "sample"],
     )
 
 
 @pytest.fixture
-def sample_events_list():
-    """List of sample ChronosEvent instances"""
-    now = datetime.utcnow()
+def sample_events_list() -> List[ChronosEvent]:
+    """Generate a small list of scheduled ChronosEvent objects."""
+    now = _utc_now_naive()
     events = []
-    
     for i in range(5):
-        event = ChronosEvent(
-            id=f'test_event_{i}',
-            title=f'Test Event {i}',
-            description=f'Test event number {i}',
-            start_time=now + timedelta(hours=i),
-            end_time=now + timedelta(hours=i + 1),
-            priority=Priority.MEDIUM,
-            event_type=EventType.TASK,
-            status=EventStatus.SCHEDULED
+        events.append(
+            ChronosEvent(
+                id=f"test_event_{i}",
+                title=f"Test Event {i}",
+                description=f"Test event number {i}",
+                start_time=now + timedelta(hours=i),
+                end_time=now + timedelta(hours=i + 1),
+                priority=Priority.MEDIUM,
+                event_type=EventType.TASK,
+                status=EventStatus.SCHEDULED,
+            )
         )
-        events.append(event)
-    
     return events
 
 
-@pytest.fixture
-async def analytics_engine():
-    """Analytics engine instance for testing"""
-    return AnalyticsEngine(cache_dir='test_data/analytics')
+@pytest_asyncio.fixture
+async def setup_test_db():
+    """Ensure a clean database schema before and after a test."""
+    async with db_service.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+    yield
+
+    async with db_service.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
 
 
 @pytest.fixture
-def event_parser():
-    """Event parser instance for testing"""
+def analytics_engine():
+    """Analytics engine instance pointing to the shared test DB."""
+    from src.core.analytics_engine import AnalyticsEngine
+
+    return AnalyticsEngine()
+
+
+@pytest.fixture
+def event_parser() -> EventParser:
+    """EventParser instance for parsing calendar payloads."""
     return EventParser()
 
 
 @pytest.fixture
 def mock_calendar_events():
-    """Mock calendar events data"""
-    base_time = datetime.utcnow()
+    """Generate a batch of synthetic calendar events."""
+    base_time = _utc_now_naive()
     return [
         {
-            'id': f'mock_event_{i}',
-            'summary': f'Mock Event {i}',
-            'description': f'Test event {i}',
-            'start': {'dateTime': (base_time + timedelta(hours=i)).isoformat() + 'Z'},
-            'end': {'dateTime': (base_time + timedelta(hours=i + 1)).isoformat() + 'Z'},
-            'attendees': [],
-            'location': ''
+            "id": f"mock_event_{i}",
+            "summary": f"Mock Event {i}",
+            "description": f"Test event {i}",
+            "start": {"dateTime": f"{(base_time + timedelta(hours=i)).isoformat()}Z"},
+            "end": {"dateTime": f"{(base_time + timedelta(hours=i + 1)).isoformat()}Z"},
+            "attendees": [],
+            "location": "",
         }
         for i in range(3)
     ]
@@ -106,22 +126,12 @@ def mock_calendar_events():
 
 @pytest.fixture(autouse=True)
 async def cleanup_test_data():
-    """Cleanup test data after each test"""
+    """Placeholder for post-test cleanup hooks."""
     yield
-    # Cleanup code would go here if needed
-    # For now, we're using in-memory data structures
-    pass
 
 
-# Test configuration
-def pytest_configure(config):
-    """Configure pytest"""
-    config.addinivalue_line(
-        "markers", "asyncio: mark test as async"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as integration test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
+def pytest_configure(config: pytest.Config) -> None:
+    """Register custom markers used throughout the test-suite."""
+    config.addinivalue_line("markers", "asyncio: mark test as async")
+    config.addinivalue_line("markers", "integration: mark test as integration test")
+    config.addinivalue_line("markers", "slow: mark test as slow running")

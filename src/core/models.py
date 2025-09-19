@@ -3,7 +3,7 @@ Core data models for Chronos Engine v2.1 - SQLAlchemy Integration
 All models now support database persistence
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Dict, Any, List, Optional
 import uuid
@@ -126,7 +126,26 @@ class ChronosEventDB(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def to_domain_model(self) -> 'ChronosEvent':
-        """Convert SQLAlchemy model to domain model"""
+        """Convert SQLAlchemy model to domain model."""
+
+        status_value = self.status
+        if status_value is None:
+            status = EventStatus.SCHEDULED
+        else:
+            try:
+                status = EventStatus(status_value)
+            except ValueError:
+                status = EventStatus[status_value]
+
+        event_type_value = self.event_type
+        if event_type_value is None:
+            event_type = EventType.TASK
+        else:
+            try:
+                event_type = EventType(event_type_value)
+            except ValueError:
+                event_type = EventType[event_type_value]
+
         return ChronosEvent(
             id=self.id,
             title=self.title,
@@ -134,8 +153,8 @@ class ChronosEventDB(Base):
             start_time=self.start_time,
             end_time=self.end_time,
             priority=Priority[self.priority],
-            event_type=EventType[self.event_type],
-            status=EventStatus[self.status],
+            event_type=event_type,
+            status=status,
             calendar_id=self.calendar_id,
             attendees=self.attendees or [],
             location=self.location,
@@ -150,7 +169,9 @@ class ChronosEventDB(Base):
             min_duration=self.min_duration or timedelta(minutes=15),
             max_duration=self.max_duration or timedelta(hours=4),
             flexible_timing=self.flexible_timing,
-            requires_focus=self.requires_focus
+            requires_focus=self.requires_focus,
+            created_at=self.created_at or datetime.utcnow(),
+            updated_at=self.updated_at or datetime.utcnow(),
         )
 
 
@@ -292,7 +313,7 @@ class TimeSlot:
 @dataclass
 class ChronosEvent:
     """Enhanced event model with database persistence"""
-    
+
     # Core attributes
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     title: str = ""
@@ -327,6 +348,9 @@ class ChronosEvent:
     max_duration: timedelta = field(default_factory=lambda: timedelta(hours=4))
     flexible_timing: bool = True
     requires_focus: bool = False
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+    version: int = 1
     
     @property
     def duration(self) -> Optional[timedelta]:
@@ -340,15 +364,156 @@ class ChronosEvent:
         """Calculate total time including preparation and buffer"""
         base_duration = self.duration or self.estimated_duration or timedelta(hours=1)
         return base_duration + self.preparation_time + self.buffer_time
-    
+
+    def is_flexible(self) -> bool:
+        """Return whether the event can be moved."""
+        return bool(self.flexible_timing)
+
+    def get_time_slot(self) -> Optional[TimeSlot]:
+        """Return a TimeSlot if start and end times are set."""
+        if self.start_time and self.end_time:
+            return TimeSlot(self.start_time, self.end_time)
+        return None
+
+    def conflicts_with(self, other: 'ChronosEvent') -> bool:
+        """Determine if this event conflicts with another event."""
+        if not (self.start_time and self.end_time and other.start_time and other.end_time):
+            return False
+        return self.start_time < other.end_time and self.end_time > other.start_time
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize the event into a dictionary for storage or APIs."""
+
+        def _dt_to_iso(dt: Optional[datetime]) -> Optional[str]:
+            return dt.isoformat() if dt else None
+
+        def _td_to_minutes(td: Optional[timedelta]) -> Optional[int]:
+            return int(td.total_seconds() // 60) if td else None
+
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'start_time': _dt_to_iso(self.start_time),
+            'end_time': _dt_to_iso(self.end_time),
+            'priority': self.priority.name,
+            'event_type': self.event_type.value,
+            'status': self.status.value,
+            'calendar_id': self.calendar_id,
+            'attendees': list(self.attendees),
+            'location': self.location,
+            'tags': list(self.tags),
+            'estimated_duration_minutes': _td_to_minutes(self.estimated_duration),
+            'actual_duration_minutes': _td_to_minutes(self.actual_duration),
+            'preparation_time_minutes': _td_to_minutes(self.preparation_time),
+            'buffer_time_minutes': _td_to_minutes(self.buffer_time),
+            'productivity_score': self.productivity_score,
+            'completion_rate': self.completion_rate,
+            'stress_level': self.stress_level,
+            'min_duration_minutes': _td_to_minutes(self.min_duration),
+            'max_duration_minutes': _td_to_minutes(self.max_duration),
+            'flexible_timing': self.flexible_timing,
+            'requires_focus': self.requires_focus,
+            'created_at': _dt_to_iso(self.created_at),
+            'updated_at': _dt_to_iso(self.updated_at),
+            'version': self.version,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ChronosEvent':
+        """Create a ChronosEvent from a serialized dictionary."""
+
+        def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
+            if not value:
+                return None
+            return datetime.fromisoformat(value)
+
+        def _parse_timedelta(minutes: Optional[int]) -> Optional[timedelta]:
+            if minutes is None:
+                return None
+            return timedelta(minutes=minutes)
+
+        event_type_value = data.get('event_type', EventType.TASK.value)
+        try:
+            event_type = EventType(event_type_value)
+        except ValueError:
+            event_type = EventType[event_type_value]
+
+        status_value = data.get('status', EventStatus.SCHEDULED.value)
+        try:
+            status = EventStatus(status_value)
+        except ValueError:
+            status = EventStatus[status_value]
+
+        priority_value = data.get('priority', Priority.MEDIUM.name)
+        try:
+            priority = Priority(priority_value)
+        except ValueError:
+            priority = Priority[priority_value]
+
+        return cls(
+            id=data.get('id', str(uuid.uuid4())),
+            title=data.get('title', ""),
+            description=data.get('description', ""),
+            start_time=_parse_datetime(data.get('start_time')),
+            end_time=_parse_datetime(data.get('end_time')),
+            priority=priority,
+            event_type=event_type,
+            status=status,
+            calendar_id=data.get('calendar_id', ""),
+            attendees=list(data.get('attendees', [])),
+            location=data.get('location', ""),
+            tags=list(data.get('tags', [])),
+            estimated_duration=_parse_timedelta(data.get('estimated_duration_minutes')),
+            actual_duration=_parse_timedelta(data.get('actual_duration_minutes')),
+            preparation_time=_parse_timedelta(data.get('preparation_time_minutes')) or timedelta(minutes=5),
+            buffer_time=_parse_timedelta(data.get('buffer_time_minutes')) or timedelta(minutes=10),
+            productivity_score=data.get('productivity_score'),
+            completion_rate=data.get('completion_rate'),
+            stress_level=data.get('stress_level'),
+            min_duration=_parse_timedelta(data.get('min_duration_minutes')) or timedelta(minutes=15),
+            max_duration=_parse_timedelta(data.get('max_duration_minutes')) or timedelta(hours=4),
+            flexible_timing=data.get('flexible_timing', True),
+            requires_focus=data.get('requires_focus', False),
+            created_at=_parse_datetime(data.get('created_at')) or datetime.utcnow(),
+            updated_at=_parse_datetime(data.get('updated_at')) or datetime.utcnow(),
+            version=data.get('version', 1),
+        )
+
     def to_db_model(self) -> ChronosEventDB:
         """Convert to SQLAlchemy model"""
+
+        def _normalize_to_utc(dt: Optional[datetime]) -> Optional[datetime]:
+            if dt is None:
+                return None
+            if dt.tzinfo is not None:
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt
+
+        start_utc = _normalize_to_utc(self.start_time)
+        end_utc = _normalize_to_utc(self.end_time)
+
+        all_day_date = None
+        if start_utc and end_utc and self.start_time and self.end_time:
+            duration = end_utc - start_utc
+            if (
+                self.start_time.hour == 0
+                and self.start_time.minute == 0
+                and self.end_time.hour == 0
+                and self.end_time.minute == 0
+                and duration >= timedelta(days=1)
+            ):
+                all_day_date = start_utc.date().isoformat()
+
         return ChronosEventDB(
             id=self.id,
             title=self.title,
             description=self.description,
             start_time=self.start_time,
             end_time=self.end_time,
+            start_utc=start_utc,
+            end_utc=end_utc,
+            all_day_date=all_day_date,
             priority=self.priority.name,
             event_type=self.event_type.value,
             status=self.status.value,
@@ -366,7 +531,9 @@ class ChronosEvent:
             min_duration=self.min_duration,
             max_duration=self.max_duration,
             flexible_timing=self.flexible_timing,
-            requires_focus=self.requires_focus
+            requires_focus=self.requires_focus,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
         )
 
 

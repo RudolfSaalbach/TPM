@@ -1,9 +1,8 @@
-﻿"""
+"""
 Unit tests for EventParser
 """
 
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from src.core.event_parser import EventParser
 from src.core.models import Priority, EventType
@@ -25,24 +24,25 @@ class TestEventParser:
     def test_priority_detection(self, event_parser):
         """Test priority detection from content"""
         # Test urgent priority
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         urgent_event = {
             'id': 'urgent_test',
             'summary': 'URGENT: Fix production issue',
             'description': 'Critical system failure',
-            'start': {'dateTime': datetime.utcnow().isoformat() + 'Z'},
-            'end': {'dateTime': (datetime.utcnow() + timedelta(hours=1)).isoformat() + 'Z'}
+            'start': {'dateTime': now.isoformat() + 'Z'},
+            'end': {'dateTime': (now + timedelta(hours=1)).isoformat() + 'Z'}
         }
-        
+
         result = event_parser.parse_event(urgent_event)
         assert result.priority == Priority.URGENT
-        
+
         # Test low priority
         low_event = {
             'id': 'low_test',
             'summary': 'Optional team lunch sometime',
-            'description': 'Low priority social event',
-            'start': {'dateTime': datetime.utcnow().isoformat() + 'Z'},
-            'end': {'dateTime': (datetime.utcnow() + timedelta(hours=1)).isoformat() + 'Z'}
+            'description': 'Casual social event with optional attendance',
+            'start': {'dateTime': now.isoformat() + 'Z'},
+            'end': {'dateTime': (now + timedelta(hours=1)).isoformat() + 'Z'}
         }
         
         result = event_parser.parse_event(low_event)
@@ -51,14 +51,15 @@ class TestEventParser:
     def test_event_type_detection(self, event_parser):
         """Test event type detection"""
         # Test meeting detection
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         meeting_event = {
             'id': 'meeting_test',
             'summary': 'Team meeting with stakeholders',
             'description': 'Weekly sync call',
-            'start': {'dateTime': datetime.utcnow().isoformat() + 'Z'},
-            'end': {'dateTime': (datetime.utcnow() + timedelta(hours=1)).isoformat() + 'Z'}
+            'start': {'dateTime': now.isoformat() + 'Z'},
+            'end': {'dateTime': (now + timedelta(hours=1)).isoformat() + 'Z'}
         }
-        
+
         result = event_parser.parse_event(meeting_event)
         assert result.event_type == EventType.MEETING
         
@@ -67,8 +68,8 @@ class TestEventParser:
             'id': 'task_test',
             'summary': 'Complete project documentation',
             'description': 'Work on finishing the docs',
-            'start': {'dateTime': datetime.utcnow().isoformat() + 'Z'},
-            'end': {'dateTime': (datetime.utcnow() + timedelta(hours=2)).isoformat() + 'Z'}
+            'start': {'dateTime': now.isoformat() + 'Z'},
+            'end': {'dateTime': (now + timedelta(hours=2)).isoformat() + 'Z'}
         }
         
         result = event_parser.parse_event(task_event)
@@ -76,12 +77,13 @@ class TestEventParser:
     
     def test_tag_extraction(self, event_parser):
         """Test hashtag extraction from description"""
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         tagged_event = {
             'id': 'tag_test',
             'summary': 'Tagged Event',
             'description': 'Event with #urgent #priority #project tags',
-            'start': {'dateTime': datetime.utcnow().isoformat() + 'Z'},
-            'end': {'dateTime': (datetime.utcnow() + timedelta(hours=1)).isoformat() + 'Z'}
+            'start': {'dateTime': now.isoformat() + 'Z'},
+            'end': {'dateTime': (now + timedelta(hours=1)).isoformat() + 'Z'}
         }
         
         result = event_parser.parse_event(tagged_event)
@@ -91,7 +93,7 @@ class TestEventParser:
     
     def test_datetime_parsing(self, event_parser):
         """Test datetime parsing variations"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         
         # Test with Z timezone
         event_z = {

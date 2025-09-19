@@ -5,12 +5,11 @@ Fixed version with proper async database session handling
 
 import json
 import logging
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Union
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func, text, select
+from sqlalchemy import and_, or_, func, select, update
 
 from src.core.scheduler import ChronosScheduler
 from src.core.database import db_service
@@ -74,11 +73,11 @@ class ChronosEnhancedRoutes:
 
                 # Build and execute query
                 async with db_service.get_session() as session:
-                    query = session.query(ChronosEventDB)
+                    filters = []
 
                     # Calendar filter
                     if calendar:
-                        query = query.filter(ChronosEventDB.calendar_id == calendar)
+                        filters.append(ChronosEventDB.calendar_id == calendar)
 
                     # Time range filtering
                     if direction == EventDirection.PAST:
@@ -86,7 +85,7 @@ class ChronosEnhancedRoutes:
                         anchor_end = anchor_date.replace(hour=23, minute=59, second=59)
                         range_start = anchor_date - timedelta(days=range_days)
 
-                        query = query.filter(
+                        filters.append(
                             and_(
                                 ChronosEventDB.end_utc <= anchor_end,
                                 ChronosEventDB.start_utc >= range_start
@@ -98,7 +97,7 @@ class ChronosEnhancedRoutes:
                         anchor_start = anchor_date.replace(hour=0, minute=0, second=0)
                         range_end = anchor_date + timedelta(days=range_days)
 
-                        query = query.filter(
+                        filters.append(
                             and_(
                                 ChronosEventDB.start_utc >= anchor_start,
                                 ChronosEventDB.end_utc <= range_end
@@ -110,7 +109,7 @@ class ChronosEnhancedRoutes:
                         range_start = anchor_date - timedelta(days=range_days)
                         range_end = anchor_date + timedelta(days=range_days)
 
-                        query = query.filter(
+                        filters.append(
                             and_(
                                 ChronosEventDB.start_utc <= range_end,
                                 ChronosEventDB.end_utc >= range_start
@@ -120,19 +119,31 @@ class ChronosEnhancedRoutes:
                     # Text search filter
                     if q:
                         search_term = f"%{q}%"
-                        query = query.filter(
+                        filters.append(
                             or_(
                                 ChronosEventDB.title.ilike(search_term),
                                 ChronosEventDB.description.ilike(search_term)
                             )
                         )
 
+                    # Build base statements with collected filters
+                    count_stmt = select(func.count(ChronosEventDB.id))
+                    events_stmt = select(ChronosEventDB)
+
+                    if filters:
+                        count_stmt = count_stmt.where(*filters)
+                        events_stmt = events_stmt.where(*filters)
+
                     # Count total for pagination
-                    total_count = query.count()
+                    total_result = await session.execute(count_stmt)
+                    total_count = total_result.scalar() or 0
 
                     # Apply pagination
                     offset = (page - 1) * page_size
-                    events = query.offset(offset).limit(page_size).all()
+                    events_stmt = events_stmt.offset(offset).limit(page_size)
+
+                    result = await session.execute(events_stmt)
+                    events = result.scalars().all()
 
                     # Convert to response models
                     event_responses = []
@@ -436,7 +447,28 @@ class ChronosEnhancedRoutes:
             try:
                 async with db_service.get_session() as session:
                     from src.core.models import ExternalCommandDB, CommandStatus
-                    from sqlalchemy import select
+
+                    # Release commands stuck in PROCESSING for too long
+                    stale_threshold = datetime.utcnow() - timedelta(minutes=5)
+                    reset_stmt = (
+                        update(ExternalCommandDB)
+                        .where(
+                            ExternalCommandDB.target_system == system_id,
+                            ExternalCommandDB.status == CommandStatus.PROCESSING.value,
+                            ExternalCommandDB.processed_at.isnot(None),
+                            ExternalCommandDB.processed_at < stale_threshold
+                        )
+                        .values(
+                            status=CommandStatus.PENDING.value,
+                            processed_at=None
+                        )
+                    )
+                    reset_result = await session.execute(reset_stmt)
+
+                    if reset_result.rowcount:
+                        self.logger.warning(
+                            f"[API] Reset {reset_result.rowcount} stale commands for system {system_id}"
+                        )
 
                     # Get pending commands for the specified system
                     stmt = select(ExternalCommandDB).where(

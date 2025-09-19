@@ -207,13 +207,13 @@ class AnalyticsEngine:
             events = result.scalars().all()
             
             # Initialize hourly distribution
-            time_distribution = {str(hour): 0.0 for hour in range(24)}
+            time_distribution = {hour: 0.0 for hour in range(24)}
             
             # Calculate time spent per hour
             for event in events:
                 if event.start_time and event.end_time:
                     duration_hours = (event.end_time - event.start_time).total_seconds() / 3600
-                    start_hour = str(event.start_time.hour)
+                    start_hour = event.start_time.hour
                     time_distribution[start_hour] += duration_hours
             
             return time_distribution

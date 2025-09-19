@@ -214,9 +214,12 @@ class EventParser:
         # Re-analyze priority and type
         chronos_event.priority = self._detect_priority(chronos_event.title, chronos_event.description)
         chronos_event.event_type = self._detect_event_type(chronos_event.title, chronos_event.description)
-        
+
+        # Refresh tags based on new description
+        chronos_event.tags = self._extract_tags(chronos_event.description)
+
         # Update timestamp
         chronos_event.updated_at = datetime.utcnow()
         chronos_event.version += 1
-        
+
         return chronos_event

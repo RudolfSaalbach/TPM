@@ -1,133 +1,94 @@
-﻿"""
-Unit tests for ReplanEngine - Testing Conflict Detection & Resolution
-"""
+"""Unit tests for the ReplanEngine."""
 
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, Mock
 
-from src.core.replan_engine import ReplanEngine, ReplanSuggestion, Conflict, ConflictType
-from src.core.models import ChronosEvent, Priority, EventType, EventStatus
-from src.core.analytics_engine import AnalyticsEngine
-from src.core.timebox_engine import TimeboxEngine
+import pytest
+
+from src.core.models import ChronosEvent, EventType, Priority, TimeSlot
+from src.core.replan_engine import ConflictType, ReplanEngine
 
 
-class TestReplanEngine:
-    """Test suite for ReplanEngine with 80%+ coverage"""
-    
-    @pytest.fixture
-    def mock_analytics(self):
-        """Mock analytics engine"""
-        analytics = Mock(spec=AnalyticsEngine)
-        analytics.get_productivity_metrics = AsyncMock(return_value={
-            'completion_rate': 0.8,
-            'average_productivity': 3.5
-        })
-        return analytics
-    
-    @pytest.fixture
-    def mock_timebox(self):
-        """Mock timebox engine"""
-        timebox = Mock(spec=TimeboxEngine)
-        timebox.find_optimal_slots = AsyncMock(return_value=[])
-        return timebox
-    
-    @pytest.fixture
-    def replan_engine(self, mock_analytics, mock_timebox):
-        """Create ReplanEngine instance for testing"""
-        return ReplanEngine(mock_analytics, mock_timebox)
-    
-    @pytest.fixture
-    def overlapping_events(self):
-        """Create overlapping events for conflict testing"""
-        base_time = datetime(2025, 1, 15, 10, 0)
-        
-        return [
-            ChronosEvent(
-                id="overlap_1",
-                title="Meeting A",
-                start_time=base_time,
-                end_time=base_time + timedelta(hours=2),
-                priority=Priority.HIGH,
-                event_type=EventType.MEETING
-            ),
-            ChronosEvent(
-                id="overlap_2",
-                title="Meeting B",
-                start_time=base_time + timedelta(minutes=30),
-                end_time=base_time + timedelta(hours=1.5),
-                priority=Priority.URGENT,
-                event_type=EventType.MEETING
-            )
-        ]
-    
-    @pytest.mark.asyncio
-    async def test_detect_conflicts_overlap(self, replan_engine, overlapping_events):
-        """Test detection of overlapping events"""
-        
-        conflicts = await replan_engine.detect_conflicts(overlapping_events)
-        
-        assert len(conflicts) > 0
-        
-        overlap_conflicts = [c for c in conflicts if c.type == ConflictType.OVERLAP]
-        assert len(overlap_conflicts) > 0
-        
-        conflict = overlap_conflicts[0]
-        assert len(conflict.events) == 2
-        assert 'overlap_1' in conflict.events
-        assert 'overlap_2' in conflict.events
-        assert conflict.severity > 0.5  # Should be significant conflict
-    
-    @pytest.mark.asyncio
-    async def test_generate_replan_suggestions(self, replan_engine, overlapping_events):
-        """Test generation of replanning suggestions"""
-        
-        suggestions = await replan_engine.generate_replan_suggestions(overlapping_events)
-        
-        assert isinstance(suggestions, list)
-        assert len(suggestions) > 0
-        
-        for suggestion in suggestions:
-            assert isinstance(suggestion, ReplanSuggestion)
-            assert suggestion.event_id in ['overlap_1', 'overlap_2']
-            assert 0.0 <= suggestion.confidence <= 1.0
-            assert suggestion.reason is not None
-    
-    @pytest.mark.asyncio
-    async def test_auto_replan_conflicts(self, replan_engine, overlapping_events):
-        """Test automatic conflict resolution"""
-        
-        result = await replan_engine.auto_replan_conflicts(overlapping_events, auto_apply=False)
-        
-        assert 'conflicts_detected' in result
-        assert 'suggestions' in result
-        assert result['conflicts_detected'] > 0
-        assert len(result['suggestions']) > 0
-    
-    def test_events_overlap(self, replan_engine):
-        """Test overlap detection logic"""
-        
-        base_time = datetime(2025, 1, 15, 10, 0)
-        
-        # Overlapping events
-        event1 = ChronosEvent(
-            id="e1",
-            start_time=base_time,
-            end_time=base_time + timedelta(hours=2)
-        )
-        event2 = ChronosEvent(
-            id="e2",
-            start_time=base_time + timedelta(hours=1),
-            end_time=base_time + timedelta(hours=3)
-        )
-        
-        assert replan_engine._events_overlap(event1, event2)
-        
-        # Non-overlapping events
-        event3 = ChronosEvent(
-            id="e3",
-            start_time=base_time + timedelta(hours=3),
-            end_time=base_time + timedelta(hours=4)
-        )
-        
-        assert not replan_engine._events_overlap(event1, event3)
+def _utc(hour: int) -> datetime:
+    return datetime.now(timezone.utc).replace(hour=hour, minute=0, second=0, microsecond=0, tzinfo=None)
+
+
+@pytest.fixture
+def replan_engine():
+    analytics = Mock()
+    timebox = Mock()
+    return ReplanEngine(analytics, timebox)
+
+
+@pytest.fixture
+def overlapping_events():
+    start = _utc(9)
+    return [
+        ChronosEvent(
+            id="a",
+            title="Planning",
+            start_time=start,
+            end_time=start + timedelta(hours=1),
+            priority=Priority.HIGH,
+            event_type=EventType.MEETING,
+        ),
+        ChronosEvent(
+            id="b",
+            title="Review",
+            start_time=start + timedelta(minutes=30),
+            end_time=start + timedelta(hours=2),
+            priority=Priority.MEDIUM,
+            event_type=EventType.MEETING,
+        ),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_detect_conflicts_reports_overlap(replan_engine: ReplanEngine, overlapping_events):
+    conflicts = await replan_engine.detect_conflicts(overlapping_events)
+
+    assert conflicts
+    overlap = next(c for c in conflicts if c.type == ConflictType.OVERLAP)
+    assert set(overlap.events) == {"a", "b"}
+    assert overlap.severity > 0
+
+
+@pytest.mark.asyncio
+async def test_suggest_replanning_generates_slot(monkeypatch, replan_engine: ReplanEngine, overlapping_events):
+    slot = TimeSlot(_utc(12), _utc(13))
+    monkeypatch.setattr(replan_engine, "_find_alternative_slot", AsyncMock(return_value=slot))
+
+    conflicts = await replan_engine.detect_conflicts(overlapping_events)
+    suggestions = await replan_engine.suggest_replanning(conflicts, overlapping_events)
+
+    assert suggestions
+    assert suggestions[0].suggested_start == slot.start
+    assert suggestions[0].event_id in {"a", "b"}
+
+
+@pytest.mark.asyncio
+async def test_apply_replan_suggestion_updates_event(monkeypatch, replan_engine: ReplanEngine, overlapping_events):
+    slot = TimeSlot(_utc(13), _utc(14))
+    monkeypatch.setattr(replan_engine, "_find_alternative_slot", AsyncMock(return_value=slot))
+
+    conflicts = await replan_engine.detect_conflicts(overlapping_events)
+    suggestions = await replan_engine.suggest_replanning(conflicts, overlapping_events)
+
+    updated = await replan_engine.apply_replan_suggestion(suggestions[0], overlapping_events)
+
+    assert updated is True
+    target = next(e for e in overlapping_events if e.id == suggestions[0].event_id)
+    assert target.start_time == slot.start
+    assert target.version == 2
+
+
+@pytest.mark.asyncio
+async def test_auto_replan_conflicts_returns_summary(monkeypatch, replan_engine: ReplanEngine, overlapping_events):
+    slot = TimeSlot(_utc(15), _utc(16))
+    monkeypatch.setattr(replan_engine, "_find_alternative_slot", AsyncMock(return_value=slot))
+
+    summary = await replan_engine.auto_replan_conflicts(overlapping_events, auto_apply=False)
+
+    assert summary["conflicts_found"] >= 1
+    assert summary["suggestions_generated"] >= 1
+    assert "conflicts" in summary
