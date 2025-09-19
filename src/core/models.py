@@ -3,7 +3,7 @@ Core data models for Chronos Engine v2.1 - SQLAlchemy Integration
 All models now support database persistence
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Dict, Any, List, Optional
 import uuid
@@ -343,12 +343,38 @@ class ChronosEvent:
     
     def to_db_model(self) -> ChronosEventDB:
         """Convert to SQLAlchemy model"""
+
+        def _normalize_to_utc(dt: Optional[datetime]) -> Optional[datetime]:
+            if dt is None:
+                return None
+            if dt.tzinfo is not None:
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt
+
+        start_utc = _normalize_to_utc(self.start_time)
+        end_utc = _normalize_to_utc(self.end_time)
+
+        all_day_date = None
+        if start_utc and end_utc and self.start_time and self.end_time:
+            duration = end_utc - start_utc
+            if (
+                self.start_time.hour == 0
+                and self.start_time.minute == 0
+                and self.end_time.hour == 0
+                and self.end_time.minute == 0
+                and duration >= timedelta(days=1)
+            ):
+                all_day_date = start_utc.date().isoformat()
+
         return ChronosEventDB(
             id=self.id,
             title=self.title,
             description=self.description,
             start_time=self.start_time,
             end_time=self.end_time,
+            start_utc=start_utc,
+            end_utc=end_utc,
+            all_day_date=all_day_date,
             priority=self.priority.name,
             event_type=self.event_type.value,
             status=self.status.value,

@@ -7,6 +7,7 @@ import asyncio
 import logging
 import sys
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
 
@@ -15,6 +16,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+from sqlalchemy import select, text
 
 # Import configuration
 from src.config.config_loader import load_config
@@ -121,7 +124,6 @@ class ChronosApp:
         async def health_check():
             """Enhanced health check endpoint with database and FTS5 validation"""
             try:
-                from datetime import datetime
                 health_status = {
                     "status": "healthy",
                     "version": "2.1.0",
@@ -130,11 +132,13 @@ class ChronosApp:
 
                 # Check database connectivity
                 try:
-                    session = await db_service.get_session()
-                    # Test a simple query
                     from src.core.models import ChronosEventDB
-                    test_query = session.query(ChronosEventDB).limit(1).first()
-                    session.close()
+
+                    async with db_service.get_session() as session:
+                        # Test a simple query using async SQLAlchemy API
+                        result = await session.execute(select(ChronosEventDB).limit(1))
+                        _ = result.scalars().first()
+
                     health_status["database"] = {
                         "status": "connected",
                         "type": "sqlite",
@@ -150,9 +154,11 @@ class ChronosApp:
 
                 # Check FTS5 support (optional)
                 try:
-                    session = await db_service.get_session()
-                    fts_test = session.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_fts'")).fetchall()
-                    session.close()
+                    async with db_service.get_session() as session:
+                        result = await session.execute(
+                            text("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_fts'")
+                        )
+                        fts_test = result.fetchall()
                     health_status["fts5"] = {
                         "status": "available" if fts_test else "not_configured",
                         "tables": len(fts_test)
