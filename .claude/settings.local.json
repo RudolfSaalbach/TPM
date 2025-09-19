@@ -13,7 +13,9 @@
       "Bash(netstat:*)",
       "Bash(set API_PORT=8081)",
       "Bash(taskkill:*)",
-      "Bash(set API_PORT=8082)"
+      "Bash(set API_PORT=8082)",
+      "Bash(dir)",
+      "Bash(pytest:*)"
     ],
     "deny": [],
     "ask": []
