@@ -30,11 +30,17 @@ class DatabaseService:
         db_path.mkdir(exist_ok=True)
         
         # Create async engine
+        # SQLite connection arguments for WAL mode and stability
+        sqlite_args = {
+            "check_same_thread": False,
+            "timeout": 20,
+        }
+
         self.engine = create_async_engine(
             database_url,
             echo=False,
             poolclass=StaticPool,
-            connect_args={"check_same_thread": False}
+            connect_args=sqlite_args
         )
         
         # Create session factory
@@ -166,10 +172,18 @@ class DatabaseService:
                 # Import all models to ensure they're registered
                 from src.core.models import ChronosEventDB, AnalyticsDataDB, TaskDB, TemplateDB, TemplateUsageDB, NoteDB, ExternalCommandDB, URLPayloadDB, EventLinkDB, ActionWorkflowDB
                 from src.database.models import PendingSync
+                from src.core.security import APIKeyDB, AuditLogDB
+
+                # Enable WAL mode and other SQLite optimizations
+                await conn.execute(text("PRAGMA journal_mode=WAL"))
+                await conn.execute(text("PRAGMA synchronous=NORMAL"))
+                await conn.execute(text("PRAGMA foreign_keys=ON"))
+                await conn.execute(text("PRAGMA busy_timeout=30000"))
 
                 # Create all tables defined in Base.metadata
                 await conn.run_sync(Base.metadata.create_all)
                 self.logger.info("All tables created successfully using direct SQLAlchemy")
+                self.logger.info("SQLite optimizations applied (WAL mode, foreign keys, etc.)")
 
         except Exception as e:
             self.logger.error(f"Error creating tables directly: {e}")
@@ -183,10 +197,24 @@ class DatabaseService:
                 # Import all models to ensure they're registered
                 from src.core.models import ChronosEventDB, AnalyticsDataDB, TaskDB, TemplateDB, TemplateUsageDB, NoteDB, ExternalCommandDB, URLPayloadDB, EventLinkDB, ActionWorkflowDB
                 from src.database.models import PendingSync
+                from src.core.security import APIKeyDB, AuditLogDB
+                from src.core.outbox import OutboxEntryDB
+                from src.core.schema_extensions import (
+                    WhitelistDB, WorkflowDB, EmailTemplateDB, WebhookTemplateDB,
+                    EmailLogDB, BackupJobDB, BackupHistoryDB, EventModeDB,
+                    IntegrationConfigDB, CommandExecutionDB, SystemMetricsDB
+                )
+
+                # Enable WAL mode and other SQLite optimizations
+                await conn.execute(text("PRAGMA journal_mode=WAL"))
+                await conn.execute(text("PRAGMA synchronous=NORMAL"))
+                await conn.execute(text("PRAGMA foreign_keys=ON"))
+                await conn.execute(text("PRAGMA busy_timeout=30000"))
 
                 # Create all tables
                 await conn.run_sync(Base.metadata.create_all)
                 self.logger.info("All tables created successfully")
+                self.logger.info("SQLite optimizations applied (WAL mode, foreign keys, etc.)")
 
         except Exception as e:
             self.logger.error(f"Error creating tables: {e}")
