@@ -89,6 +89,9 @@ class DatabaseService:
             # Skip Alembic for now due to aiosqlite compatibility issues
             # Database tables are created properly by SQLAlchemy directly
             self.logger.info("Skipping Alembic migrations - using direct SQLAlchemy table creation")
+
+            # Create tables directly using SQLAlchemy
+            await self._create_tables_directly()
             return
 
             result = subprocess.run(
@@ -155,11 +158,39 @@ class DatabaseService:
         except Exception as e:
             self.logger.error(f"Migration check failed: {e}")
             # Don't raise here - try to continue with existing database
+
+    async def _create_tables_directly(self):
+        """Create tables directly using SQLAlchemy without Alembic"""
+        try:
+            async with self.engine.begin() as conn:
+                # Import all models to ensure they're registered
+                from src.core.models import ChronosEventDB, AnalyticsDataDB, TaskDB, TemplateDB, TemplateUsageDB, NoteDB, ExternalCommandDB, URLPayloadDB
+                from src.database.models import PendingSync
+
+                # Create all tables defined in Base.metadata
+                await conn.run_sync(Base.metadata.create_all)
+                self.logger.info("All tables created successfully using direct SQLAlchemy")
+
+        except Exception as e:
+            self.logger.error(f"Error creating tables directly: {e}")
+            raise
     
     async def create_tables(self):
-        """Create tables (legacy method - now uses migrations)"""
-        self.logger.info("Using Alembic migrations instead of direct table creation")
-        await self.initialize_database()
+        """Create tables using SQLAlchemy directly"""
+        self.logger.info("Creating tables using SQLAlchemy...")
+        try:
+            async with self.engine.begin() as conn:
+                # Import all models to ensure they're registered
+                from src.core.models import ChronosEventDB, AnalyticsDataDB, TaskDB, TemplateDB, TemplateUsageDB, NoteDB, ExternalCommandDB, URLPayloadDB
+                from src.database.models import PendingSync
+
+                # Create all tables
+                await conn.run_sync(Base.metadata.create_all)
+                self.logger.info("All tables created successfully")
+
+        except Exception as e:
+            self.logger.error(f"Error creating tables: {e}")
+            raise
     
     @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:

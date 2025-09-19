@@ -164,13 +164,12 @@ class PluginManager:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             
-            # Find plugin classes
+            # Find plugin classes - include EventPlugin and SchedulingPlugin subclasses
             plugin_classes = []
             for name, obj in inspect.getmembers(module):
-                if (inspect.isclass(obj) and 
-                    issubclass(obj, PluginInterface) and 
-                    obj != PluginInterface and
-                    obj not in [EventPlugin, SchedulingPlugin]):
+                if (inspect.isclass(obj) and
+                    issubclass(obj, PluginInterface) and
+                    obj not in [PluginInterface, EventPlugin, SchedulingPlugin]):
                     plugin_classes.append(obj)
             
             if not plugin_classes:
@@ -299,23 +298,34 @@ class PluginManager:
         self.logger.info(f"Disabled plugin: {plugin_name}")
         return True
     
-    async def process_event_through_plugins(self, event: ChronosEvent) -> ChronosEvent:
+    async def process_event_through_plugins(self, event: ChronosEvent) -> Optional[ChronosEvent]:
         """Process event through all enabled event plugins"""
-        
+
         processed_event = event
-        
-        for plugin in self.event_processors:
+
+        # Sort plugins to ensure command_handler runs first
+        sorted_plugins = sorted(self.event_processors,
+                              key=lambda p: 0 if p.name == "command_handler" else 1)
+
+        for plugin in sorted_plugins:
             plugin_info = self.plugins.get(plugin.name)
-            
+
             if plugin_info and plugin_info.enabled:
                 try:
-                    processed_event = await plugin.process_event(processed_event)
+                    result = await plugin.process_event(processed_event)
+
+                    # Handle None return (event should be deleted)
+                    if result is None:
+                        self.logger.info(f"Plugin {plugin.name} signaled event deletion")
+                        return None
+
+                    processed_event = result
                     self.logger.debug(f"Event processed by plugin: {plugin.name}")
-                    
+
                 except Exception as e:
                     self.logger.error(f"Plugin {plugin.name} failed to process event: {e}")
                     # Continue with other plugins
-        
+
         return processed_event
     
     async def get_scheduling_suggestions(

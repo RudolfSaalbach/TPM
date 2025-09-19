@@ -25,6 +25,7 @@ from src.core.scheduler import ChronosScheduler
 
 # Import API routes
 from src.api.routes import ChronosAPIRoutes
+from src.api.enhanced_routes_fixed import ChronosEnhancedRoutes
 from src.api.dashboard import ChronosDashboard
 
 
@@ -91,6 +92,12 @@ class ChronosApp:
             scheduler=self.scheduler,
             api_key=config.get('api', {}).get('api_key', 'development-key')
         )
+
+        # Initialize enhanced routes
+        enhanced_routes = ChronosEnhancedRoutes(
+            scheduler=self.scheduler,
+            api_key=config.get('api', {}).get('api_key', 'development-key')
+        )
         
         # Initialize dashboard
         dashboard = ChronosDashboard(
@@ -101,6 +108,7 @@ class ChronosApp:
         
         # Register routes
         self.app.include_router(api_routes.router, prefix="/api/v1")
+        self.app.include_router(enhanced_routes.router, prefix="/api/v1")
         self.app.include_router(dashboard.router)
         
         # Serve static files
@@ -111,17 +119,94 @@ class ChronosApp:
         # Health check endpoint
         @self.app.get("/health")
         async def health_check():
-            """Health check endpoint"""
+            """Enhanced health check endpoint with database and FTS5 validation"""
             try:
-                scheduler_status = await self.scheduler.get_health_status()
-                return {
+                from datetime import datetime
+                health_status = {
                     "status": "healthy",
                     "version": "2.1.0",
-                    "database": "sqlite",
-                    "scheduler": scheduler_status
+                    "timestamp": datetime.utcnow().isoformat()
                 }
+
+                # Check database connectivity
+                try:
+                    session = await db_service.get_session()
+                    # Test a simple query
+                    from src.core.models import ChronosEventDB
+                    test_query = session.query(ChronosEventDB).limit(1).first()
+                    session.close()
+                    health_status["database"] = {
+                        "status": "connected",
+                        "type": "sqlite",
+                        "tables": "accessible"
+                    }
+                except Exception as db_e:
+                    health_status["database"] = {
+                        "status": "error",
+                        "type": "sqlite",
+                        "error": str(db_e)
+                    }
+                    health_status["status"] = "degraded"
+
+                # Check FTS5 support (optional)
+                try:
+                    session = await db_service.get_session()
+                    fts_test = session.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_fts'")).fetchall()
+                    session.close()
+                    health_status["fts5"] = {
+                        "status": "available" if fts_test else "not_configured",
+                        "tables": len(fts_test)
+                    }
+                except Exception as fts_e:
+                    health_status["fts5"] = {
+                        "status": "unavailable",
+                        "error": str(fts_e)
+                    }
+
+                # Check scheduler status
+                try:
+                    scheduler_status = await self.scheduler.get_health_status()
+                    health_status["scheduler"] = scheduler_status
+                except Exception as sched_e:
+                    health_status["scheduler"] = {
+                        "status": "error",
+                        "error": str(sched_e)
+                    }
+                    health_status["status"] = "degraded"
+
+                # Set overall status
+                if health_status["status"] == "degraded":
+                    raise HTTPException(status_code=503, detail="Service degraded")
+
+                return health_status
+
+            except HTTPException:
+                raise
             except Exception as e:
                 raise HTTPException(status_code=503, detail=f"Service unhealthy: {e}")
+
+        # GUI Client endpoint
+        @self.app.get("/client", response_class=HTMLResponse)
+        async def gui_client():
+            """Serve the GUI client"""
+            try:
+                client_path = Path("templates/chronos_gui_client.html")
+                if client_path.exists():
+                    return client_path.read_text(encoding='utf-8')
+                else:
+                    return '''
+                    <!DOCTYPE html>
+                    <html>
+                    <head><title>Client Not Found</title></head>
+                    <body>
+                        <h1>GUI Client Not Found</h1>
+                        <p>The GUI client template file is missing.</p>
+                        <a href="/">Return to Home</a>
+                    </body>
+                    </html>
+                    '''
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to load client: {e}")
         
         # Root endpoint
         @self.app.get("/", response_class=HTMLResponse)
@@ -150,6 +235,7 @@ class ChronosApp:
                     <div class="logo">Chronos Engine</div>
                     <div class="version">Version 2.1.0 - Database Edition</div>
                     <div class="links">
+                        <a href="/client">GUI Client</a>
                         <a href="/dashboard">Dashboard</a>
                         <a href="/docs">API Docs</a>
                         <a href="/health">Health Check</a>

@@ -38,7 +38,7 @@ class ChronosScheduler:
         )
 
         self.event_parser = EventParser()
-        self.task_queue = TaskQueue(config.get('task_queue', {}))
+        self.task_queue = TaskQueue(config.get('task_queue', {}).get('max_concurrent_tasks', 5))
         self.plugins = PluginManager(config.get('plugins', {}))
 
         # Optional components
@@ -125,10 +125,16 @@ class ChronosScheduler:
             for event_data in events:
                 try:
                     # Parse event
-                    chronos_event = await self.event_parser.parse_calendar_event(event_data)
+                    chronos_event = self.event_parser.parse_event(event_data)
 
                     # Process through plugins
-                    chronos_event = await self.plugins.process_event(chronos_event)
+                    chronos_event = await self.plugins.process_event_through_plugins(chronos_event)
+
+                    # Check if event was processed as command (None return = delete event)
+                    if chronos_event is None:
+                        self.logger.info(f"Event processed as command - skipping database save")
+                        processed_count += 1
+                        continue
 
                     # Save to database
                     async with db_service.get_session() as session:

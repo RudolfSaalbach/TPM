@@ -6,6 +6,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
+import zoneinfo
 
 from src.core.models import ChronosEvent, Priority, EventType, EventStatus
 
@@ -116,7 +117,14 @@ class EventParser:
             # Handle date format (all-day events)
             elif 'date' in dt_data:
                 date_str = dt_data['date']
-                return datetime.strptime(date_str, '%Y-%m-%d')
+                # For all-day events, create datetime at midnight in local timezone
+                # This prevents DST-related day shifts
+                local_tz = zoneinfo.ZoneInfo("Europe/Berlin")
+                naive_dt = datetime.strptime(date_str, '%Y-%m-%d')
+                # Create timezone-aware datetime at midnight local time
+                localized_dt = naive_dt.replace(tzinfo=local_tz)
+                # Convert to UTC for storage (preserves the date)
+                return localized_dt.astimezone(zoneinfo.ZoneInfo("UTC")).replace(tzinfo=None)
             
             return None
             

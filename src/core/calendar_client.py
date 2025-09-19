@@ -73,7 +73,7 @@ class GoogleCalendarClient:
         try:
             if not GOOGLE_AVAILABLE:
                 self.logger.warning("Google Calendar API not available - using mock implementation")
-                return await self._use_mock_implementation()
+                return await self._authenticate_mock()
 
             if self.auth_mode == "service_account":
                 return await self._authenticate_service_account()

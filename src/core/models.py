@@ -80,13 +80,18 @@ class TimedeltaType(TypeDecorator):
 class ChronosEventDB(Base):
     """SQLAlchemy model for ChronosEvent"""
     __tablename__ = 'events'
-    
+
     # Core attributes
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(200), nullable=False, default="")
     description = Column(Text, default="")
     start_time = Column(DateTime, nullable=True)
     end_time = Column(DateTime, nullable=True)
+
+    # New UTC timestamp fields for enhanced filtering
+    start_utc = Column(DateTime, nullable=True, index=True)
+    end_utc = Column(DateTime, nullable=True, index=True)
+    all_day_date = Column(String(10), nullable=True, index=True)  # YYYY-MM-DD format
     
     # Categorization
     priority = Column(String(10), nullable=False, default="MEDIUM")
@@ -171,7 +176,7 @@ class AnalyticsDataDB(Base):
 class TaskDB(Base):
     """SQLAlchemy model for background tasks"""
     __tablename__ = 'tasks'
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(200), nullable=False)
     function_name = Column(String(100), nullable=False)
@@ -185,7 +190,7 @@ class TaskDB(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
-    
+
     def to_domain_model(self) -> 'Task':
         """Convert to domain model"""
         return Task(
@@ -202,6 +207,61 @@ class TaskDB(Base):
             created_at=self.created_at,
             started_at=self.started_at,
             completed_at=self.completed_at
+        )
+
+
+class TemplateDB(Base):
+    """SQLAlchemy model for event templates"""
+    __tablename__ = 'templates'
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(Text, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    all_day = Column(Integer, nullable=False, default=0)
+    default_time = Column(Text, nullable=True)
+    duration_minutes = Column(Integer, nullable=True)
+    calendar_id = Column(Text, nullable=True)
+    tags_json = Column(Text, nullable=False, default='[]')
+    usage_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(Text, nullable=False, default=lambda: datetime.utcnow().isoformat())
+    updated_at = Column(Text, nullable=False, default=lambda: datetime.utcnow().isoformat())
+    author = Column(Text, nullable=True)
+
+    def to_domain_model(self) -> 'Template':
+        """Convert to domain model"""
+        import json
+        return Template(
+            id=self.id,
+            title=self.title,
+            description=self.description,
+            all_day=bool(self.all_day),
+            default_time=self.default_time,
+            duration_minutes=self.duration_minutes,
+            calendar_id=self.calendar_id,
+            tags=json.loads(self.tags_json) if self.tags_json else [],
+            usage_count=self.usage_count,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            author=self.author
+        )
+
+
+class TemplateUsageDB(Base):
+    """SQLAlchemy model for template usage tracking"""
+    __tablename__ = 'template_usage'
+
+    id = Column(Integer, primary_key=True)
+    template_id = Column(Integer, nullable=False, index=True)
+    used_at = Column(Text, nullable=False, default=lambda: datetime.utcnow().isoformat())
+    actor = Column(Text, nullable=True)
+
+    def to_domain_model(self) -> 'TemplateUsage':
+        """Convert to domain model"""
+        return TemplateUsage(
+            id=self.id,
+            template_id=self.template_id,
+            used_at=self.used_at,
+            actor=self.actor
         )
 
 
@@ -385,10 +445,194 @@ class PluginConfig:
     name: str
     enabled: bool = True
     config: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'name': self.name,
             'enabled': self.enabled,
             'config': self.config
         }
+
+
+@dataclass
+class Template:
+    """Event template domain model"""
+    id: Optional[int] = None
+    title: str = ""
+    description: Optional[str] = None
+    all_day: bool = False
+    default_time: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    calendar_id: Optional[str] = None
+    tags: List[str] = field(default_factory=list)
+    usage_count: int = 0
+    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    author: Optional[str] = None
+
+    def to_db_model(self) -> TemplateDB:
+        """Convert to SQLAlchemy model"""
+        return TemplateDB(
+            id=self.id,
+            title=self.title,
+            description=self.description,
+            all_day=int(self.all_day),
+            default_time=self.default_time,
+            duration_minutes=self.duration_minutes,
+            calendar_id=self.calendar_id,
+            tags_json=json.dumps(self.tags),
+            usage_count=self.usage_count,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            author=self.author
+        )
+
+
+@dataclass
+class TemplateUsage:
+    """Template usage tracking domain model"""
+    id: Optional[int] = None
+    template_id: int = 0
+    used_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    actor: Optional[str] = None
+
+    def to_db_model(self) -> TemplateUsageDB:
+        """Convert to SQLAlchemy model"""
+        return TemplateUsageDB(
+            id=self.id,
+            template_id=self.template_id,
+            used_at=self.used_at,
+            actor=self.actor
+        )
+
+
+class CommandStatus(Enum):
+    """External command execution status"""
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+# SQLAlchemy Models for Command Layer
+
+class NoteDB(Base):
+    """Database model for notes from NOTIZ: commands"""
+    __tablename__ = 'notes'
+
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+    event_timestamp = Column(DateTime, nullable=True)
+    event_details = Column(JSON, nullable=True)
+    calendar_id = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ExternalCommandDB(Base):
+    """Database model for external commands from ACTION: commands"""
+    __tablename__ = 'external_commands'
+
+    id = Column(Integer, primary_key=True, index=True)
+    target_system = Column(String(100), nullable=False, index=True)
+    command = Column(String(100), nullable=False)
+    parameters = Column(JSON, nullable=True)
+    status = Column(String(20), nullable=False, default=CommandStatus.PENDING.value, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    processed_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    result = Column(JSON, nullable=True)
+    error_message = Column(Text, nullable=True)
+
+
+class URLPayloadDB(Base):
+    """Database model for URL payloads from URL: commands"""
+    __tablename__ = 'url_payloads'
+
+    id = Column(Integer, primary_key=True, index=True)
+    url = Column(Text, nullable=False)
+    title = Column(String(500), nullable=True)
+    description = Column(Text, nullable=True)
+    event_details = Column(JSON, nullable=True)
+    calendar_id = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    processed = Column(Boolean, default=False, index=True)
+
+
+# Domain Models for Command Layer
+
+@dataclass
+class Note:
+    """Note domain model"""
+    id: Optional[int] = None
+    content: str = ""
+    event_timestamp: Optional[datetime] = None
+    event_details: Optional[Dict[str, Any]] = None
+    calendar_id: Optional[str] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+
+    def to_db_model(self) -> NoteDB:
+        """Convert to SQLAlchemy model"""
+        return NoteDB(
+            id=self.id,
+            content=self.content,
+            event_timestamp=self.event_timestamp,
+            event_details=self.event_details,
+            calendar_id=self.calendar_id,
+            created_at=self.created_at
+        )
+
+
+@dataclass
+class ExternalCommand:
+    """External command domain model"""
+    id: Optional[int] = None
+    target_system: str = ""
+    command: str = ""
+    parameters: Optional[Dict[str, Any]] = None
+    status: CommandStatus = CommandStatus.PENDING
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    processed_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    result: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+
+    def to_db_model(self) -> ExternalCommandDB:
+        """Convert to SQLAlchemy model"""
+        return ExternalCommandDB(
+            id=self.id,
+            target_system=self.target_system,
+            command=self.command,
+            parameters=self.parameters,
+            status=self.status.value,
+            created_at=self.created_at,
+            processed_at=self.processed_at,
+            completed_at=self.completed_at,
+            result=self.result,
+            error_message=self.error_message
+        )
+
+
+@dataclass
+class URLPayload:
+    """URL payload domain model"""
+    id: Optional[int] = None
+    url: str = ""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    event_details: Optional[Dict[str, Any]] = None
+    calendar_id: Optional[str] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    processed: bool = False
+
+    def to_db_model(self) -> URLPayloadDB:
+        """Convert to SQLAlchemy model"""
+        return URLPayloadDB(
+            id=self.id,
+            url=self.url,
+            title=self.title,
+            description=self.description,
+            event_details=self.event_details,
+            calendar_id=self.calendar_id,
+            created_at=self.created_at,
+            processed=self.processed
+        )

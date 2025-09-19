@@ -111,3 +111,73 @@ class AnalyticsResponse(BaseModel):
     completion_rate: float
     productivity_score: float
     metrics: Dict[str, Any]
+
+
+# Template schemas
+class TemplateCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=500)
+    description: Optional[str] = None
+    all_day: bool = False
+    default_time: Optional[str] = Field(None, pattern=r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$')
+    duration_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    calendar_id: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+
+
+class TemplateUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=500)
+    description: Optional[str] = None
+    all_day: Optional[bool] = None
+    default_time: Optional[str] = Field(None, pattern=r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$')
+    duration_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    calendar_id: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+class TemplateResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None
+    all_day: bool
+    default_time: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    calendar_id: Optional[str] = None
+    tags: List[str]
+    usage_count: int
+    created_at: str
+    updated_at: str
+    author: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TemplateUsageResponse(BaseModel):
+    id: int
+    template_id: int
+    used_at: str
+    actor: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TemplatesListResponse(BaseModel):
+    items: List[TemplateResponse]
+    page: int = 1
+    page_size: int = 100
+    total_count: Optional[int] = None
+
+
+# Enhanced Event schemas for new filtering
+class EventsListResponse(BaseModel):
+    items: List[EventResponse]
+    page: int = 1
+    page_size: int = 100
+    total_count: Optional[int] = None
+
+
+class EventDirection(str, Enum):
+    PAST = "past"
+    FUTURE = "future"
+    ALL = "all"

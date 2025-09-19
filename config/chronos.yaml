@@ -1,7 +1,7 @@
 # Chronos Engine Configuration File
 
 general:
-  timezone: "UTC"
+  timezone: "Europe/Berlin"
   working_hours:
     start: 9
     end: 18
@@ -59,9 +59,20 @@ notifications:
       password: ""
 
 plugins:
-  enabled: ["timebox", "replan", "analytics"]
+  enabled: ["timebox", "replan", "analytics", "command_handler"]
   custom_dir: "plugins/custom"
   auto_load: true
+
+command_handler:
+  enabled: true
+  action_whitelist:
+    - "SHUTDOWN"
+    - "REBOOT"
+    - "SEND_MESSAGE"
+    - "RUN_BACKUP"
+    - "STATUS_CHECK"
+    - "UPDATE_STATUS"
+    - "SEND_NOTIFICATION"
 
 task_queue:
   max_concurrent: 5

@@ -8,7 +8,12 @@
       "Bash(git push:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Read(//c/Users/rudol/Downloads/**)",
+      "Bash(netstat:*)",
+      "Bash(set API_PORT=8081)",
+      "Bash(taskkill:*)",
+      "Bash(set API_PORT=8082)"
     ],
     "deny": [],
     "ask": []
