@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Chronos Engine v2.2{% endblock %}</title>
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    {% block extra_css %}{% endblock %}
+
+    <!-- Core JavaScript - Load order is important -->
+    <script src="{{ url_for('static', filename='js/core/EventBus.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/core/ComponentBase.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/services/StateManager.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/services/APIService.js') }}" defer></script>
+
+    <!-- Component Scripts -->
+    <script src="{{ url_for('static', filename='js/components/FilterPanel.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/components/EventList.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/components/TemplateModal.js') }}" defer></script>
+
+    <!-- Application Script -->
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+
+    {% block extra_scripts_head %}{% endblock %}
+</head>
+<body class="chronos-app">
+    <!-- App Container -->
+    <div id="chronos-root" class="app-container">
+
+        <!-- Navigation Header -->
+        <header class="app-header" id="app-header">
+            <div class="header-brand">
+                <h1>📊 Chronos Engine</h1>
+                <span class="version">v2.2</span>
+            </div>
+
+            <nav class="header-nav" role="navigation">
+                <a href="{{ url_for('dashboard') }}" class="nav-link" data-nav="dashboard">
+                    Dashboard
+                </a>
+                <a href="{{ url_for('events') }}" class="nav-link" data-nav="events">
+                    Events
+                </a>
+                <a href="{{ url_for('templates') }}" class="nav-link" data-nav="templates">
+                    Templates
+                </a>
+                <a href="{{ url_for('analytics') }}" class="nav-link" data-nav="analytics">
+                    Analytics
+                </a>
+            </nav>
+
+            <div class="header-actions">
+                <div class="connection-status" id="connection-status">
+                    <span class="status-dot status-online"></span>
+                    <span class="status-text">Online</span>
+                </div>
+
+                <button class="btn btn-icon" id="settings-btn" title="Settings">
+                    ⚙️
+                </button>
+
+                <button class="btn btn-icon" id="help-btn" title="Help">
+                    ❓
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="app-main" role="main">
+            {% block content %}
+            <!-- Page content will be inserted here -->
+            {% endblock %}
+        </main>
+
+        <!-- Global Modals Container -->
+        <div id="modals-container">
+            {% block modals %}
+            <!-- Template Modal -->
+            <dialog id="template-modal" class="modal template-modal" aria-modal="true" aria-labelledby="template-modal-title">
+                <div class="modal-backdrop" data-ref="backdrop"></div>
+                <div class="modal-content" role="document">
+                    <header class="modal-header">
+                        <h2 id="template-modal-title">Templates</h2>
+                        <button class="btn btn-icon modal-close" data-ref="close" aria-label="Close modal">
+                            ✕
+                        </button>
+                    </header>
+
+                    <div class="modal-body">
+                        <div class="template-sidebar">
+                            <div class="search-container">
+                                <input type="text"
+                                       class="search-input"
+                                       data-ref="search"
+                                       placeholder="Search templates..."
+                                       aria-label="Search templates">
+                            </div>
+                            <div class="templates-list" data-ref="templates-list" aria-label="Templates list">
+                                <!-- Template items will be populated by component -->
+                            </div>
+                        </div>
+
+                        <div class="template-details">
+                            <div class="details-content" data-ref="details">
+                                <div class="no-selection">
+                                    Select a template to view details
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </dialog>
+
+            <!-- Settings Modal -->
+            <dialog id="settings-modal" class="modal settings-modal" aria-modal="true" aria-labelledby="settings-modal-title">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content">
+                    <header class="modal-header">
+                        <h2 id="settings-modal-title">Settings</h2>
+                        <button class="btn btn-icon modal-close" aria-label="Close modal">✕</button>
+                    </header>
+                    <div class="modal-body">
+                        <!-- Settings content will be populated -->
+                    </div>
+                </div>
+            </dialog>
+            {% endblock %}
+        </div>
+
+        <!-- Toast Notifications Container -->
+        <div id="toast-container" class="toast-container" aria-live="polite" aria-label="Notifications">
+            <!-- Toast notifications will be inserted here -->
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="global-loading" class="loading-overlay" aria-hidden="true">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Configuration -->
+    <script>
+        // Global configuration object
+        window.ChronosConfig = {
+            // API Configuration
+            api: {
+                baseURL: '{{ api_base_url or "/api/v1" }}',
+                timeout: 30000,
+                retryAttempts: 3
+            },
+
+            // UI Configuration
+            ui: {
+                theme: '{{ theme or "dark" }}',
+                language: '{{ language or "de" }}',
+                timezone: '{{ timezone or "Europe/Berlin" }}',
+                dateFormat: '{{ date_format or "DD.MM.YYYY" }}',
+                timeFormat: '{{ time_format or "24h" }}'
+            },
+
+            // Feature Flags
+            features: {
+                v22Enabled: {{ 'true' if features.v22_enabled else 'false' }},
+                subTasksEnabled: {{ 'true' if features.sub_tasks_enabled else 'false' }},
+                workflowsEnabled: {{ 'true' if features.workflows_enabled else 'false' }},
+                aiEnabled: {{ 'true' if features.ai_enabled else 'false' }}
+            },
+
+            // Debug Configuration
+            debug: {{ 'true' if debug else 'false' }},
+
+            // Page-specific data
+            pageData: {
+                {% block page_data %}{% endblock %}
+            }
+        };
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

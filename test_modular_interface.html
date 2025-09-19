@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chronos Engine v2.2 - Modular Interface Test</title>
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="static/css/core.css">
+    <link rel="stylesheet" href="static/css/components.css">
+
+    <style>
+        /* Test-specific styles */
+        .test-container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            height: 100vh;
+            gap: var(--space-4);
+            padding: var(--space-4);
+        }
+
+        .events-page {
+            display: grid;
+            grid-template-columns: 1fr;
+            height: 100%;
+            gap: var(--space-4);
+        }
+
+        .filter-panel {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            height: fit-content;
+        }
+
+        .panel-header h2 {
+            margin: 0 0 var(--space-4) 0;
+            font-size: var(--font-size-lg);
+        }
+
+        .filter-group {
+            margin-bottom: var(--space-4);
+        }
+
+        .filter-label {
+            display: block;
+            font-weight: var(--font-weight-medium);
+            margin-bottom: var(--space-2);
+            color: var(--color-text-primary);
+        }
+
+        .filter-select,
+        .filter-input {
+            width: 100%;
+            padding: var(--space-2) var(--space-3);
+            background: var(--color-bg-tertiary);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-base);
+            color: var(--color-text-primary);
+        }
+
+        .direction-fieldset {
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-base);
+            padding: var(--space-3);
+            background: var(--color-bg-tertiary);
+        }
+
+        .direction-fieldset legend {
+            padding: 0 var(--space-2);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            cursor: pointer;
+        }
+
+        .filter-actions {
+            margin-top: var(--space-6);
+        }
+
+        .quick-actions {
+            margin-top: var(--space-4);
+            display: grid;
+            gap: var(--space-2);
+        }
+
+        .events-main {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .events-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: var(--space-4);
+            padding-bottom: var(--space-4);
+            border-bottom: 1px solid var(--color-border-primary);
+        }
+
+        .header-info h1 {
+            margin: 0 0 var(--space-2) 0;
+        }
+
+        .events-stats {
+            display: flex;
+            gap: var(--space-4);
+            font-size: var(--font-size-sm);
+        }
+
+        .stat-item {
+            display: flex;
+            gap: var(--space-1);
+        }
+
+        .stat-label {
+            color: var(--color-text-muted);
+        }
+
+        .stat-value {
+            color: var(--color-text-primary);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: var(--space-2);
+        }
+
+        .events-list-container {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .events-list {
+            height: 100%;
+            overflow-y: auto;
+            display: grid;
+            gap: var(--space-3);
+            grid-auto-rows: min-content;
+        }
+
+        /* Test results */
+        .test-results {
+            position: fixed;
+            top: var(--space-4);
+            right: var(--space-4);
+            background: var(--color-bg-elevated);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-1) 0;
+        }
+
+        .test-status {
+            font-weight: var(--font-weight-bold);
+        }
+
+        .test-pass { color: var(--color-success); }
+        .test-fail { color: var(--color-danger); }
+        .test-pending { color: var(--color-warning); }
+    </style>
+
+    <!-- Core JavaScript -->
+    <script src="static/js/core/EventBus.js"></script>
+    <script src="static/js/core/ComponentBase.js"></script>
+    <script src="static/js/services/StateManager.js"></script>
+    <script src="static/js/services/APIService.js"></script>
+
+    <!-- Component Scripts -->
+    <script src="static/js/components/FilterPanel.js"></script>
+    <script src="static/js/components/EventList.js"></script>
+    <script src="static/js/components/TemplateModal.js"></script>
+</head>
+<body class="chronos-app">
+    <!-- Test Results Panel -->
+    <div class="test-results" id="test-results">
+        <h3>Interface Test Results</h3>
+        <div id="test-list">
+            <!-- Test results will be populated here -->
+        </div>
+    </div>
+
+    <!-- Main Test Container -->
+    <div class="test-container">
+        <!-- Filter Panel -->
+        <aside class="filter-panel" id="filter-panel">
+            <div class="panel-header">
+                <h2>Calendar Filters</h2>
+            </div>
+
+            <div class="panel-content">
+                <!-- Time Range Filter -->
+                <div class="filter-group">
+                    <label for="range-select" class="filter-label">Time Range</label>
+                    <select id="range-select" class="filter-select" data-ref="range">
+                        <option value="7">7 Days</option>
+                        <option value="14">14 Days</option>
+                        <option value="30">30 Days</option>
+                        <option value="60">60 Days</option>
+                        <option value="360">360 Days</option>
+                        <option value="-1">All Events</option>
+                    </select>
+                </div>
+
+                <!-- Direction Filter -->
+                <div class="filter-group">
+                    <fieldset class="direction-fieldset">
+                        <legend class="filter-label">Direction</legend>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="direction" value="past" data-ref="direction">
+                                <span class="radio-text">Past</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="direction" value="future" checked data-ref="direction">
+                                <span class="radio-text">Future</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="direction" value="all" data-ref="direction">
+                                <span class="radio-text">All</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <!-- Search Filter -->
+                <div class="filter-group">
+                    <label for="search-input" class="filter-label">Search</label>
+                    <input type="text"
+                           id="search-input"
+                           class="filter-input"
+                           data-ref="search"
+                           placeholder="Search in title/description..."
+                           aria-label="Search events">
+                </div>
+
+                <!-- Filter Actions -->
+                <div class="filter-actions">
+                    <button type="button" class="btn btn-secondary btn-block" data-ref="clear">
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <button type="button" class="btn btn-primary btn-block" data-ref="new-event">
+                    📅 New Event
+                </button>
+                <button type="button" class="btn btn-accent btn-block" data-ref="templates">
+                    📝 Use Template
+                </button>
+            </div>
+        </aside>
+
+        <!-- Events Main Content -->
+        <main class="events-main">
+            <!-- Events Header -->
+            <header class="events-header">
+                <div class="header-info">
+                    <h1>📋 Events</h1>
+                    <div class="events-stats">
+                        <span class="stat-item">
+                            <span class="stat-label">Total:</span>
+                            <span class="stat-value" data-ref="count" id="events-count">—</span>
+                        </span>
+                        <span class="stat-item">
+                            <span class="stat-label">Status:</span>
+                            <span class="stat-value" data-ref="status" id="events-status">Ready</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button type="button" class="btn btn-icon" id="refresh-btn" title="Refresh events">🔄</button>
+                    <button type="button" class="btn btn-secondary" id="test-btn">Run Tests</button>
+                </div>
+            </header>
+
+            <!-- Events List -->
+            <section class="events-list-container">
+                <div class="events-list" id="events-list" data-ref="list" role="list" aria-label="Events list">
+                    <!-- Events will be populated here by JavaScript -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Template Modal -->
+    <dialog id="template-modal" class="modal" aria-modal="true">
+        <div class="modal-backdrop" data-ref="backdrop"></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2>Templates</h2>
+                <button class="btn btn-icon modal-close" data-ref="close">✕</button>
+            </header>
+
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                    <div>
+                        <input type="text"
+                               class="form-input"
+                               data-ref="search"
+                               placeholder="Search templates..."
+                               style="margin-bottom: var(--space-4);">
+                        <div class="templates-list" data-ref="templates-list" style="max-height: 300px; overflow-y: auto;">
+                            <!-- Templates will be populated here -->
+                        </div>
+                    </div>
+                    <div>
+                        <div data-ref="details">
+                            <div class="empty-state">
+                                <div class="empty-title">Select a template</div>
+                                <div class="empty-subtitle">Choose a template from the list to view details</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Test Configuration and Runner -->
+    <script>
+        // Global test configuration
+        window.ChronosConfig = {
+            api: {
+                baseURL: '/api/v1',
+                timeout: 30000,
+                retryAttempts: 3
+            },
+            ui: {
+                theme: 'dark',
+                language: 'de',
+                timezone: 'Europe/Berlin'
+            },
+            features: {
+                v22Enabled: true,
+                subTasksEnabled: true,
+                workflowsEnabled: true,
+                aiEnabled: false
+            },
+            debug: true,
+            pageData: {
+                currentPage: 'events'
+            }
+        };
+
+        // Mock API responses for testing
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            // Mock API responses
+            if (url.includes('/api/v1/events')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve({
+                        items: generateMockEvents(),
+                        total: 20
+                    })
+                });
+            }
+
+            if (url.includes('/api/v1/templates')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve({
+                        items: generateMockTemplates(),
+                        total: 5
+                    })
+                });
+            }
+
+            // Fall back to original fetch
+            return originalFetch(url, options);
+        };
+
+        function generateMockEvents() {
+            const events = [];
+            for (let i = 0; i < 20; i++) {
+                events.push({
+                    id: `event-${i}`,
+                    title: `Test Event ${i + 1}`,
+                    description: `Description for test event ${i + 1}`,
+                    start_utc: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString(),
+                    end_utc: new Date(Date.now() + i * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
+                    all_day: i % 5 === 0,
+                    all_day_date: i % 5 === 0 ? new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null
+                });
+            }
+            return events;
+        }
+
+        function generateMockTemplates() {
+            return [
+                {
+                    id: 'template-1',
+                    title: 'Team Meeting',
+                    description: 'Weekly team synchronization',
+                    tags: ['meeting', 'team'],
+                    usage_count: 15,
+                    all_day: false,
+                    default_time: '09:00',
+                    duration_minutes: 60
+                },
+                {
+                    id: 'template-2',
+                    title: 'Project Review',
+                    description: 'Quarterly project review',
+                    tags: ['review', 'project'],
+                    usage_count: 8,
+                    all_day: false,
+                    default_time: '14:00',
+                    duration_minutes: 90
+                }
+            ];
+        }
+
+        // Test Suite
+        class ModularInterfaceTest {
+            constructor() {
+                this.tests = [];
+                this.results = new Map();
+                this.components = {};
+            }
+
+            async runTests() {
+                console.log('🧪 Starting modular interface tests...');
+
+                // Initialize components first
+                await this.initializeComponents();
+
+                // Run tests
+                await this.testEventBus();
+                await this.testStateManager();
+                await this.testComponentBase();
+                await this.testFilterPanel();
+                await this.testEventList();
+                await this.testTemplateModal();
+                await this.testComponentCommunication();
+
+                this.displayResults();
+            }
+
+            async initializeComponents() {
+                try {
+                    // Initialize FilterPanel
+                    this.components.filterPanel = new FilterPanelComponent(
+                        document.getElementById('filter-panel'),
+                        { debug: true }
+                    );
+
+                    // Initialize EventList
+                    this.components.eventList = new EventListComponent(
+                        document.getElementById('events-list'),
+                        { debug: true }
+                    );
+
+                    // Initialize TemplateModal
+                    this.components.templateModal = new TemplateModalComponent(
+                        document.getElementById('template-modal'),
+                        { debug: true }
+                    );
+
+                    this.recordTest('Component Initialization', true, 'All components initialized successfully');
+                } catch (error) {
+                    this.recordTest('Component Initialization', false, error.message);
+                }
+            }
+
+            async testEventBus() {
+                try {
+                    const eventBus = window.ChronosEventBus;
+                    let eventReceived = false;
+
+                    const unsubscribe = eventBus.on('test:event', () => {
+                        eventReceived = true;
+                    });
+
+                    eventBus.emit('test:event');
+                    unsubscribe();
+
+                    this.recordTest('Event Bus', eventReceived, 'Event emission and subscription working');
+                } catch (error) {
+                    this.recordTest('Event Bus', false, error.message);
+                }
+            }
+
+            async testStateManager() {
+                try {
+                    const state = window.ChronosState;
+
+                    state.set('test.value', 'hello');
+                    const value = state.get('test.value');
+
+                    this.recordTest('State Manager', value === 'hello', 'State get/set working');
+                } catch (error) {
+                    this.recordTest('State Manager', false, error.message);
+                }
+            }
+
+            async testComponentBase() {
+                try {
+                    const component = this.components.filterPanel;
+                    const hasRequiredMethods = (
+                        typeof component.init === 'function' &&
+                        typeof component.render === 'function' &&
+                        typeof component.destroy === 'function'
+                    );
+
+                    this.recordTest('Component Base', hasRequiredMethods, 'Component lifecycle methods present');
+                } catch (error) {
+                    this.recordTest('Component Base', false, error.message);
+                }
+            }
+
+            async testFilterPanel() {
+                try {
+                    const filterPanel = this.components.filterPanel;
+                    const filters = filterPanel.getFilters();
+
+                    filterPanel.setFilter('range', '30');
+                    const newFilters = filterPanel.getFilters();
+
+                    const testPassed = newFilters.range === '30';
+                    this.recordTest('Filter Panel', testPassed, 'Filter get/set working');
+                } catch (error) {
+                    this.recordTest('Filter Panel', false, error.message);
+                }
+            }
+
+            async testEventList() {
+                try {
+                    const eventList = this.components.eventList;
+
+                    // Load events
+                    await eventList.loadEvents();
+
+                    const events = eventList.getEvents();
+                    const testPassed = events.length > 0;
+
+                    this.recordTest('Event List', testPassed, `Loaded ${events.length} events`);
+                } catch (error) {
+                    this.recordTest('Event List', false, error.message);
+                }
+            }
+
+            async testTemplateModal() {
+                try {
+                    const templateModal = this.components.templateModal;
+
+                    // Test modal functionality without actually opening it
+                    const isModalClosed = !templateModal.isOpen();
+
+                    this.recordTest('Template Modal', isModalClosed, 'Modal state management working');
+                } catch (error) {
+                    this.recordTest('Template Modal', false, error.message);
+                }
+            }
+
+            async testComponentCommunication() {
+                try {
+                    const filterPanel = this.components.filterPanel;
+                    const eventList = this.components.eventList;
+
+                    let communicationWorked = false;
+
+                    // Subscribe to filter changes
+                    const unsubscribe = window.ChronosEventBus.on('filters:apply', (filters) => {
+                        communicationWorked = true;
+                    });
+
+                    // Trigger filter change
+                    filterPanel.setFilter('range', '14');
+
+                    setTimeout(() => {
+                        unsubscribe();
+                        this.recordTest('Component Communication', communicationWorked, 'Event bus communication working');
+                    }, 100);
+
+                } catch (error) {
+                    this.recordTest('Component Communication', false, error.message);
+                }
+            }
+
+            recordTest(name, passed, message) {
+                this.results.set(name, { passed, message });
+                console.log(`${passed ? '✅' : '❌'} ${name}: ${message}`);
+            }
+
+            displayResults() {
+                const testList = document.getElementById('test-list');
+                testList.innerHTML = '';
+
+                let passCount = 0;
+                let totalCount = 0;
+
+                for (const [name, result] of this.results) {
+                    totalCount++;
+                    if (result.passed) passCount++;
+
+                    const testItem = document.createElement('div');
+                    testItem.className = 'test-item';
+                    testItem.innerHTML = `
+                        <span>${name}</span>
+                        <span class="test-status ${result.passed ? 'test-pass' : 'test-fail'}">
+                            ${result.passed ? 'PASS' : 'FAIL'}
+                        </span>
+                    `;
+                    testList.appendChild(testItem);
+                }
+
+                // Add summary
+                const summary = document.createElement('div');
+                summary.className = 'test-item';
+                summary.style.borderTop = '1px solid var(--color-border-primary)';
+                summary.style.marginTop = 'var(--space-2)';
+                summary.style.paddingTop = 'var(--space-2)';
+                summary.innerHTML = `
+                    <span><strong>Summary</strong></span>
+                    <span class="test-status ${passCount === totalCount ? 'test-pass' : 'test-fail'}">
+                        ${passCount}/${totalCount}
+                    </span>
+                `;
+                testList.appendChild(summary);
+
+                console.log(`\n🏁 Tests completed: ${passCount}/${totalCount} passed`);
+            }
+        }
+
+        // Initialize test when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            const tester = new ModularInterfaceTest();
+
+            // Set up test button
+            document.getElementById('test-btn').addEventListener('click', () => {
+                tester.runTests();
+            });
+
+            // Run tests automatically after a short delay
+            setTimeout(() => {
+                tester.runTests();
+            }, 1000);
+
+            // Make tester available globally for debugging
+            window.InterfaceTest = tester;
+        });
+    </script>
+</body>
+</html>

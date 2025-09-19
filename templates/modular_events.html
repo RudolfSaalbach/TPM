@@ -1,0 +1,340 @@
+{% extends "modular_base.html" %}
+
+{% block title %}Events - Chronos Engine{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/events.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="events-page">
+    <!-- Filter Panel Sidebar -->
+    <aside class="filter-panel" id="filter-panel">
+        <div class="panel-header">
+            <h2>Calendar Filters</h2>
+        </div>
+
+        <div class="panel-content">
+            <!-- Time Range Filter -->
+            <div class="filter-group">
+                <label for="range-select" class="filter-label">Time Range</label>
+                <select id="range-select" class="filter-select" data-ref="range">
+                    <option value="7">7 Days</option>
+                    <option value="14">14 Days</option>
+                    <option value="30">30 Days</option>
+                    <option value="60">60 Days</option>
+                    <option value="360">360 Days</option>
+                    <option value="-1">All Events</option>
+                </select>
+            </div>
+
+            <!-- Direction Filter -->
+            <div class="filter-group">
+                <fieldset class="direction-fieldset">
+                    <legend class="filter-label">Direction</legend>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="direction" value="past" data-ref="direction">
+                            <span class="radio-text">Past</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="direction" value="future" checked data-ref="direction">
+                            <span class="radio-text">Future</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="direction" value="all" data-ref="direction">
+                            <span class="radio-text">All</span>
+                        </label>
+                    </div>
+                </fieldset>
+            </div>
+
+            <!-- Calendar Filter -->
+            {% if calendars and calendars|length > 1 %}
+            <div class="filter-group">
+                <label for="calendar-select" class="filter-label">Calendar</label>
+                <select id="calendar-select" class="filter-select" data-ref="calendar">
+                    {% for calendar in calendars %}
+                    <option value="{{ calendar.id }}"
+                            {% if calendar.id == selected_calendar %}selected{% endif %}>
+                        {{ calendar.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <!-- Search Filter -->
+            <div class="filter-group">
+                <label for="search-input" class="filter-label">Search</label>
+                <input type="text"
+                       id="search-input"
+                       class="filter-input"
+                       data-ref="search"
+                       placeholder="Search in title/description..."
+                       aria-label="Search events">
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="filter-actions">
+                <button type="button" class="btn btn-secondary btn-block" data-ref="clear">
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+
+        <div class="panel-footer">
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button type="button" class="btn btn-primary btn-block" data-ref="new-event">
+                    📅 New Event
+                </button>
+                <button type="button" class="btn btn-accent btn-block" data-ref="templates">
+                    📝 Use Template
+                </button>
+            </div>
+
+            <!-- Keyboard Shortcuts Help -->
+            <details class="shortcuts-help">
+                <summary>Keyboard Shortcuts</summary>
+                <div class="shortcuts-list">
+                    <div class="shortcut">
+                        <kbd>Ctrl+T</kbd> <span>Templates</span>
+                    </div>
+                    <div class="shortcut">
+                        <kbd>Ctrl+N</kbd> <span>New Event</span>
+                    </div>
+                    <div class="shortcut">
+                        <kbd>Ctrl+F</kbd> <span>Focus Search</span>
+                    </div>
+                    <div class="shortcut">
+                        <kbd>Ctrl+R</kbd> <span>Refresh</span>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </aside>
+
+    <!-- Main Events Content -->
+    <main class="events-main">
+        <!-- Events Header -->
+        <header class="events-header">
+            <div class="header-info">
+                <h1>📋 Events</h1>
+                <div class="events-stats">
+                    <span class="stat-item">
+                        <span class="stat-label">Total:</span>
+                        <span class="stat-value" data-ref="count" id="events-count">—</span>
+                    </span>
+                    <span class="stat-item">
+                        <span class="stat-label">Status:</span>
+                        <span class="stat-value" data-ref="status" id="events-status">Ready</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button type="button" class="btn btn-icon" id="refresh-btn" title="Refresh events" aria-label="Refresh events">
+                    🔄
+                </button>
+                <button type="button" class="btn btn-icon" id="view-toggle" title="Toggle view" aria-label="Toggle view">
+                    ⊞
+                </button>
+                <button type="button" class="btn btn-secondary" id="export-btn">
+                    📤 Export
+                </button>
+            </div>
+        </header>
+
+        <!-- Events List -->
+        <section class="events-list-container">
+            <div class="events-list"
+                 id="events-list"
+                 data-ref="list"
+                 role="list"
+                 aria-label="Events list"
+                 aria-busy="false">
+
+                <!-- Loading State -->
+                <div class="loading-state" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading events...</div>
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" style="display: none;">
+                    <div class="empty-icon">📅</div>
+                    <div class="empty-title">No events found</div>
+                    <div class="empty-subtitle">
+                        Try adjusting your filters or search criteria
+                    </div>
+                    <button type="button" class="btn btn-primary empty-action">
+                        Create First Event
+                    </button>
+                </div>
+
+                <!-- Error State -->
+                <div class="error-state" style="display: none;">
+                    <div class="error-icon">⚠️</div>
+                    <div class="error-title">Failed to load events</div>
+                    <div class="error-message">Please check your connection and try again</div>
+                    <button type="button" class="btn btn-secondary error-retry">
+                        Try Again
+                    </button>
+                </div>
+
+                <!-- Events will be populated here by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Events Pagination -->
+        <footer class="events-pagination" id="events-pagination" style="display: none;">
+            <div class="pagination-info">
+                <span>Showing <span id="page-start">1</span>-<span id="page-end">50</span> of <span id="total-count">150</span> events</span>
+            </div>
+            <div class="pagination-controls">
+                <button type="button" class="btn btn-icon" id="prev-page" disabled>‹</button>
+                <span class="page-info">Page <span id="current-page">1</span> of <span id="total-pages">3</span></span>
+                <button type="button" class="btn btn-icon" id="next-page">›</button>
+            </div>
+        </footer>
+    </main>
+
+    <!-- Event Details Sidebar (optional) -->
+    <aside class="event-details" id="event-details" style="display: none;">
+        <div class="details-header">
+            <h3>Event Details</h3>
+            <button type="button" class="btn btn-icon details-close" aria-label="Close details">✕</button>
+        </div>
+        <div class="details-content">
+            <!-- Event details will be populated here -->
+        </div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block page_data %}
+currentPage: 'events',
+initialFilters: {
+    range: '{{ filters.range or "7" }}',
+    direction: '{{ filters.direction or "future" }}',
+    calendar: '{{ filters.calendar or "primary" }}',
+    searchQuery: '{{ filters.search_query or "" }}'
+},
+calendars: {{ calendars | tojson if calendars else '[]' }},
+permissions: {
+    canCreate: {{ 'true' if permissions.can_create else 'false' }},
+    canEdit: {{ 'true' if permissions.can_edit else 'false' }},
+    canDelete: {{ 'true' if permissions.can_delete else 'false' }}
+}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Initialize events page when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize components
+        const filterPanel = new FilterPanelComponent(
+            document.getElementById('filter-panel'),
+            window.ChronosConfig.pageData.initialFilters
+        );
+
+        const eventsList = new EventListComponent(
+            document.getElementById('events-list'),
+            {
+                apiEndpoint: window.ChronosConfig.api.baseURL + '/events',
+                autoRefresh: true,
+                refreshInterval: 300000 // 5 minutes
+            }
+        );
+
+        const templateModal = new TemplateModalComponent(
+            document.getElementById('template-modal'),
+            {
+                apiEndpoint: window.ChronosConfig.api.baseURL + '/templates'
+            }
+        );
+
+        // Set up component communication
+        filterPanel.subscribe('filters:apply', (filters) => {
+            eventsList.setFilters(filters);
+        });
+
+        eventsList.subscribe('events:eventSelected', (event) => {
+            console.log('Event selected:', event);
+            // Could show event details sidebar here
+        });
+
+        templateModal.subscribe('templates:templateApplied', (template) => {
+            // Refresh events list after template is applied
+            eventsList.refresh();
+        });
+
+        // Set up global keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key.toLowerCase()) {
+                    case 'r':
+                        if (!e.shiftKey) {
+                            e.preventDefault();
+                            eventsList.refresh();
+                        }
+                        break;
+                }
+            }
+        });
+
+        // Header actions
+        document.getElementById('refresh-btn')?.addEventListener('click', () => {
+            eventsList.refresh();
+        });
+
+        document.getElementById('export-btn')?.addEventListener('click', () => {
+            exportEvents();
+        });
+
+        // Initialize with filters from URL or state
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlFilters = {};
+
+        ['range', 'direction', 'calendar', 'q'].forEach(param => {
+            if (urlParams.has(param)) {
+                urlFilters[param === 'q' ? 'searchQuery' : param] = urlParams.get(param);
+            }
+        });
+
+        if (Object.keys(urlFilters).length > 0) {
+            filterPanel.setFilters(urlFilters);
+        }
+
+        // Store components globally for debugging
+        window.EventsPageComponents = {
+            filterPanel,
+            eventsList,
+            templateModal
+        };
+    });
+
+    // Export events function
+    function exportEvents() {
+        const events = window.EventsPageComponents?.eventsList?.getFilteredEvents() || [];
+
+        const exportData = {
+            events: events,
+            exported_at: new Date().toISOString(),
+            filters: window.EventsPageComponents?.filterPanel?.getFilters() || {},
+            total_count: events.length
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+        const exportFileDefaultName = `chronos-events-${new Date().toISOString().split('T')[0]}.json`;
+
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+    }
+</script>
+{% endblock %}
