@@ -6,6 +6,13 @@ Provides unified access to external system integrations
 from typing import Dict, Optional, Any
 from src.integrations.telegram_adapter import TelegramAdapter, create_telegram_adapter
 from src.integrations.n8n_adapter import N8nAdapter, create_n8n_adapter
+from src.integrations.universal_n8n_service import (
+    UniversalN8NService,
+    WebhookConfiguration,
+    FieldMapping,
+    TriggerType
+)
+from src.integrations.n8n_config_manager import N8NConfigManager
 
 
 class IntegrationManager:
@@ -34,6 +41,19 @@ class IntegrationManager:
             if n8n_adapter:
                 self.adapters['n8n'] = n8n_adapter
                 print("✅ n8n integration initialized")
+
+            # Initialize Universal n8n service
+            universal_n8n = UniversalN8NService()
+            config_manager = N8NConfigManager()
+
+            # Load existing webhook configurations
+            configs = config_manager.load_all_webhook_configs()
+            for config in configs:
+                universal_n8n.register_webhook_config(config)
+
+            self.adapters['universal_n8n'] = universal_n8n
+            self.adapters['n8n_config_manager'] = config_manager
+            print(f"✅ Universal n8n service initialized with {len(configs)} webhook configs")
 
             print(f"🔗 Initialized {len(self.adapters)} integrations")
 
@@ -82,5 +102,10 @@ __all__ = [
     'IntegrationManager',
     'integration_manager',
     'create_telegram_adapter',
-    'create_n8n_adapter'
+    'create_n8n_adapter',
+    'UniversalN8NService',
+    'WebhookConfiguration',
+    'FieldMapping',
+    'TriggerType',
+    'N8NConfigManager'
 ]

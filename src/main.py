@@ -12,10 +12,11 @@ from pathlib import Path
 from typing import Dict, Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
 
 from sqlalchemy import select, text
 
@@ -29,6 +30,7 @@ from src.core.scheduler import ChronosScheduler
 # Import API routes
 from src.api.routes import ChronosUnifiedAPIRoutes
 from src.api.dashboard import ChronosDashboard
+from src.api.n8n_routes import n8n_webhook_api
 
 
 # Initialize basic console logging first
@@ -83,6 +85,9 @@ class ChronosApp:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.scheduler = ChronosScheduler(config)
+
+        # Initialize Jinja2 templates
+        self.templates = Jinja2Templates(directory="templates")
         
         # Create FastAPI app with lifespan
         self.app = FastAPI(
@@ -117,6 +122,7 @@ class ChronosApp:
         # Register routes
         self.app.include_router(unified_routes.router, prefix="/api")
         self.app.include_router(dashboard.router)
+        self.app.include_router(n8n_webhook_api.router)
         
         # Serve static files
         static_dir = Path("static")
@@ -217,6 +223,29 @@ class ChronosApp:
                     '''
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Failed to load client: {e}")
+
+        # n8n Webhooks Interface
+        @self.app.get("/n8n", response_class=HTMLResponse)
+        async def n8n_webhooks_interface():
+            """Serve the n8n webhooks management interface"""
+            try:
+                interface_path = Path("templates/n8n_webhooks.html")
+                if interface_path.exists():
+                    return interface_path.read_text(encoding='utf-8')
+                else:
+                    return '''
+                    <!DOCTYPE html>
+                    <html>
+                    <head><title>n8n Interface Not Found</title></head>
+                    <body>
+                        <h1>n8n Webhooks Interface Not Found</h1>
+                        <p>The n8n webhooks interface template file is missing.</p>
+                        <a href="/">Return to Home</a>
+                    </body>
+                    </html>
+                    '''
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to load n8n interface: {e}")
         
         # Root endpoint
         @self.app.get("/", response_class=HTMLResponse)
@@ -247,6 +276,7 @@ class ChronosApp:
                     <div class="links">
                         <a href="/client">GUI Client</a>
                         <a href="/dashboard">Dashboard</a>
+                        <a href="/n8n">n8n Webhooks</a>
                         <a href="/docs">API Docs</a>
                         <a href="/health">Health Check</a>
                     </div>
