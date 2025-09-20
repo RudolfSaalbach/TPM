@@ -1,217 +1,108 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .header {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header h1 {
-            margin: 0;
-            color: #667eea;
-        }
-        .form-container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #495057;
-        }
-        input[type="text"], textarea, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-        textarea {
-            height: 120px;
-            resize: vertical;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-        }
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .checkbox-group input[type="checkbox"] {
-            width: auto;
-        }
-        .btn {
-            background: #667eea;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .btn:hover {
-            background: #5a6fd8;
-        }
-        .btn-secondary {
-            background: #6c757d;
-            margin-right: 10px;
-        }
-        .btn-secondary:hover {
-            background: #545b62;
-        }
-        .breadcrumb {
-            margin-bottom: 20px;
-        }
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        .help-text {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-        .example-box {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 5px;
-            padding: 15px;
-            margin-top: 10px;
-        }
-        .example-box h4 {
-            margin: 0 0 10px 0;
-            color: #495057;
-        }
-        pre {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 3px;
-            overflow-x: auto;
-            font-size: 12px;
-            margin: 5px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="breadcrumb">
-            <a href="/admin">Admin</a> / <a href="/admin/whitelists">Whitelists</a> /
-            {% if whitelist %}Edit{% else %}New{% endif %}
-        </div>
+{% extends "admin/base.html" %}
 
-        <div class="header">
-            <h1>{% if whitelist %}✏️ Edit Whitelist Entry{% else %}➕ New Whitelist Entry{% endif %}</h1>
-        </div>
+{% set is_edit = whitelist is not none %}
 
-        <div class="form-container">
-            <form method="post">
-                <div class="form-group">
-                    <label for="system_name">System Name *</label>
-                    <input type="text" id="system_name" name="system_name"
-                           value="{{ whitelist.system_name if whitelist else '' }}"
-                           required placeholder="e.g., TELEGRAM, N8N, SMTP">
-                    <div class="help-text">The target system identifier (uppercase recommended)</div>
-                </div>
+{% block title %}{% if is_edit %}Whitelist bearbeiten{% else %}Whitelist anlegen{% endif %} - Chronos Admin{% endblock %}
+{% block header_title %}System Whitelists{% endblock %}
+{% block header_subtitle %}Granulare Freigaben f&uuml;r externe Systeme definieren{% endblock %}
 
-                <div class="form-group">
-                    <label for="action_name">Action Name *</label>
-                    <input type="text" id="action_name" name="action_name"
-                           value="{{ whitelist.action_name if whitelist else '' }}"
-                           required placeholder="e.g., SEND_MESSAGE, NOTIFY, EXECUTE">
-                    <div class="help-text">The specific action or command name</div>
-                </div>
+{% block content %}
+<nav class="breadcrumb">
+    <a href="/admin">Admin</a>
+    <span>/</span>
+    <a href="/admin/whitelists">Whitelists</a>
+    <span>/</span>
+    <span>{% if is_edit %}Bearbeiten{% else %}Neu{% endif %}</span>
+</nav>
 
-                <div class="form-group">
-                    <label for="allowed_params">Allowed Parameters (JSON)</label>
-                    <textarea id="allowed_params" name="allowed_params"
-                              placeholder='{"message": "string", "priority": "int", "channels": "list"}'
-                    >{{ allowed_params_json if allowed_params_json else '' }}</textarea>
-                    <div class="help-text">JSON object defining parameter names and their allowed types. Leave empty for no restrictions.</div>
-
-                    <div class="example-box">
-                        <h4>Examples:</h4>
-                        <pre>{"message": "string", "priority": "int"}</pre>
-                        <pre>{"recipient": "email", "subject": "string", "html": "string"}</pre>
-                        <pre>{"webhook_url": "url", "data": "object"}</pre>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="enabled" name="enabled"
-                               {% if not whitelist or whitelist.enabled %}checked{% endif %}>
-                        <label for="enabled">Enabled</label>
-                    </div>
-                    <div class="help-text">Whether this whitelist entry is active</div>
-                </div>
-
-                <div style="margin-top: 30px;">
-                    <a href="/admin/whitelists" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn">
-                        {% if whitelist %}Update Whitelist Entry{% else %}Create Whitelist Entry{% endif %}
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px;">
-            <h4>💡 Parameter Type Reference</h4>
-            <ul>
-                <li><code>"string"</code> - Text values</li>
-                <li><code>"int"</code> - Integer numbers</li>
-                <li><code>"float"</code> - Decimal numbers</li>
-                <li><code>"bool"</code> - True/false values</li>
-                <li><code>"email"</code> - Email addresses</li>
-                <li><code>"url"</code> - URLs</li>
-                <li><code>"list"</code> - Arrays of values</li>
-                <li><code>"object"</code> - JSON objects</li>
-            </ul>
-        </div>
+<div class="page-header">
+    <div>
+        <h1>{% if is_edit %}Whitelist-Eintrag bearbeiten{% else %}Whitelist-Eintrag anlegen{% endif %}</h1>
+        <p>Steuere, welche Aktionen ein externes System ausf&uuml;hren darf und welche Parameter erlaubt sind.</p>
     </div>
+    <div class="header-actions">
+        <a class="btn btn-secondary" href="/admin/whitelists">Zur&uuml;ck zur &Uuml;bersicht</a>
+    </div>
+</div>
 
-    <script>
-        // JSON validation
-        document.getElementById('allowed_params').addEventListener('blur', function() {
-            const value = this.value.trim();
-            if (value && value !== '') {
-                try {
-                    JSON.parse(value);
-                    this.style.borderColor = '#28a745';
-                } catch (e) {
-                    this.style.borderColor = '#dc3545';
-                    alert('Invalid JSON format. Please check your syntax.');
-                }
-            } else {
-                this.style.borderColor = '#ddd';
-            }
-        });
-    </script>
-</body>
-</html>
+<div class="form-card">
+    <form method="post" class="form-grid" id="whitelistForm">
+        <div class="form-field">
+            <label for="system_name">Systemname *</label>
+            <input type="text" id="system_name" name="system_name" value="{{ whitelist.system_name if whitelist else '' }}" required placeholder="z. B. TELEGRAM, N8N, SMTP">
+            <span class="help-text">Eindeutiger Identifikator des Zielsystems (Empfehlung: Gro&szlig;schreibung).</span>
+        </div>
+
+        <div class="form-field">
+            <label for="action_name">Aktionsname *</label>
+            <input type="text" id="action_name" name="action_name" value="{{ whitelist.action_name if whitelist else '' }}" required placeholder="z. B. SEND_MESSAGE, NOTIFY, EXECUTE">
+            <span class="help-text">Definiere den konkreten Befehl oder Workflow, der erlaubt werden soll.</span>
+        </div>
+
+        <div class="form-field">
+            <label for="allowed_params">Erlaubte Parameter (JSON)</label>
+            <textarea id="allowed_params" name="allowed_params" placeholder='{"message": "string", "priority": "int", "channels": "list"}'>{{ allowed_params_json if allowed_params_json else '' }}</textarea>
+            <span class="help-text">Optionales JSON-Objekt zur Eingrenzung erlaubter Parameter. Leer lassen f&uuml;r keine Einschr&auml;nkungen.</span>
+        </div>
+
+        <div class="info-panel" style="margin: 0;">
+            <h4>Beispiele f&uuml;r Parameterdefinitionen</h4>
+            <pre>{"message": "string", "priority": "int"}</pre>
+            <pre>{"recipient": "email", "subject": "string", "html": "string"}</pre>
+            <pre>{"webhook_url": "url", "payload": "object"}</pre>
+        </div>
+
+        <div class="form-field checkbox-field">
+            <input type="checkbox" id="enabled" name="enabled" {% if not whitelist or whitelist.enabled %}checked{% endif %}>
+            <label for="enabled">Eintrag aktiv</label>
+            <span class="help-text">Deaktivierte Eintr&auml;ge wirken nicht auf eingehende Befehle.</span>
+        </div>
+
+        <div class="form-actions">
+            <a class="btn btn-secondary" href="/admin/whitelists">Abbrechen</a>
+            <button type="submit" class="btn btn-primary">{% if is_edit %}Eintrag aktualisieren{% else %}Eintrag erstellen{% endif %}</button>
+        </div>
+    </form>
+</div>
+
+<div class="info-panel">
+    <h4>Parameter-Typ Referenz</h4>
+    <ul>
+        <li><code>"string"</code> - Textwerte</li>
+        <li><code>"int"</code> - Ganzzahlen</li>
+        <li><code>"float"</code> - Dezimalzahlen</li>
+        <li><code>"bool"</code> - Wahr/Falsch</li>
+        <li><code>"email"</code> - E-Mail-Adressen</li>
+        <li><code>"url"</code> - URLs</li>
+        <li><code>"list"</code> - Listen/Arrays</li>
+        <li><code>"object"</code> - JSON-Objekte</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    const textarea = document.getElementById('allowed_params');
+    if (!textarea) { return; }
+
+    textarea.addEventListener('blur', function() {
+        const value = this.value.trim();
+        if (!value) {
+            this.style.borderColor = '';
+            return;
+        }
+        try {
+            JSON.parse(value);
+            this.style.borderColor = 'rgba(0, 200, 81, 0.6)';
+        } catch (error) {
+            this.style.borderColor = 'rgba(255, 71, 87, 0.8)';
+            window.alert('Ung&uuml;ltiges JSON-Format. Bitte Syntax pr&uuml;fen.');
+        }
+    });
+})();
+</script>
+{% endblock %}
+
+
+

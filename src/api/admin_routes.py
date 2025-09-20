@@ -34,9 +34,18 @@ class AdminRoutes:
         # Main admin dashboard
         @self.router.get("/admin", response_class=HTMLResponse)
         async def admin_dashboard(request: Request):
+            stats = {
+                "total_events": 0,
+                "active_workflows": 0,
+                "email_templates": 0,
+                "integrations": 0
+            }
+
             return self.templates.TemplateResponse("admin/dashboard.html", {
                 "request": request,
-                "title": "Chronos Admin Dashboard"
+                "title": "Chronos Admin Dashboard",
+                "active_page": "dashboard",
+                "stats": stats
             })
 
         # Whitelists management
@@ -52,7 +61,8 @@ class AdminRoutes:
             return self.templates.TemplateResponse("admin/whitelists.html", {
                 "request": request,
                 "whitelists": whitelists,
-                "title": "System Whitelists"
+                "title": "System Whitelists",
+                "active_page": "whitelists"
             })
 
         @self.router.get("/admin/whitelists/new", response_class=HTMLResponse)
@@ -60,7 +70,9 @@ class AdminRoutes:
             return self.templates.TemplateResponse("admin/whitelist_form.html", {
                 "request": request,
                 "whitelist": None,
-                "title": "New Whitelist Entry"
+                "title": "New Whitelist Entry",
+                "active_page": "whitelists",
+                "allowed_params_json": ""
             })
 
         @self.router.post("/admin/whitelists/new")
@@ -103,7 +115,8 @@ class AdminRoutes:
                 "request": request,
                 "whitelist": whitelist,
                 "allowed_params_json": json.dumps(whitelist.allowed_params, indent=2) if whitelist.allowed_params else "",
-                "title": "Edit Whitelist Entry"
+                "title": "Edit Whitelist Entry",
+                "active_page": "whitelists"
             })
 
         @self.router.post("/admin/whitelists/{whitelist_id}/delete")

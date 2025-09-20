@@ -6,6 +6,7 @@ Unified single API combining all features from multiple versions
 import json
 import logging
 import uuid
+import platform
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Union
 from fastapi import APIRouter, HTTPException, Depends, Request, Query, Form, Header, status
@@ -17,6 +18,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from src.core.scheduler import ChronosScheduler
 from src.core.database import db_service, get_db_session
+from src.core.schema_extensions import EmailTemplateDB
 from src.core.models import (
     ChronosEvent, Priority, EventType, EventStatus,
     ChronosEventDB, TemplateDB, TemplateUsageDB,
@@ -1635,23 +1637,58 @@ class ChronosUnifiedAPIRoutes:
         @self.router.get("/admin", response_class=HTMLResponse)
         async def admin_dashboard(request: Request):
             """Admin dashboard"""
+            stats = {
+                "total_events": 0,
+                "active_workflows": 0,
+                "email_templates": 0,
+                "integrations": 0
+            }
+
+            try:
+                async with db_service.get_session() as session:
+                    stats["total_events"] = await session.scalar(
+                        select(func.count()).select_from(ChronosEventDB)
+                    ) or 0
+
+                    stats["active_workflows"] = await session.scalar(
+                        select(func.count()).select_from(ActionWorkflowDB).where(ActionWorkflowDB.enabled.is_(True))
+                    ) or 0
+
+                    stats["email_templates"] = await session.scalar(
+                        select(func.count()).select_from(EmailTemplateDB)
+                    ) or 0
+
+                    stats["integrations"] = await session.scalar(
+                        select(func.count(func.distinct(ExternalCommandDB.target_system)))
+                    ) or 0
+            except Exception as exc:
+                self.logger.warning(f"Failed to load admin stats: {exc}")
+
             return self.templates.TemplateResponse("admin/dashboard.html", {
                 "request": request,
-                "title": "Chronos Admin Dashboard"
+                "title": "Chronos Admin Dashboard",
+                "active_page": "dashboard",
+                "stats": stats
             })
 
         @self.router.get("/admin/system", response_class=HTMLResponse)
         async def system_info(request: Request):
             """System information page"""
-            # Get database info
-            db_info = {}
+            db_info = {
+                "environment": self.scheduler.config.get('environment', 'Unknown') if self.scheduler and hasattr(self.scheduler, 'config') else 'Unknown',
+                "python_version": platform.python_version(),
+                "platform": platform.platform(),
+                "uptime": 'n/a',
+                "tables": [],
+                "table_counts": {}
+            }
+
             try:
                 async with db_service.get_session() as session:
                     result = await session.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
                     tables = [row[0] for row in result.fetchall()]
                     db_info["tables"] = tables
 
-                    # Get table counts
                     table_counts = {}
                     for table in tables:
                         if not table.startswith('sqlite_'):
@@ -1659,13 +1696,14 @@ class ChronosUnifiedAPIRoutes:
                             table_counts[table] = count_result.scalar()
                     db_info["table_counts"] = table_counts
 
-            except Exception as e:
-                db_info["error"] = str(e)
+            except Exception as exc:
+                db_info["error"] = str(exc)
 
             return self.templates.TemplateResponse("admin/system.html", {
                 "request": request,
                 "db_info": db_info,
-                "title": "System Information"
+                "title": "System Information",
+                "active_page": "system"
             })
 
         # CALDAV BACKEND ROUTES
@@ -2084,3 +2122,4 @@ def create_admin_routes(email_service=None) -> APIRouter:
     """Create admin routes (now part of unified routes)"""
     routes = ChronosUnifiedAPIRoutes(None, "admin-key", email_service)
     return routes.router
+

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Chronos Admin{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/admin" class="logo">
+                    <div class="logo-icon">C</div>
+                    <span class="logo-text">chronos admin</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/admin" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <span class="nav-item-icon">&#128202;</span>
+                    <span class="nav-item-text">Dashboard</span>
+                </a>
+                <a href="/admin/whitelists" class="nav-item {% if active_page == 'whitelists' %}active{% endif %}">
+                    <span class="nav-item-icon">&#128274;</span>
+                    <span class="nav-item-text">Whitelists</span>
+                </a>
+                <a href="/admin/workflows" class="nav-item {% if active_page == 'workflows' %}active{% endif %}">
+                    <span class="nav-item-icon">&#128295;</span>
+                    <span class="nav-item-text">Workflows</span>
+                </a>
+                <a href="/admin/email-templates" class="nav-item {% if active_page == 'email' %}active{% endif %}">
+                    <span class="nav-item-icon">&#128231;</span>
+                    <span class="nav-item-text">E-Mail Templates</span>
+                </a>
+                <a href="/admin/integrations" class="nav-item {% if active_page == 'integrations' %}active{% endif %}">
+                    <span class="nav-item-icon">&#128279;</span>
+                    <span class="nav-item-text">Integrationen</span>
+                </a>
+                <a href="/admin/backups" class="nav-item {% if active_page == 'backups' %}active{% endif %}">
+                    <span class="nav-item-icon">&#128190;</span>
+                    <span class="nav-item-text">Backups</span>
+                </a>
+                <a href="/admin/system" class="nav-item {% if active_page == 'system' %}active{% endif %}">
+                    <span class="nav-item-icon">&#9881;</span>
+                    <span class="nav-item-text">System</span>
+                </a>
+            </nav>
+        </aside>
+
+        <div class="main-content">
+            <nav class="navbar">
+                <div class="navbar-brand">
+                    <h1 class="navbar-title">{% block header_title %}Chronos Admin{% endblock %}</h1>
+                    <p class="navbar-subtitle">{% block header_subtitle %}Operations &amp; Governance Center{% endblock %}</p>
+                </div>
+
+                <div class="navbar-actions">
+                    <button class="btn btn-secondary" type="button" onclick="toggleSidebar()">Menu</button>
+                    {% block header_actions %}{% endblock %}
+                </div>
+            </nav>
+
+            <div class="page-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script>
+    (function() {
+        const sidebar = document.getElementById('sidebar');
+        window.toggleSidebar = function toggleSidebar() {
+            if (!sidebar) { return; }
+            sidebar.classList.toggle('collapsed');
+        };
+    })();
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

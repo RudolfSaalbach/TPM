@@ -14,7 +14,7 @@ from typing import Dict, Any
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 
@@ -248,43 +248,11 @@ class ChronosApp:
                 raise HTTPException(status_code=500, detail=f"Failed to load n8n interface: {e}")
         
         # Root endpoint
-        @self.app.get("/", response_class=HTMLResponse)
+        @self.app.get("/", response_class=RedirectResponse)
         async def root():
             """Root endpoint - redirect to dashboard"""
-            return '''
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Chronos Engine v2.1</title>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <style>
-                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-                    .container { max-width: 600px; margin: 0 auto; }
-                    .logo { font-size: 2.5em; color: #667eea; margin-bottom: 20px; }
-                    .version { color: #666; margin-bottom: 30px; }
-                    .links a { display: inline-block; margin: 10px; padding: 10px 20px; 
-                              background: #667eea; color: white; text-decoration: none; 
-                              border-radius: 5px; }
-                    .links a:hover { background: #5a6fd8; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="logo">Chronos Engine</div>
-                    <div class="version">Version 2.1.0 - Database Edition</div>
-                    <div class="links">
-                        <a href="/client">GUI Client</a>
-                        <a href="/dashboard">Dashboard</a>
-                        <a href="/n8n">n8n Webhooks</a>
-                        <a href="/docs">API Docs</a>
-                        <a href="/health">Health Check</a>
-                    </div>
-                    <p><strong>New in v2.1:</strong> Full SQLite database persistence, OAuth2 Google Calendar integration</p>
-                </div>
-            </body>
-            </html>
-            '''
+            return RedirectResponse(url="/dashboard", status_code=307)
+
     
     async def startup(self):
         """Application startup"""

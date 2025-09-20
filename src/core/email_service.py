@@ -434,7 +434,7 @@ DEFAULT_NOTIFICATION_TEMPLATE = {
     'html_body_template': '''
     <html>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #667eea;">{{title}}</h2>
+        <h2 style="color: #ff6d5a;">{{title}}</h2>
         <p>{{message}}</p>
 
         {{#if event.title}}

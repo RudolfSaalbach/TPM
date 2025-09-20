@@ -1,0 +1,890 @@
+# chronos_dashboard.py - Enhanced Dashboard Routes für n8n-Style UI
+
+from flask import Flask, render_template, jsonify, request, send_file
+from flask_socketio import SocketIO, emit
+import json
+import io
+import csv
+from datetime import datetime, timedelta
+from typing import Dict, List, Any
+
+class ChronosDashboardAPI:
+    """Enhanced Dashboard API für n8n-Style Interface"""
+    
+    def __init__(self, app: Flask, chronos_engine):
+        self.app = app
+        self.chronos_engine = chronos_engine
+        self.socketio = SocketIO(app, cors_allowed_origins="*")
+        self.setup_routes()
+        self.setup_websocket_handlers()
+    
+    def setup_routes(self):
+        """Setup enhanced API routes"""
+        
+        @self.app.route('/dashboard')
+        def dashboard():
+            """Serve the n8n-style dashboard"""
+            return render_template('dashboard_n8n.html')
+        
+        @self.app.route('/api/dashboard/metrics')
+        def get_dashboard_metrics():
+            """Get comprehensive dashboard metrics"""
+            try:
+                metrics = self._calculate_enhanced_metrics()
+                return jsonify(metrics)
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/events')
+        def get_events():
+            """Get filtered and paginated events"""
+            try:
+                # Query parameters
+                limit = request.args.get('limit', 10, type=int)
+                offset = request.args.get('offset', 0, type=int)
+                search = request.args.get('search', '')
+                event_type = request.args.get('type', 'all')
+                priority = request.args.get('priority', 'all')
+                status = request.args.get('status', 'all')
+                sort_by = request.args.get('sort', 'start_time')
+                sort_order = request.args.get('order', 'asc')
+                
+                events = self._get_filtered_events(
+                    limit, offset, search, event_type, 
+                    priority, status, sort_by, sort_order
+                )
+                
+                return jsonify({
+                    'events': events,
+                    'total': len(events),
+                    'limit': limit,
+                    'offset': offset
+                })
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/sync/status')
+        def get_sync_status():
+            """Get detailed sync status"""
+            try:
+                status = self._get_enhanced_sync_status()
+                return jsonify(status)
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/sync/<sync_type>', methods=['POST'])
+        def trigger_sync(sync_type):
+            """Trigger synchronization"""
+            try:
+                if sync_type == 'full':
+                    result = self.chronos_engine.perform_full_sync()
+                elif sync_type == 'incremental':
+                    result = self.chronos_engine.perform_incremental_sync()
+                else:
+                    return jsonify({'error': 'Invalid sync type'}), 400
+                
+                # Emit WebSocket update
+                self.socketio.emit('sync_status', {
+                    'type': 'sync_status',
+                    'sync_status': self._get_enhanced_sync_status()
+                })
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'{sync_type.title()} sync completed successfully',
+                    'details': result
+                })
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/analytics/productivity')
+        def get_productivity_analytics():
+            """Get productivity analytics"""
+            try:
+                analytics = self._calculate_productivity_analytics()
+                return jsonify(analytics)
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/export/<format>')
+        def export_data(format):
+            """Export data in various formats"""
+            try:
+                if format not in ['json', 'csv']:
+                    return jsonify({'error': 'Unsupported format'}), 400
+                
+                data = self._prepare_export_data()
+                
+                if format == 'json':
+                    return jsonify(data)
+                elif format == 'csv':
+                    return self._generate_csv_export(data)
+                    
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/events/<event_id>', methods=['GET', 'PUT', 'DELETE'])
+        def handle_event(event_id):
+            """CRUD operations for individual events"""
+            try:
+                if request.method == 'GET':
+                    event = self.chronos_engine.get_event_by_id(event_id)
+                    if not event:
+                        return jsonify({'error': 'Event not found'}), 404
+                    return jsonify(event.to_dict())
+                
+                elif request.method == 'PUT':
+                    data = request.get_json()
+                    updated_event = self.chronos_engine.update_event(event_id, data)
+                    
+                    # Emit update via WebSocket
+                    self.socketio.emit('event_update', {
+                        'type': 'event_update',
+                        'event': updated_event.to_dict()
+                    })
+                    
+                    return jsonify(updated_event.to_dict())
+                
+                elif request.method == 'DELETE':
+                    success = self.chronos_engine.delete_event(event_id)
+                    if success:
+                        self.socketio.emit('event_update', {
+                            'type': 'event_deleted',
+                            'event_id': event_id
+                        })
+                        return jsonify({'success': True})
+                    else:
+                        return jsonify({'error': 'Failed to delete event'}), 500
+                        
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/api/recommendations')
+        def get_recommendations():
+            """Get AI-powered recommendations"""
+            try:
+                recommendations = self._generate_recommendations()
+                return jsonify(recommendations)
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+    
+    def setup_websocket_handlers(self):
+        """Setup WebSocket event handlers"""
+        
+        @self.socketio.on('connect')
+        def handle_connect():
+            """Handle client connection"""
+            emit('connected', {'status': 'Connected to Chronos Engine'})
+            
+            # Send initial data
+            emit('metrics_update', {
+                'type': 'metrics_update',
+                'metrics': self._calculate_enhanced_metrics()
+            })
+        
+        @self.socketio.on('disconnect')
+        def handle_disconnect():
+            """Handle client disconnection"""
+            print('Client disconnected')
+        
+        @self.socketio.on('request_update')
+        def handle_update_request(data):
+            """Handle manual update requests"""
+            update_type = data.get('type', 'all')
+            
+            if update_type in ['all', 'metrics']:
+                emit('metrics_update', {
+                    'type': 'metrics_update',
+                    'metrics': self._calculate_enhanced_metrics()
+                })
+            
+            if update_type in ['all', 'events']:
+                emit('event_update', {
+                    'type': 'event_update'
+                })
+            
+            if update_type in ['all', 'sync']:
+                emit('sync_status', {
+                    'type': 'sync_status',
+                    'sync_status': self._get_enhanced_sync_status()
+                })
+    
+    def _calculate_enhanced_metrics(self) -> Dict[str, Any]:
+        """Calculate comprehensive dashboard metrics"""
+        try:
+            # Get events from the last 7 days
+            end_date = datetime.utcnow()
+            start_date = end_date - timedelta(days=7)
+            
+            events = self.chronos_engine.get_events_in_range(start_date, end_date)
+            
+            # Calculate current metrics
+            total_events = len(events)
+            completed_events = len([e for e in events if e.status == 'COMPLETED'])
+            completion_rate = (completed_events / total_events * 100) if total_events > 0 else 0
+            
+            # Calculate total hours
+            total_hours = sum([
+                (e.end_time - e.start_time).total_seconds() / 3600 
+                for e in events if e.end_time and e.start_time
+            ])
+            
+            # Calculate productivity score
+            productivity_score = self._calculate_productivity_score(events)
+            
+            # Get comparison with previous period
+            prev_start = start_date - timedelta(days=7)
+            prev_events = self.chronos_engine.get_events_in_range(prev_start, start_date)
+            
+            # Calculate changes
+            prev_total = len(prev_events)
+            prev_completed = len([e for e in prev_events if e.status == 'COMPLETED'])
+            prev_completion_rate = (prev_completed / prev_total * 100) if prev_total > 0 else 0
+            prev_hours = sum([
+                (e.end_time - e.start_time).total_seconds() / 3600 
+                for e in prev_events if e.end_time and e.start_time
+            ])
+            
+            return {
+                'total_events': total_events,
+                'completed_tasks': completed_events,
+                'completion_rate': round(completion_rate, 1),
+                'total_hours': round(total_hours, 1),
+                'productivity_score': round(productivity_score, 1),
+                'events_per_day': round(total_events / 7, 1),
+                
+                # Changes from previous period
+                'events_change': total_events - prev_total,
+                'productivity_change': round(completion_rate - prev_completion_rate, 1),
+                'time_saved_change': round(total_hours - prev_hours, 1),
+                'tasks_change': completed_events - prev_completed,
+                
+                # Additional metrics
+                'high_priority_events': len([e for e in events if e.priority in ['HIGH', 'URGENT']]),
+                'overdue_events': len([e for e in events if e.end_time < datetime.utcnow() and e.status != 'COMPLETED']),
+                'upcoming_deadlines': len([
+                    e for e in events 
+                    if e.event_type == 'DEADLINE' and e.start_time > datetime.utcnow()
+                ]),
+                
+                'generated_at': datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            self.app.logger.error(f"Error calculating metrics: {e}")
+            return self._get_fallback_metrics()
+    
+    def _get_filtered_events(self, limit: int, offset: int, search: str, 
+                           event_type: str, priority: str, status: str,
+                           sort_by: str, sort_order: str) -> List[Dict]:
+        """Get filtered and sorted events"""
+        try:
+            # Get all events
+            events = self.chronos_engine.get_all_events()
+            
+            # Apply filters
+            if search:
+                events = [e for e in events if 
+                         search.lower() in e.title.lower() or
+                         search.lower() in (e.description or '').lower() or
+                         search.lower() in (e.location or '').lower()]
+            
+            if event_type != 'all':
+                events = [e for e in events if e.event_type == event_type.upper()]
+            
+            if priority != 'all':
+                events = [e for e in events if e.priority == priority.upper()]
+            
+            if status != 'all':
+                events = [e for e in events if e.status == status.upper()]
+            
+            # Sort events
+            reverse = sort_order.lower() == 'desc'
+            
+            if sort_by == 'start_time':
+                events.sort(key=lambda x: x.start_time or datetime.min, reverse=reverse)
+            elif sort_by == 'priority':
+                priority_order = {'URGENT': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1}
+                events.sort(key=lambda x: priority_order.get(x.priority, 0), reverse=reverse)
+            elif sort_by == 'title':
+                events.sort(key=lambda x: x.title.lower(), reverse=reverse)
+            elif sort_by == 'type':
+                events.sort(key=lambda x: x.event_type, reverse=reverse)
+            
+            # Apply pagination
+            paginated_events = events[offset:offset + limit]
+            
+            # Convert to dict format
+            return [self._event_to_dict(event) for event in paginated_events]
+            
+        except Exception as e:
+            self.app.logger.error(f"Error filtering events: {e}")
+            return []
+    
+    def _event_to_dict(self, event) -> Dict[str, Any]:
+        """Convert event to dictionary with enhanced fields"""
+        return {
+            'id': event.id,
+            'title': event.title,
+            'description': event.description,
+            'start_time': event.start_time.isoformat() if event.start_time else None,
+            'end_time': event.end_time.isoformat() if event.end_time else None,
+            'location': event.location,
+            'priority': event.priority,
+            'event_type': event.event_type,
+            'status': event.status,
+            'tags': event.tags,
+            'created_at': event.created_at.isoformat() if event.created_at else None,
+            'updated_at': event.updated_at.isoformat() if event.updated_at else None,
+            'duration_minutes': self._calculate_event_duration(event),
+            'is_overdue': self._is_event_overdue(event),
+            'urgency_score': self._calculate_urgency_score(event)
+        }
+    
+    def _get_enhanced_sync_status(self) -> Dict[str, Any]:
+        """Get comprehensive sync status"""
+        try:
+            sync_status = self.chronos_engine.get_sync_status()
+            
+            # Calculate additional metrics
+            last_sync = sync_status.get('last_update')
+            if last_sync:
+                last_sync_dt = datetime.fromisoformat(last_sync)
+                time_since_sync = (datetime.utcnow() - last_sync_dt).total_seconds() / 60  # minutes
+            else:
+                time_since_sync = None
+            
+            # Get quota information
+            quota_info = self.chronos_engine.get_api_quota_status()
+            
+            return {
+                'status': 'connected' if sync_status.get('is_connected', False) else 'disconnected',
+                'last_update': last_sync,
+                'time_since_sync_minutes': time_since_sync,
+                'total_events': sync_status.get('total_events', 0),
+                'events_synced_today': sync_status.get('events_synced_today', 0),
+                'sync_errors': sync_status.get('sync_errors', 0),
+                'quota_used': quota_info.get('used', 0),
+                'quota_limit': quota_info.get('limit', 100000),
+                'quota_remaining': quota_info.get('remaining', 100000),
+                'quota_reset_time': quota_info.get('reset_time'),
+                'earliest_event': sync_status.get('earliest_event'),
+                'latest_event': sync_status.get('latest_event'),
+                'sync_frequency': 'automatic',  # oder basierend auf Konfiguration
+                'last_full_sync': sync_status.get('last_full_sync'),
+                'next_scheduled_sync': sync_status.get('next_scheduled_sync')
+            }
+            
+        except Exception as e:
+            self.app.logger.error(f"Error getting sync status: {e}")
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
+    
+    def _calculate_productivity_analytics(self) -> Dict[str, Any]:
+        """Calculate detailed productivity analytics"""
+        try:
+            # Get events from the last 30 days for better analytics
+            end_date = datetime.utcnow()
+            start_date = end_date - timedelta(days=30)
+            
+            events = self.chronos_engine.get_events_in_range(start_date, end_date)
+            
+            # Weekly trends
+            weekly_data = self._calculate_weekly_trends(events)
+            
+            # Priority distribution
+            priority_dist = self._calculate_priority_distribution(events)
+            
+            # Time distribution (hourly productivity)
+            time_dist = self._calculate_time_distribution(events)
+            
+            # Completion patterns
+            completion_patterns = self._calculate_completion_patterns(events)
+            
+            # Recommendations
+            recommendations = self._generate_ai_recommendations(events)
+            
+            return {
+                'weekly_trends': weekly_data,
+                'priority_distribution': priority_dist,
+                'time_distribution': time_dist,
+                'completion_patterns': completion_patterns,
+                'recommendations': recommendations,
+                'productivity_score': self._calculate_productivity_score(events),
+                'efficiency_rating': self._calculate_efficiency_rating(events),
+                'focus_time_hours': self._calculate_focus_time(events),
+                'meeting_load_percentage': self._calculate_meeting_load(events),
+                'generated_at': datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            self.app.logger.error(f"Error calculating productivity analytics: {e}")
+            return {}
+    
+    def _prepare_export_data(self) -> Dict[str, Any]:
+        """Prepare data for export"""
+        try:
+            events = self.chronos_engine.get_all_events()
+            metrics = self._calculate_enhanced_metrics()
+            analytics = self._calculate_productivity_analytics()
+            sync_status = self._get_enhanced_sync_status()
+            
+            return {
+                'export_info': {
+                    'generated_at': datetime.utcnow().isoformat(),
+                    'chronos_version': '2.0.0',
+                    'total_events': len(events)
+                },
+                'events': [self._event_to_dict(event) for event in events],
+                'metrics': metrics,
+                'analytics': analytics,
+                'sync_status': sync_status
+            }
+            
+        except Exception as e:
+            self.app.logger.error(f"Error preparing export data: {e}")
+            return {}
+    
+    def _generate_csv_export(self, data: Dict[str, Any]):
+        """Generate CSV export"""
+        try:
+            output = io.StringIO()
+            writer = csv.writer(output)
+            
+            # Write headers
+            headers = [
+                'ID', 'Title', 'Description', 'Start Time', 'End Time',
+                'Location', 'Priority', 'Type', 'Status', 'Tags',
+                'Duration (min)', 'Is Overdue', 'Created At'
+            ]
+            writer.writerow(headers)
+            
+            # Write event data
+            for event in data.get('events', []):
+                row = [
+                    event.get('id', ''),
+                    event.get('title', ''),
+                    event.get('description', ''),
+                    event.get('start_time', ''),
+                    event.get('end_time', ''),
+                    event.get('location', ''),
+                    event.get('priority', ''),
+                    event.get('event_type', ''),
+                    event.get('status', ''),
+                    ', '.join(event.get('tags', [])),
+                    event.get('duration_minutes', ''),
+                    event.get('is_overdue', ''),
+                    event.get('created_at', '')
+                ]
+                writer.writerow(row)
+            
+            output.seek(0)
+            
+            # Create response
+            return send_file(
+                io.BytesIO(output.getvalue().encode('utf-8')),
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=f'chronos_events_{datetime.now().strftime("%Y%m%d")}.csv'
+            )
+            
+        except Exception as e:
+            self.app.logger.error(f"Error generating CSV export: {e}")
+            return jsonify({'error': 'CSV export failed'}), 500
+    
+    def _generate_recommendations(self) -> List[Dict[str, Any]]:
+        """Generate AI-powered recommendations"""
+        try:
+            events = self.chronos_engine.get_all_events()
+            recommendations = []
+            
+            # Analyze patterns and generate recommendations
+            
+            # 1. Meeting density analysis
+            meeting_count = len([e for e in events if e.event_type == 'MEETING'])
+            total_count = len(events)
+            
+            if meeting_count / total_count > 0.6:
+                recommendations.append({
+                    'type': 'optimization',
+                    'category': 'meetings',
+                    'title': 'Zu viele Meetings',
+                    'description': 'Sie haben sehr viele Meetings. Versuchen Sie, einige zu konsolidieren.',
+                    'priority': 'high',
+                    'icon': '📅',
+                    'action': 'review_meetings'
+                })
+            
+            # 2. Peak hours analysis
+            peak_hour = self._find_peak_productivity_hour(events)
+            if peak_hour:
+                recommendations.append({
+                    'type': 'insight',
+                    'category': 'productivity',
+                    'title': f'Beste Produktivitätszeit: {peak_hour}:00',
+                    'description': f'Planen Sie wichtige Aufgaben um {peak_hour}:00 Uhr.',
+                    'priority': 'medium',
+                    'icon': '⚡',
+                    'action': 'schedule_focus_time'
+                })
+            
+            # 3. Overdue tasks analysis
+            overdue_count = len([e for e in events if self._is_event_overdue(e)])
+            if overdue_count > 0:
+                recommendations.append({
+                    'type': 'warning',
+                    'category': 'deadlines',
+                    'title': f'{overdue_count} überfällige Aufgaben',
+                    'description': 'Sie haben überfällige Aufgaben, die Aufmerksamkeit benötigen.',
+                    'priority': 'urgent',
+                    'icon': '⚠️',
+                    'action': 'review_overdue'
+                })
+            
+            # 4. Break recommendation
+            consecutive_events = self._find_consecutive_events(events)
+            if consecutive_events > 4:
+                recommendations.append({
+                    'type': 'health',
+                    'category': 'wellbeing',
+                    'title': 'Pausen einplanen',
+                    'description': 'Planen Sie mehr Pausen zwischen aufeinanderfolgenden Terminen.',
+                    'priority': 'medium',
+                    'icon': '☕',
+                    'action': 'add_breaks'
+                })
+            
+            # 5. Priority balance
+            high_priority_ratio = len([e for e in events if e.priority in ['HIGH', 'URGENT']]) / total_count
+            if high_priority_ratio > 0.8:
+                recommendations.append({
+                    'type': 'balance',
+                    'category': 'priorities',
+                    'title': 'Zu viele hohe Prioritäten',
+                    'description': 'Überdenken Sie Ihre Prioritätssetzung für besseren Fokus.',
+                    'priority': 'medium',
+                    'icon': '🎯',
+                    'action': 'rebalance_priorities'
+                })
+            
+            return recommendations[:5]  # Limit to top 5 recommendations
+            
+        except Exception as e:
+            self.app.logger.error(f"Error generating recommendations: {e}")
+            return []
+    
+    # Helper methods for calculations
+    def _calculate_event_duration(self, event) -> int:
+        """Calculate event duration in minutes"""
+        if event.start_time and event.end_time:
+            return int((event.end_time - event.start_time).total_seconds() / 60)
+        return 0
+    
+    def _is_event_overdue(self, event) -> bool:
+        """Check if event is overdue"""
+        if event.status == 'COMPLETED':
+            return False
+        if event.end_time and event.end_time < datetime.utcnow():
+            return True
+        return False
+    
+    def _calculate_urgency_score(self, event) -> float:
+        """Calculate urgency score (0-100)"""
+        score = 0
+        
+        # Priority factor
+        priority_scores = {'LOW': 25, 'MEDIUM': 50, 'HIGH': 75, 'URGENT': 100}
+        score += priority_scores.get(event.priority, 25)
+        
+        # Time factor
+        if event.start_time:
+            time_until = (event.start_time - datetime.utcnow()).total_seconds() / 3600  # hours
+            if time_until < 1:
+                score += 25
+            elif time_until < 24:
+                score += 15
+            elif time_until < 72:
+                score += 10
+        
+        # Type factor
+        if event.event_type == 'DEADLINE':
+            score += 20
+        elif event.event_type == 'MEETING':
+            score += 10
+        
+        return min(score, 100)
+    
+    def _calculate_productivity_score(self, events: List) -> float:
+        """Calculate overall productivity score"""
+        if not events:
+            return 0
+        
+        completed = len([e for e in events if e.status == 'COMPLETED'])
+        total = len(events)
+        completion_rate = completed / total
+        
+        # Adjust for priority
+        high_priority_completed = len([
+            e for e in events 
+            if e.status == 'COMPLETED' and e.priority in ['HIGH', 'URGENT']
+        ])
+        high_priority_total = len([
+            e for e in events 
+            if e.priority in ['HIGH', 'URGENT']
+        ])
+        
+        priority_bonus = 0
+        if high_priority_total > 0:
+            priority_completion_rate = high_priority_completed / high_priority_total
+            priority_bonus = priority_completion_rate * 0.2
+        
+        return min((completion_rate + priority_bonus) * 100, 100)
+    
+    def _calculate_weekly_trends(self, events: List) -> List[Dict]:
+        """Calculate weekly productivity trends"""
+        weekly_data = []
+        
+        for week_offset in range(4):  # Last 4 weeks
+            week_start = datetime.utcnow() - timedelta(weeks=week_offset+1)
+            week_end = week_start + timedelta(days=7)
+            
+            week_events = [
+                e for e in events 
+                if e.start_time and week_start <= e.start_time < week_end
+            ]
+            
+            completed = len([e for e in week_events if e.status == 'COMPLETED'])
+            total = len(week_events)
+            completion_rate = (completed / total * 100) if total > 0 else 0
+            
+            weekly_data.append({
+                'week': f"W{week_offset+1}",
+                'total_events': total,
+                'completed_events': completed,
+                'completion_rate': round(completion_rate, 1),
+                'week_start': week_start.isoformat(),
+                'week_end': week_end.isoformat()
+            })
+        
+        return list(reversed(weekly_data))  # Oldest first
+    
+    def _calculate_priority_distribution(self, events: List) -> Dict[str, int]:
+        """Calculate priority distribution"""
+        distribution = {'URGENT': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+        
+        for event in events:
+            if event.priority in distribution:
+                distribution[event.priority] += 1
+        
+        return distribution
+    
+    def _calculate_time_distribution(self, events: List) -> Dict[int, int]:
+        """Calculate hourly activity distribution"""
+        distribution = {hour: 0 for hour in range(24)}
+        
+        for event in events:
+            if event.start_time:
+                hour = event.start_time.hour
+                distribution[hour] += 1
+        
+        return distribution
+    
+    def _calculate_completion_patterns(self, events: List) -> Dict[str, Any]:
+        """Calculate completion patterns"""
+        completed_events = [e for e in events if e.status == 'COMPLETED']
+        
+        if not completed_events:
+            return {}
+        
+        # Average completion time by priority
+        completion_by_priority = {}
+        for priority in ['LOW', 'MEDIUM', 'HIGH', 'URGENT']:
+            priority_events = [e for e in completed_events if e.priority == priority]
+            if priority_events:
+                avg_duration = sum([
+                    self._calculate_event_duration(e) for e in priority_events
+                ]) / len(priority_events)
+                completion_by_priority[priority] = round(avg_duration, 1)
+        
+        return {
+            'completion_by_priority': completion_by_priority,
+            'total_completed': len(completed_events),
+            'completion_rate_by_type': self._calculate_type_completion_rates(events)
+        }
+    
+    def _calculate_type_completion_rates(self, events: List) -> Dict[str, float]:
+        """Calculate completion rates by event type"""
+        rates = {}
+        event_types = set(e.event_type for e in events)
+        
+        for event_type in event_types:
+            type_events = [e for e in events if e.event_type == event_type]
+            completed = len([e for e in type_events if e.status == 'COMPLETED'])
+            total = len(type_events)
+            rates[event_type] = round((completed / total * 100) if total > 0 else 0, 1)
+        
+        return rates
+    
+    def _find_peak_productivity_hour(self, events: List) -> int:
+        """Find the hour with most completed events"""
+        completed_events = [e for e in events if e.status == 'COMPLETED' and e.start_time]
+        
+        if not completed_events:
+            return None
+        
+        hour_counts = {}
+        for event in completed_events:
+            hour = event.start_time.hour
+            hour_counts[hour] = hour_counts.get(hour, 0) + 1
+        
+        return max(hour_counts.items(), key=lambda x: x[1])[0]
+    
+    def _find_consecutive_events(self, events: List) -> int:
+        """Find maximum consecutive events in a day"""
+        if not events:
+            return 0
+        
+        # Group events by date
+        events_by_date = {}
+        for event in events:
+            if event.start_time:
+                date_key = event.start_time.date()
+                if date_key not in events_by_date:
+                    events_by_date[date_key] = []
+                events_by_date[date_key].append(event)
+        
+        max_consecutive = 0
+        for date_events in events_by_date.values():
+            # Sort by start time
+            date_events.sort(key=lambda x: x.start_time)
+            
+            consecutive = 1
+            current_consecutive = 1
+            
+            for i in range(1, len(date_events)):
+                prev_event = date_events[i-1]
+                curr_event = date_events[i]
+                
+                # Check if events are within 1 hour of each other
+                if prev_event.end_time and curr_event.start_time:
+                    gap = (curr_event.start_time - prev_event.end_time).total_seconds() / 3600
+                    if gap <= 1:  # Less than 1 hour gap
+                        current_consecutive += 1
+                    else:
+                        consecutive = max(consecutive, current_consecutive)
+                        current_consecutive = 1
+            
+            consecutive = max(consecutive, current_consecutive)
+            max_consecutive = max(max_consecutive, consecutive)
+        
+        return max_consecutive
+    
+    def _calculate_efficiency_rating(self, events: List) -> float:
+        """Calculate efficiency rating based on time vs. completion"""
+        if not events:
+            return 0
+        
+        total_planned_time = sum([
+            self._calculate_event_duration(e) for e in events
+        ])
+        
+        completed_events = [e for e in events if e.status == 'COMPLETED']
+        total_completed_time = sum([
+            self._calculate_event_duration(e) for e in completed_events
+        ])
+        
+        if total_planned_time == 0:
+            return 0
+        
+        return round((total_completed_time / total_planned_time) * 100, 1)
+    
+    def _calculate_focus_time(self, events: List) -> float:
+        """Calculate total focus time (non-meeting events)"""
+        focus_events = [
+            e for e in events 
+            if e.event_type not in ['MEETING', 'APPOINTMENT'] and e.status == 'COMPLETED'
+        ]
+        
+        total_minutes = sum([self._calculate_event_duration(e) for e in focus_events])
+        return round(total_minutes / 60, 1)  # Convert to hours
+    
+    def _calculate_meeting_load(self, events: List) -> float:
+        """Calculate percentage of time spent in meetings"""
+        meeting_events = [e for e in events if e.event_type in ['MEETING', 'APPOINTMENT']]
+        total_events = events
+        
+        if not total_events:
+            return 0
+        
+        meeting_time = sum([self._calculate_event_duration(e) for e in meeting_events])
+        total_time = sum([self._calculate_event_duration(e) for e in total_events])
+        
+        if total_time == 0:
+            return 0
+        
+        return round((meeting_time / total_time) * 100, 1)
+    
+    def _generate_ai_recommendations(self, events: List) -> List[Dict]:
+        """Generate AI-powered recommendations based on patterns"""
+        recommendations = []
+        
+        # Analyze patterns and suggest improvements
+        productivity_score = self._calculate_productivity_score(events)
+        
+        if productivity_score < 70:
+            recommendations.append({
+                'type': 'improvement',
+                'message': 'Fokussieren Sie sich auf weniger, aber wichtigere Aufgaben',
+                'impact': 'high'
+            })
+        
+        meeting_load = self._calculate_meeting_load(events)
+        if meeting_load > 60:
+            recommendations.append({
+                'type': 'optimization',
+                'message': 'Reduzieren Sie Meeting-Zeit und schaffen Sie mehr Fokuszeit',
+                'impact': 'medium'
+            })
+        
+        return recommendations
+    
+    def _get_fallback_metrics(self) -> Dict[str, Any]:
+        """Fallback metrics when calculation fails"""
+        return {
+            'total_events': 0,
+            'completed_tasks': 0,
+            'completion_rate': 0,
+            'total_hours': 0,
+            'productivity_score': 0,
+            'events_per_day': 0,
+            'events_change': 0,
+            'productivity_change': 0,
+            'time_saved_change': 0,
+            'tasks_change': 0,
+            'high_priority_events': 0,
+            'overdue_events': 0,
+            'upcoming_deadlines': 0,
+            'generated_at': datetime.utcnow().isoformat()
+        }
+
+    def emit_notification(self, title: str, message: str, level: str = 'info'):
+        """Emit notification to all connected clients"""
+        self.socketio.emit('notification', {
+            'type': 'notification',
+            'title': title,
+            'message': message,
+            'level': level,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+
+# Integration in die Hauptanwendung
+def setup_enhanced_dashboard(app: Flask, chronos_engine):
+    """Setup the enhanced dashboard with n8n-style UI"""
+    dashboard_api = ChronosDashboardAPI(app, chronos_engine)
+    
+    # Template-Ordner für n8n-Style Templates
+    app.template_folder = 'templates/n8n_style'
+    
+    return dashboard_api
