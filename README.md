@@ -146,14 +146,34 @@ Use `pytest tests/unit/test_event_parser.py::TestEventParser` (or similar) to ex
 ## 📁 Project Layout
 ```
 src/
-├── api/             # FastAPI routers, schemas and dashboard handlers
-├── core/            # Scheduler, models, plugins, analytics, AI, database helpers
-├── database/        # Additional DB models (e.g. pending sync state)
-├── config/          # Runtime configuration loading
-└── main.py          # FastAPI application factory & lifespan hooks
-plugins/custom/      # Built-in plugins (command handler, wellness monitor, ...)
-templates/           # Dashboard and GUI client templates
-static/              # Front-end assets for the dashboard/client
+├── api/                         # FastAPI routers and API endpoints
+├── core/                        # Core business logic and calendar management
+│   ├── source_adapter.py        # Unified backend interface (CalDAV/Google)
+│   ├── caldav_adapter.py        # CalDAV/Radicale implementation
+│   ├── google_adapter.py        # Google Calendar implementation
+│   ├── calendar_source_manager.py # Backend switching and management
+│   ├── scheduler.py             # Multi-calendar synchronization
+│   ├── calendar_repairer.py     # Backend-agnostic event processing
+│   └── models.py                # Database models and schemas
+├── config/                      # Configuration management
+└── main.py                      # FastAPI application factory
+
+config/
+├── chronos.yaml                 # Main configuration file
+└── examples/                    # Configuration examples
+    ├── caldav_basic.yaml        # Basic CalDAV setup
+    ├── caldav_production.yaml   # Production deployment
+    ├── hybrid_caldav_google.yaml # Hybrid backend setup
+    └── ...
+
+docs/
+├── CalDAV_Integration_Guide.md  # Complete CalDAV setup guide
+└── CalDAV_API_Reference.md      # API documentation
+
+tests/
+├── unit/                        # Unit tests
+├── test_caldav_*.py             # CalDAV integration tests
+└── conftest.py                  # Test fixtures and configuration
 ```
 
 ---
@@ -170,4 +190,14 @@ For CalDAV setup guidance, see `docs/CalDAV_Integration_Guide.md` and configurat
 
 ---
 
-**Chronos Engine** – production-ready calendar orchestration with plugin-driven automation.
+## 📚 Documentation
+
+- **[FEATURES.md](FEATURES.md)** - Complete feature overview and technical capabilities
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Documentation index and navigation guide
+- **[docs/CalDAV_Integration_Guide.md](docs/CalDAV_Integration_Guide.md)** - CalDAV setup and configuration
+- **[docs/CalDAV_API_Reference.md](docs/CalDAV_API_Reference.md)** - Complete API reference
+- **[config/examples/](config/examples/)** - Configuration examples for different scenarios
+
+---
+
+**Chronos Engine v2.1** – Production-ready CalDAV-first calendar orchestration with unified backend architecture.

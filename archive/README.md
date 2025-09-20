@@ -1,6 +1,6 @@
 # Chronos Engine - Archived Files
 
-This directory contains archived files from the API consolidation process that occurred during the migration to v2.2.
+This directory contains archived files from various development iterations of Chronos Engine.
 
 ## Archived Configuration Files (archive/configs/)
 
@@ -11,7 +11,7 @@ The following configuration files have been consolidated into the unified `confi
 - `chronos_v22.yaml.bak` - v2.2 feature configuration
 - `alembic_broken.ini` - Broken Alembic database migration configuration
 
-**Current Configuration:** All settings are now unified in `/config.yaml`
+**Current Configuration:** All settings are now unified in `/config/chronos.yaml`
 
 ## Archived Route Files (archive/routes/)
 
@@ -39,10 +39,10 @@ The following route files have been consolidated into the unified `src/api/route
 - Backward compatibility maintained
 - Single point of truth for API definitions
 
-### Migration Date
+### Archive Date
 **Date:** 2025-01-20
-**Version:** v2.1 → v2.2
-**Status:** Complete
+**Version:** v2.1 CalDAV Integration
+**Status:** Archived for reference
 
 ## Recovery Instructions
 
