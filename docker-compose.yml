@@ -12,10 +12,10 @@
       - CHRONOS_WEBHOOK_URL=https://your-webhook-endpoint.com
       - CHRONOS_WEBHOOK_API_KEY=your-webhook-api-key
     volumes:
-      - ./data:/app/data
-      - ./config:/app/config
-      - ./logs:/app/logs
-      - ./plugins/custom:/app/plugins/custom
+      - chronos_data:/app/data
+      - chronos_config:/app/config
+      - chronos_logs:/app/logs
+      - chronos_plugins:/app/plugins/custom
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/sync/health"]
       interval: 30s
@@ -24,6 +24,16 @@
       start_period: 40s
     networks:
       - chronos-network
+
+volumes:
+  chronos_data:
+    driver: local
+  chronos_config:
+    driver: local
+  chronos_logs:
+    driver: local
+  chronos_plugins:
+    driver: local
 
 networks:
   chronos-network:

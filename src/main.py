@@ -31,17 +31,29 @@ from src.api.routes import ChronosUnifiedAPIRoutes
 from src.api.dashboard import ChronosDashboard
 
 
-# Configure logging
+# Initialize basic console logging first
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('logs/chronos.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 
 logger = logging.getLogger(__name__)
+
+def setup_file_logging():
+    """Set up file logging after ensuring directories exist"""
+    # Create logs directory
+    Path("logs").mkdir(exist_ok=True)
+
+    # Add file handler to existing logger
+    file_handler = logging.FileHandler('logs/chronos.log')
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+    # Add to root logger
+    root_logger = logging.getLogger()
+    root_logger.addHandler(file_handler)
+
+    logger.info("File logging initialized")
 
 # Global app instance for lifespan access
 app_instance = None
@@ -247,11 +259,14 @@ class ChronosApp:
     async def startup(self):
         """Application startup"""
         logger.info("Starting Chronos Engine v2.1...")
-        
-        # Create necessary directories
+
+        # Create necessary directories first
         Path("logs").mkdir(exist_ok=True)
         Path("data").mkdir(exist_ok=True)
         Path("config").mkdir(exist_ok=True)
+
+        # Set up file logging after directories exist
+        setup_file_logging()
         
         # Initialize database
         await db_service.create_tables()
