@@ -120,7 +120,7 @@ class LoggingConfig:
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     file_enabled: bool = True
-    file_path: str = "logs/chronos.log"
+    file_path: str = "/tmp/chronos.log"
     file_max_size: int = 10 * 1024 * 1024  # 10MB
     file_backup_count: int = 5
     console_enabled: bool = True
@@ -286,6 +286,7 @@ class ConfigManager:
             f"{self.env_prefix}SMTP_PASSWORD": "smtp.password",
             f"{self.env_prefix}SMTP_FROM_EMAIL": "smtp.from_email",
             f"{self.env_prefix}LOG_LEVEL": "logging.level",
+            f"{self.env_prefix}LOG_FILE_PATH": "logging.file_path",
             f"{self.env_prefix}TELEGRAM_BOT_TOKEN": "integrations.telegram_bot_token",
             f"{self.env_prefix}N8N_WEBHOOK_URL": "integrations.n8n_webhook_base_url",
         }
@@ -525,7 +526,7 @@ logging:
   level: INFO
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file_enabled: true
-  file_path: logs/chronos.log
+  file_path: /tmp/chronos.log
   file_max_size: 10485760  # 10MB
   file_backup_count: 5
   console_enabled: true

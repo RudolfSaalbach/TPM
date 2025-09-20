@@ -31,12 +31,15 @@ from src.api.routes import ChronosUnifiedAPIRoutes
 from src.api.dashboard import ChronosDashboard
 
 
-# Configure logging
+# Configure logging with writable location
+log_dir = Path("/tmp")
+log_dir.mkdir(exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/chronos.log'),
+        logging.FileHandler('/tmp/chronos.log'),
         logging.StreamHandler(sys.stdout)
     ]
 )
@@ -248,10 +251,19 @@ class ChronosApp:
         """Application startup"""
         logger.info("Starting Chronos Engine v2.1...")
         
-        # Create necessary directories
-        Path("logs").mkdir(exist_ok=True)
+        # Create necessary directories with proper permissions
+        Path("/tmp").mkdir(exist_ok=True)
         Path("data").mkdir(exist_ok=True)
         Path("config").mkdir(exist_ok=True)
+
+        # Create logs directory as fallback (but use /tmp by default)
+        logs_dir = Path("logs")
+        logs_dir.mkdir(exist_ok=True)
+        try:
+            # Try to make it writable
+            logs_dir.chmod(0o755)
+        except (OSError, PermissionError):
+            logger.warning("Could not set permissions on logs directory, using /tmp instead")
         
         # Initialize database
         await db_service.create_tables()

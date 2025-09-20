@@ -76,6 +76,9 @@ class CalendarRepairer:
     """
 
     def __init__(self, config: Dict[str, Any], source_manager=None):
+        # Store full config for later reference
+        self.config = config
+
         # Extract nested config from repair_and_enrich section
         repair_config = config.get('repair_and_enrich', {})
         self.parsing_config = repair_config.get('parsing', {})
