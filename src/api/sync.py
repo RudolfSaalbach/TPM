@@ -264,7 +264,7 @@ class SyncService:
                     "status": "healthy",
                     "timestamp": datetime.utcnow().isoformat(),
                     "service": "chronos-sync",
-                    "version": "2.0.0"
+                    "version": "2.1.0"
                 }
                 
                 # Test calendar client availability
@@ -282,6 +282,6 @@ class SyncService:
                     "status": "unhealthy",
                     "timestamp": datetime.utcnow().isoformat(),
                     "service": "chronos-sync",
-                    "version": "2.0.0",
+                    "version": "2.1.0",
                     "error": str(e)
                 }
