@@ -1096,6 +1096,540 @@ class ChronosUnifiedAPIRoutes:
                 self.logger.error(f"Error failing command {command_id}: {e}")
                 raise HTTPException(status_code=500, detail=f"Failed to fail command: {e}")
 
+        # EVENT DATA PORTABILITY ROUTES (Export/Import)
+
+        @self.router.get("/events/{event_id}/export")
+        async def export_event(
+            event_id: str,
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Export a single event with all related data to JSON (FR-1.1, FR-1.2, FR-1.3)"""
+            self._verify_api_key(credentials)
+
+            try:
+                async with db_service.get_session() as session:
+                    # Get the main event
+                    event_stmt = select(ChronosEventDB).where(ChronosEventDB.id == event_id)
+                    event_result = await session.execute(event_stmt)
+                    event = event_result.scalar_one_or_none()
+
+                    if not event:
+                        raise HTTPException(status_code=404, detail="Event not found")
+
+                    # Get related event links
+                    links_stmt = select(EventLinkDB).where(
+                        or_(
+                            EventLinkDB.source_event_id == event_id,
+                            EventLinkDB.target_event_id == event_id
+                        )
+                    )
+                    links_result = await session.execute(links_stmt)
+                    event_links = links_result.scalars().all()
+
+                    # Create export format with all event data
+                    export_data = {
+                        "format_version": "1.0",
+                        "export_timestamp": datetime.utcnow().isoformat(),
+                        "events": [{
+                            # Core event data
+                            "id": event.id,
+                            "title": event.title,
+                            "description": event.description,
+                            "start_time": event.start_time.isoformat() if event.start_time else None,
+                            "end_time": event.end_time.isoformat() if event.end_time else None,
+                            "start_utc": event.start_utc.isoformat() if event.start_utc else None,
+                            "end_utc": event.end_utc.isoformat() if event.end_utc else None,
+                            "all_day_date": event.all_day_date,
+
+                            # Categorization
+                            "priority": event.priority,
+                            "event_type": event.event_type,
+                            "status": event.status,
+
+                            # Metadata
+                            "calendar_id": event.calendar_id,
+                            "attendees": event.attendees or [],
+                            "location": event.location,
+                            "tags": event.tags or [],
+
+                            # Sub-tasks (FR-1.3)
+                            "sub_tasks": event.sub_tasks or [],
+
+                            # Duration fields
+                            "estimated_duration": event.estimated_duration.total_seconds() if event.estimated_duration else None,
+                            "actual_duration": event.actual_duration.total_seconds() if event.actual_duration else None,
+                            "preparation_time": event.preparation_time.total_seconds() if event.preparation_time else None,
+                            "buffer_time": event.buffer_time.total_seconds() if event.buffer_time else None,
+
+                            # AI/Analytics
+                            "productivity_score": event.productivity_score,
+                            "completion_rate": event.completion_rate,
+                            "stress_level": event.stress_level,
+
+                            # Scheduling constraints
+                            "min_duration": event.min_duration.total_seconds() if event.min_duration else None,
+                            "max_duration": event.max_duration.total_seconds() if event.max_duration else None,
+                            "flexible_timing": event.flexible_timing,
+                            "requires_focus": event.requires_focus,
+
+                            # Timestamps
+                            "created_at": event.created_at.isoformat() if event.created_at else None,
+                            "updated_at": event.updated_at.isoformat() if event.updated_at else None
+                        }],
+
+                        # Event links/relations (FR-1.3)
+                        "event_links": [
+                            {
+                                "id": link.id,
+                                "source_event_id": link.source_event_id,
+                                "target_event_id": link.target_event_id,
+                                "link_type": link.link_type,
+                                "created_at": link.created_at.isoformat() if link.created_at else None,
+                                "created_by": link.created_by
+                            }
+                            for link in event_links
+                        ]
+                    }
+
+                    return export_data
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error exporting event {event_id}: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to export event: {e}")
+
+        @self.router.post("/events/import")
+        async def import_events(
+            import_data: dict,
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Import events from JSON with transactional processing (FR-2.1, FR-2.2, FR-2.4, FR-2.5, FR-2.6, FR-2.7)"""
+            self._verify_api_key(credentials)
+
+            try:
+                # Validate import format (FR-2.7)
+                if not isinstance(import_data, dict):
+                    raise HTTPException(status_code=400, detail="Import data must be a JSON object")
+
+                if "events" not in import_data:
+                    raise HTTPException(status_code=400, detail="Import data must contain 'events' array")
+
+                events_data = import_data["events"]
+                if not isinstance(events_data, list):
+                    raise HTTPException(status_code=400, detail="'events' must be an array")
+
+                if len(events_data) == 0:
+                    raise HTTPException(status_code=400, detail="No events to import")
+
+                event_links_data = import_data.get("event_links", [])
+
+                # Validate each event (FR-2.7)
+                for i, event_data in enumerate(events_data):
+                    if not isinstance(event_data, dict):
+                        raise HTTPException(status_code=400, detail=f"Event {i} must be an object")
+
+                    required_fields = ["title"]
+                    for field in required_fields:
+                        if field not in event_data:
+                            raise HTTPException(status_code=400, detail=f"Event {i} missing required field: {field}")
+
+                created_events = []
+                created_links = []
+
+                # Transactional processing (FR-2.4)
+                async with db_service.get_session() as session:
+                    try:
+                        # Import events (FR-2.5 - always create new events)
+                        old_to_new_id_mapping = {}
+
+                        for event_data in events_data:
+                            # Generate new ID to ensure we don't overwrite existing events
+                            old_id = event_data.get("id")
+                            new_id = str(uuid.uuid4())
+                            old_to_new_id_mapping[old_id] = new_id
+
+                            # Parse datetime fields
+                            start_time = None
+                            end_time = None
+                            start_utc = None
+                            end_utc = None
+
+                            if event_data.get("start_time"):
+                                start_time = datetime.fromisoformat(event_data["start_time"])
+                            if event_data.get("end_time"):
+                                end_time = datetime.fromisoformat(event_data["end_time"])
+                            if event_data.get("start_utc"):
+                                start_utc = datetime.fromisoformat(event_data["start_utc"])
+                            if event_data.get("end_utc"):
+                                end_utc = datetime.fromisoformat(event_data["end_utc"])
+
+                            # Parse timedelta fields
+                            estimated_duration = None
+                            actual_duration = None
+                            preparation_time = None
+                            buffer_time = None
+                            min_duration = None
+                            max_duration = None
+
+                            if event_data.get("estimated_duration") is not None:
+                                estimated_duration = timedelta(seconds=event_data["estimated_duration"])
+                            if event_data.get("actual_duration") is not None:
+                                actual_duration = timedelta(seconds=event_data["actual_duration"])
+                            if event_data.get("preparation_time") is not None:
+                                preparation_time = timedelta(seconds=event_data["preparation_time"])
+                            if event_data.get("buffer_time") is not None:
+                                buffer_time = timedelta(seconds=event_data["buffer_time"])
+                            if event_data.get("min_duration") is not None:
+                                min_duration = timedelta(seconds=event_data["min_duration"])
+                            if event_data.get("max_duration") is not None:
+                                max_duration = timedelta(seconds=event_data["max_duration"])
+
+                            # Create new event in database
+                            new_event = ChronosEventDB(
+                                id=new_id,
+                                title=event_data["title"],
+                                description=event_data.get("description", ""),
+                                start_time=start_time,
+                                end_time=end_time,
+                                start_utc=start_utc,
+                                end_utc=end_utc,
+                                all_day_date=event_data.get("all_day_date"),
+                                priority=event_data.get("priority", "MEDIUM"),
+                                event_type=event_data.get("event_type", "TASK"),
+                                status=event_data.get("status", "SCHEDULED"),
+                                calendar_id=event_data.get("calendar_id", ""),
+                                attendees=event_data.get("attendees", []),
+                                location=event_data.get("location", ""),
+                                tags=event_data.get("tags", []),
+                                sub_tasks=event_data.get("sub_tasks", []),
+                                estimated_duration=estimated_duration,
+                                actual_duration=actual_duration,
+                                preparation_time=preparation_time,
+                                buffer_time=buffer_time,
+                                productivity_score=event_data.get("productivity_score"),
+                                completion_rate=event_data.get("completion_rate"),
+                                stress_level=event_data.get("stress_level"),
+                                min_duration=min_duration,
+                                max_duration=max_duration,
+                                flexible_timing=event_data.get("flexible_timing", True),
+                                requires_focus=event_data.get("requires_focus", False),
+                                created_at=datetime.utcnow(),
+                                updated_at=datetime.utcnow()
+                            )
+
+                            session.add(new_event)
+                            created_events.append(new_event)
+
+                        await session.flush()  # Ensure events are created before creating links
+
+                        # Import event links with updated IDs (FR-2.6)
+                        for link_data in event_links_data:
+                            old_source_id = link_data.get("source_event_id")
+                            old_target_id = link_data.get("target_event_id")
+
+                            # Map old IDs to new IDs
+                            new_source_id = old_to_new_id_mapping.get(old_source_id)
+                            new_target_id = old_to_new_id_mapping.get(old_target_id)
+
+                            # Only create link if both events were imported
+                            if new_source_id and new_target_id:
+                                new_link = EventLinkDB(
+                                    source_event_id=new_source_id,
+                                    target_event_id=new_target_id,
+                                    link_type=link_data.get("link_type", "depends_on"),
+                                    created_at=datetime.utcnow(),
+                                    created_by="import"
+                                )
+                                session.add(new_link)
+                                created_links.append(new_link)
+
+                        await session.commit()
+
+                        return {
+                            "success": True,
+                            "imported_events": len(created_events),
+                            "imported_links": len(created_links),
+                            "created_event_ids": [event.id for event in created_events],
+                            "id_mappings": old_to_new_id_mapping,
+                            "imported_at": datetime.utcnow().isoformat()
+                        }
+
+                    except Exception as e:
+                        await session.rollback()
+                        raise e
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error importing events: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to import events: {e}")
+
+        # CALENDAR REPAIRER ROUTES
+
+        @self.router.post("/calendar/repair")
+        async def repair_calendar_events(
+            calendar_id: Optional[str] = Query(None, description="Calendar ID to repair (default: primary)"),
+            dry_run: bool = Query(False, description="Preview repairs without making changes"),
+            force: bool = Query(False, description="Force repair even if already processed"),
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Trigger calendar repair for keyword-prefixed events"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'calendar_repairer'):
+                    raise HTTPException(status_code=503, detail="Calendar repairer not available")
+
+                calendar_repairer = self.scheduler.calendar_repairer
+                target_calendar_id = calendar_id or 'primary'
+
+                # Get events from calendar
+                if hasattr(self.scheduler, 'calendar_client') and self.scheduler.calendar_client:
+                    calendar_client = self.scheduler.calendar_client
+
+                    # Fetch events that might need repair
+                    events = await calendar_client.get_events(
+                        calendar_id=target_calendar_id,
+                        time_min=datetime.utcnow() - timedelta(days=30),  # Look back 30 days
+                        time_max=datetime.utcnow() + timedelta(days=365)   # Look ahead 1 year
+                    )
+
+                    # Filter to keyword events only for efficiency
+                    keyword_events = []
+                    for event in events:
+                        is_keyword, keyword, rule_id = calendar_repairer.is_keyword_event(event.get('summary', ''))
+                        if is_keyword:
+                            if force or calendar_repairer.needs_repair(event)[0]:
+                                keyword_events.append(event)
+
+                    if dry_run:
+                        # Preview mode - don't actually patch
+                        preview_results = []
+                        for event in keyword_events:
+                            event_title = event.get('summary', '')
+                            _, keyword, rule_id = calendar_repairer.is_keyword_event(event_title)
+
+                            if rule_id:
+                                payload_text = event_title.split(':', 1)[1].strip()
+                                payload = calendar_repairer.parse_payload(payload_text, event_title)
+                                rule = calendar_repairer.rules[rule_id]
+                                new_title = calendar_repairer.format_title(rule, payload)
+
+                                preview_results.append({
+                                    "event_id": event.get('id'),
+                                    "original_title": event_title,
+                                    "new_title": new_title,
+                                    "rule_id": rule_id,
+                                    "needs_review": payload.needs_review,
+                                    "payload": {
+                                        "name": payload.name,
+                                        "date": payload.date_iso,
+                                        "original_text": payload.original_text
+                                    }
+                                })
+
+                        return {
+                            "success": True,
+                            "dry_run": True,
+                            "calendar_id": target_calendar_id,
+                            "total_events_found": len(events),
+                            "keyword_events_found": len(keyword_events),
+                            "previews": preview_results,
+                            "timestamp": datetime.utcnow().isoformat()
+                        }
+
+                    else:
+                        # Actually repair the events
+                        results = await calendar_repairer.process_events(keyword_events, target_calendar_id)
+
+                        # Summarize results
+                        summary = {
+                            "total_processed": len(results),
+                            "successful": sum(1 for r in results if r.success),
+                            "patched": sum(1 for r in results if r.patched),
+                            "skipped": sum(1 for r in results if r.skipped),
+                            "needs_review": sum(1 for r in results if r.needs_review),
+                            "errors": sum(1 for r in results if not r.success)
+                        }
+
+                        # Include details for failed or review-needed events
+                        details = []
+                        for i, result in enumerate(results):
+                            if not result.success or result.needs_review:
+                                event = keyword_events[i] if i < len(keyword_events) else {}
+                                details.append({
+                                    "event_id": event.get('id'),
+                                    "original_title": event.get('summary'),
+                                    "rule_id": result.rule_id,
+                                    "success": result.success,
+                                    "needs_review": result.needs_review,
+                                    "error": result.error,
+                                    "new_title": result.new_title
+                                })
+
+                        return {
+                            "success": True,
+                            "dry_run": False,
+                            "calendar_id": target_calendar_id,
+                            "summary": summary,
+                            "details": details,
+                            "metrics": calendar_repairer.get_metrics(),
+                            "timestamp": datetime.utcnow().isoformat()
+                        }
+
+                else:
+                    raise HTTPException(status_code=503, detail="Calendar client not available")
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error repairing calendar events: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to repair calendar: {e}")
+
+        @self.router.get("/calendar/repair/rules")
+        async def get_repair_rules(
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Get available calendar repair rules and their configurations"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'calendar_repairer'):
+                    raise HTTPException(status_code=503, detail="Calendar repairer not available")
+
+                calendar_repairer = self.scheduler.calendar_repairer
+
+                # Convert rules to API-friendly format
+                rules_info = []
+                for rule_id, rule in calendar_repairer.rules.items():
+                    rule_info = {
+                        "id": rule.id,
+                        "keywords": rule.keywords,
+                        "title_template": rule.title_template,
+                        "description": f"Repairs {'/'.join(rule.keywords)} prefixed events",
+                        "all_day": rule.all_day,
+                        "rrule": rule.rrule,
+                        "warn_offset_days": rule.warn_offset_days,
+                        "link_to_rule": rule.link_to_rule,
+                        "enrichment_type": rule.enrich.get('event_type') if rule.enrich else None,
+                        "enrichment_tags": rule.enrich.get('tags') if rule.enrich else []
+                    }
+                    rules_info.append(rule_info)
+
+                return {
+                    "success": True,
+                    "rules": rules_info,
+                    "reserved_prefixes": list(calendar_repairer.reserved_prefixes),
+                    "parsing_config": {
+                        "day_first": calendar_repairer.day_first,
+                        "year_optional": calendar_repairer.year_optional,
+                        "strict_when_ambiguous": calendar_repairer.strict_when_ambiguous,
+                        "accept_separators": calendar_repairer.accept_separators
+                    },
+                    "enabled": calendar_repairer.enabled
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error getting repair rules: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to get repair rules: {e}")
+
+        @self.router.get("/calendar/repair/metrics")
+        async def get_repair_metrics(
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Get calendar repair metrics for monitoring"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'calendar_repairer'):
+                    raise HTTPException(status_code=503, detail="Calendar repairer not available")
+
+                calendar_repairer = self.scheduler.calendar_repairer
+                metrics = calendar_repairer.get_metrics()
+
+                return {
+                    "success": True,
+                    "metrics": metrics,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error getting repair metrics: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to get repair metrics: {e}")
+
+        @self.router.post("/calendar/repair/test")
+        async def test_repair_parsing(
+            test_data: dict,
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Test calendar repair parsing without making any changes"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'calendar_repairer'):
+                    raise HTTPException(status_code=503, detail="Calendar repairer not available")
+
+                calendar_repairer = self.scheduler.calendar_repairer
+
+                # Validate input
+                if 'event_title' not in test_data:
+                    raise HTTPException(status_code=400, detail="event_title is required")
+
+                event_title = test_data['event_title']
+
+                # Test parsing
+                is_keyword, keyword, rule_id = calendar_repairer.is_keyword_event(event_title)
+
+                result = {
+                    "input": event_title,
+                    "is_keyword_event": is_keyword,
+                    "detected_keyword": keyword,
+                    "rule_id": rule_id,
+                    "reserved_prefix": keyword in calendar_repairer.reserved_prefixes if keyword else False
+                }
+
+                if is_keyword and rule_id:
+                    # Parse the payload
+                    payload_text = event_title.split(':', 1)[1].strip()
+                    payload = calendar_repairer.parse_payload(payload_text, event_title)
+
+                    # Format new title
+                    rule = calendar_repairer.rules[rule_id]
+                    new_title = calendar_repairer.format_title(rule, payload)
+
+                    result.update({
+                        "parsing_successful": not payload.needs_review,
+                        "needs_review": payload.needs_review,
+                        "parsed_payload": {
+                            "name": payload.name,
+                            "date": payload.date_iso,
+                            "original_text": payload.original_text
+                        },
+                        "formatted_title": new_title,
+                        "rule_info": {
+                            "id": rule.id,
+                            "template": rule.title_template,
+                            "keywords": rule.keywords
+                        }
+                    })
+
+                return {
+                    "success": True,
+                    "result": result,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error testing repair parsing: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to test parsing: {e}")
+
         # ADMIN UI ROUTES
 
         @self.router.get("/admin", response_class=HTMLResponse)

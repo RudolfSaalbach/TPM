@@ -19,6 +19,7 @@ from src.core.replan_engine import ReplanEngine
 from src.core.notification_engine import NotificationEngine
 from src.core.task_queue import TaskQueue
 from src.core.plugin_manager import PluginManager
+from src.core.calendar_repairer import CalendarRepairer
 
 
 class ChronosScheduler:
@@ -45,6 +46,9 @@ class ChronosScheduler:
         self.ai_optimizer = AIOptimizer(config.get('ai', {}))
         self.timebox = TimeboxEngine(config.get('ai', {}).get('timebox', {}))
         self.notifications = NotificationEngine(config.get('notifications', {}))
+
+        # Calendar Repairer - must run BEFORE other enrichers
+        self.calendar_repairer = CalendarRepairer(config, self.calendar_client)
 
         # ReplanEngine needs analytics and timebox engines
         try:
@@ -121,12 +125,36 @@ class ChronosScheduler:
             created_count = 0
             updated_count = 0
 
-            for event_data in events:
+            # STEP 1: Calendar Repairer - repair keyword events FIRST
+            repair_results = []
+            if self.calendar_repairer and self.calendar_repairer.enabled:
+                self.logger.info("Running Calendar Repairer before other processing...")
+                try:
+                    repair_results = await self.calendar_repairer.process_events(events, 'primary')
+                    repaired_count = sum(1 for r in repair_results if r.patched)
+                    if repaired_count > 0:
+                        self.logger.info(f"Calendar Repairer processed {repaired_count} events")
+                except Exception as e:
+                    self.logger.error(f"Calendar Repairer failed: {e}")
+
+            # STEP 2: Process events through normal pipeline
+            for i, event_data in enumerate(events):
                 try:
                     # Parse event
                     parsed_event = self.event_parser.parse_event(event_data)
 
-                    # Process through plugins
+                    # Apply enrichment data from CalendarRepairer if available
+                    if i < len(repair_results) and repair_results[i].enrichment_data:
+                        enrichment = repair_results[i].enrichment_data
+                        # Merge enrichment data into parsed event
+                        if 'event_type' in enrichment:
+                            parsed_event.event_type = enrichment['event_type']
+                        if 'tags' in enrichment:
+                            parsed_event.tags.extend(enrichment['tags'])
+                        if 'sub_tasks' in enrichment:
+                            parsed_event.sub_tasks.extend(enrichment['sub_tasks'])
+
+                    # Process through plugins (KeywordEnricher, command_handler, etc.)
                     processed_event = await self.plugins.process_event_through_plugins(parsed_event)
 
                     # Check if event was processed as command (None return = delete event)

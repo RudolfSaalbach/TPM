@@ -6,10 +6,18 @@ import asyncio
 import pytest
 from datetime import datetime, timedelta
 from typing import List
+import os
+import tempfile
+
+from httpx import AsyncClient
+from fastapi.testclient import TestClient
 
 from src.core.models import ChronosEvent, Priority, EventType, EventStatus
 from src.core.analytics_engine import AnalyticsEngine
 from src.core.event_parser import EventParser
+from src.core.database import db_service
+from src.main import create_app
+from src.config.config_loader import load_config
 
 
 @pytest.fixture(scope="session")
@@ -111,6 +119,52 @@ async def cleanup_test_data():
     # Cleanup code would go here if needed
     # For now, we're using in-memory data structures
     pass
+
+
+@pytest.fixture
+async def test_app():
+    """Create a test FastAPI application"""
+    # Create test configuration
+    test_config = {
+        'database': {
+            'url': ':memory:',  # Use in-memory SQLite for testing
+            'echo': False
+        },
+        'api': {
+            'api_key': 'test-api-key',
+            'host': '127.0.0.1',
+            'port': 8080,
+            'cors_origins': ["*"]
+        },
+        'scheduler': {
+            'sync_interval': 3600,
+            'max_workers': 2
+        },
+        'calendar': {
+            'provider': 'mock',
+            'credentials_file': None
+        }
+    }
+
+    # Create app with test config
+    app = create_app(test_config)
+
+    # Initialize database for testing
+    await db_service.close()  # Close any existing connections
+    await db_service.initialize(':memory:')  # Use in-memory database
+    await db_service.create_tables()
+
+    yield app
+
+    # Cleanup
+    await db_service.close()
+
+
+@pytest.fixture
+async def client(test_app):
+    """Create an AsyncClient for testing"""
+    async with AsyncClient(app=test_app, base_url="http://test") as ac:
+        yield ac
 
 
 # Test configuration
