@@ -1,6 +1,4 @@
-﻿version: '3.8'
-
-services:
+﻿services:
   chronos-engine:
     build: .
     container_name: chronos-engine

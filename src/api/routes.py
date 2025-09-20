@@ -8,7 +8,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Union
-from fastapi import APIRouter, HTTPException, Depends, Request, Query, Form, status
+from fastapi import APIRouter, HTTPException, Depends, Request, Query, Form, Header, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
