@@ -1,229 +1,645 @@
-﻿{% extends "base.html" %}
-
-{% block title %}Dashboard - Chronos Engine{% endblock %}
-
-{% block content %}
-<div class="dashboard-header">
-    <h1>📊 Dashboard Overview</h1>
-    <p>Real-time insights into your calendar management and productivity</p>
-    <div class="header-stats">
-        <div class="stat-item">
-            <span class="stat-value">{{ productivity_metrics.total_events or 0 }}</span>
-            <span class="stat-label">Total Events</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-value">{{ "%.1f" | format(productivity_metrics.completion_rate * 100) if productivity_metrics.completion_rate else 0 }}%</span>
-            <span class="stat-label">Completion Rate</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-value">{{ "%.1f" | format(productivity_metrics.total_hours) if productivity_metrics.total_hours else 0 }}h</span>
-            <span class="stat-label">Total Hours</span>
-        </div>
-    </div>
-</div>
-
-<div class="dashboard-grid">
-    <!-- Productivity Metrics Card -->
-    <div class="card card-primary">
-        <div class="card-header">
-            <h3>📈 Productivity Metrics</h3>
-            <div class="card-actions">
-                <button class="btn btn-sm btn-icon" onclick="refreshMetrics()" title="Refresh">
-                    🔄
-                </button>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronos Engine - Dashboard</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <div class="logo-icon">C</div>
+                    <span class="logo-text">chronos</span>
+                </a>
             </div>
-        </div>
-        <div class="card-body">
-            <div class="metrics-grid">
-                <div class="metric">
-                    <span class="metric-label">Total Events</span>
-                    <span class="metric-value">{{ productivity_metrics.total_events or 0 }}</span>
-                </div>
-                
-                <div class="metric">
-                    <span class="metric-label">Completion Rate</span>
-                    <span class="metric-value">{{ "%.1f%%" | format((productivity_metrics.completion_rate or 0) * 100) }}</span>
-                </div>
-                
-                <div class="metric">
-                    <span class="metric-label">Average Productivity</span>
-                    <span class="metric-value">{{ "%.1f/5.0" | format(productivity_metrics.average_productivity or 0) }}</span>
-                </div>
-                
-                <div class="metric">
-                    <span class="metric-label">Events per Day</span>
-                    <span class="metric-value">{{ "%.1f" | format(productivity_metrics.events_per_day or 0) }}</span>
-                </div>
-            </div>
-            
-            <!-- Progress bar for completion rate -->
-            <div class="progress-section">
-                <label class="progress-label">Completion Progress</label>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ (productivity_metrics.completion_rate or 0) * 100 }}%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Priority Distribution Card -->
-    <div class="card card-secondary">
-        <div class="card-header">
-            <h3>🎯 Priority Distribution</h3>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item active">
+                    <span class="nav-item-icon">📊</span>
+                    <span class="nav-item-text">Übersicht</span>
+                </a>
+                <a href="/calendar" class="nav-item">
+                    <span class="nav-item-icon">📅</span>
+                    <span class="nav-item-text">Kalender</span>
+                </a>
+                <a href="/events" class="nav-item">
+                    <span class="nav-item-icon">📋</span>
+                    <span class="nav-item-text">Events</span>
+                </a>
+                <a href="/analytics" class="nav-item">
+                    <span class="nav-item-icon">📈</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <a href="/sync" class="nav-item">
+                    <span class="nav-item-icon">🔄</span>
+                    <span class="nav-item-text">Sync</span>
+                </a>
+                <a href="/settings" class="nav-item">
+                    <span class="nav-item-icon">⚙️</span>
+                    <span class="nav-item-text">Einstellungen</span>
+                </a>
+            </nav>
         </div>
-        <div class="card-body">
-            <div class="priority-list">
-                {% for priority, count in priority_distribution.items() %}
-                <div class="priority-item">
-                    <div class="priority-info">
-                        <span class="priority-badge priority-{{ priority.lower() }}">{{ priority }}</span>
-                    </div>
-                    <span class="priority-count">{{ count }} events</span>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
 
-    <!-- Time Distribution Chart -->
-    <div class="card card-chart">
-        <div class="card-header">
-            <h3>⏰ Time Distribution</h3>
-        </div>
-        <div class="card-body">
-            <div class="chart-container">
-                <canvas id="timeDistributionChart" width="400" height="200"></canvas>
-            </div>
-        </div>
-    </div>
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Top Navigation Bar -->
+            <nav class="navbar">
+                <div class="navbar-brand">
+                    <h1 class="navbar-title">Dashboard</h1>
+                    <p class="navbar-subtitle">Chronos Engine - Kalender Management System</p>
+                </div>
 
-    <!-- System Status Card -->
-    <div class="card card-status">
-        <div class="card-header">
-            <h3>🔧 System Status</h3>
-        </div>
-        <div class="card-body">
-            <div class="status-grid">
-                <div class="status-item">
-                    <span class="status-indicator status-online"></span>
-                    <span class="status-label">Calendar Sync</span>
-                    <span class="status-value">Active</span>
+                <div class="navbar-actions">
+                    <button class="btn btn-secondary" onclick="toggleSidebar()">
+                        <span>☰</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshDashboard()">
+                        <span>🔄</span>
+                        Aktualisieren
+                    </button>
+                    <button class="btn btn-primary" onclick="syncCalendar()">
+                        <span>⚡</span>
+                        Sync starten
+                    </button>
                 </div>
-                
-                <div class="status-item">
-                    <span class="status-indicator status-online"></span>
-                    <span class="status-label">Analytics Engine</span>
-                    <span class="status-value">Running</span>
-                </div>
-                
-                <div class="status-item">
-                    <span class="status-indicator status-online"></span>
-                    <span class="status-label">AI Optimizer</span>
-                    <span class="status-value">Ready</span>
-                </div>
-                
-                <div class="status-item">
-                    <span class="status-indicator status-online"></span>
-                    <span class="status-label">Plugin System</span>
-                    <span class="status-value">Loaded</span>
-                </div>
-            </div>
-        </div>
-    </div>
+            </nav>
 
-    <!-- Quick Actions Card -->
-    <div class="card card-actions">
-        <div class="card-header">
-            <h3>⚡ Quick Actions</h3>
-        </div>
-        <div class="card-body">
-            <div class="action-grid">
-                <button class="btn btn-primary btn-block" onclick="syncCalendar()">
-                    🔄 Sync Calendar
-                </button>
-                
-                <button class="btn btn-success btn-block" onclick="optimizeSchedule()">
-                    🤖 Optimize Schedule
-                </button>
-                
-                <button class="btn btn-info btn-block" onclick="generateReport()">
-                    📊 Generate Report
-                </button>
-                
-                <button class="btn btn-warning btn-block" onclick="detectConflicts()">
-                    ⚠️ Detect Conflicts
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Activity Card -->
-    <div class="card card-activity">
-        <div class="card-header">
-            <h3>📋 Recent Activity</h3>
-        </div>
-        <div class="card-body">
-            <div class="activity-feed" id="activityFeed">
-                <!-- Activity items will be populated by JavaScript -->
-                <div class="activity-item">
-                    <span class="activity-time">{{ generated_at or "Just now" }}</span>
-                    <span class="activity-text">Dashboard loaded successfully</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Recommendations Section -->
-{% if recommendations %}
-<div class="recommendations-section">
-    <div class="card card-recommendations">
-        <div class="card-header">
-            <h3>💡 AI Recommendations</h3>
-            <span class="badge">{{ recommendations|length }} suggestions</span>
-        </div>
-        <div class="card-body">
-            <div class="recommendations-list">
-                {% for recommendation in recommendations %}
-                <div class="recommendation recommendation-{{ recommendation.priority or 'low' }}">
-                    <div class="recommendation-header">
-                        <span class="recommendation-type">{{ recommendation.type|title }}</span>
-                        <span class="recommendation-priority priority-{{ recommendation.priority or 'low' }}">
-                            {{ recommendation.priority|title }}
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <!-- Metrics Overview -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Gesamte Events</h3>
+                                <p class="metric-subtitle">Letzte 7 Tage</p>
+                            </div>
+                            <span class="metric-icon">📅</span>
+                        </div>
+                        <div class="metric-value" id="totalEvents">{{ productivity_metrics.total_events or 0 }}</div>
+                        <span class="metric-change positive" id="eventsChange">
+                            ↗️ +12%
                         </span>
                     </div>
-                    <p class="recommendation-message">{{ recommendation.message }}</p>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Produktivitätsrate</h3>
+                                <p class="metric-subtitle">Durchschnitt</p>
+                            </div>
+                            <span class="metric-icon">📊</span>
+                        </div>
+                        <div class="metric-value" id="productivityRate">{{ "%.1f" | format((productivity_metrics.completion_rate or 0) * 100) }}%</div>
+                        <span class="metric-change positive" id="productivityChange">
+                            ↗️ +5.2%
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Gesparte Zeit</h3>
+                                <p class="metric-subtitle">Diese Woche</p>
+                            </div>
+                            <span class="metric-icon">⏰</span>
+                        </div>
+                        <div class="metric-value" id="timeSaved">{{ "%.1f" | format(productivity_metrics.total_hours or 0) }}h</div>
+                        <span class="metric-change positive" id="timeSavedChange">
+                            ↗️ +2.5h
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Abgeschlossene Aufgaben</h3>
+                                <p class="metric-subtitle">Heute</p>
+                            </div>
+                            <span class="metric-icon">✅</span>
+                        </div>
+                        <div class="metric-value" id="completedTasks">{{ productivity_metrics.completed_tasks or 0 }}</div>
+                        <span class="metric-change neutral" id="tasksChange">
+                            → Keine Änderung
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Sync Status</h3>
+                                <p class="metric-subtitle">Letzte Aktualisierung</p>
+                            </div>
+                            <span class="metric-icon">🔄</span>
+                        </div>
+                        <div class="metric-value" style="font-size: 18px;" id="syncStatus">
+                            <span class="status-indicator active"></span>
+                            Verbunden
+                        </div>
+                        <span class="metric-change neutral" id="lastUpdate">
+                            vor 2 Min
+                        </span>
+                    </div>
                 </div>
-                {% endfor %}
+
+                <!-- Controls Bar -->
+                <div class="controls-bar">
+                    <input type="text" class="search-box" placeholder="Events durchsuchen..." id="searchInput">
+                    <div class="filter-controls">
+                        <select class="filter-select" id="sortFilter">
+                            <option value="date">Nach Datum sortieren</option>
+                            <option value="priority">Nach Priorität sortieren</option>
+                            <option value="type">Nach Typ sortieren</option>
+                            <option value="status">Nach Status sortieren</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="toggleView()">
+                            📊 Ansicht wechseln
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportData()">
+                            📥 Exportieren
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Events Section -->
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Aktuelle Events</h2>
+                        <span class="section-meta">Gesamt: <span id="eventCount">0</span></span>
+                    </div>
+
+                    <div id="eventsList">
+                        <!-- Events werden hier dynamisch geladen -->
+                        <div class="list-item">
+                            <div class="list-item-info">
+                                <h4 class="list-item-title">
+                                    📅 Team Meeting
+                                    <span class="badge bg-info">MEETING</span>
+                                </h4>
+                                <p class="list-item-meta">Heute, 14:00 - 15:00 | Konferenzraum A | Hohe Priorität</p>
+                            </div>
+                            <div class="list-item-actions">
+                                <span class="status-indicator active"></span>
+                                <span class="status-text">Aktiv</span>
+                                <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            </div>
+                        </div>
+
+                        <div class="list-item">
+                            <div class="list-item-info">
+                                <h4 class="list-item-title">
+                                    📋 Projektplanung
+                                    <span class="badge bg-warning">TASK</span>
+                                </h4>
+                                <p class="list-item-meta">Morgen, 09:00 - 11:00 | Home Office | Mittlere Priorität</p>
+                            </div>
+                            <div class="list-item-actions">
+                                <span class="status-indicator inactive"></span>
+                                <span class="status-text">Geplant</span>
+                                <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            </div>
+                        </div>
+
+                        <div class="list-item">
+                            <div class="list-item-info">
+                                <h4 class="list-item-title">
+                                    🎯 Quarterly Review
+                                    <span class="badge bg-danger">DEADLINE</span>
+                                </h4>
+                                <p class="list-item-meta">Nächste Woche, 10:00 - 12:00 | Hauptgebäude | Sehr hohe Priorität</p>
+                            </div>
+                            <div class="list-item-actions">
+                                <span class="status-indicator warning"></span>
+                                <span class="status-text">Deadline</span>
+                                <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Section -->
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Produktivitäts-Analytics</h2>
+                        <button class="btn btn-secondary btn-sm">Vollbericht anzeigen</button>
+                    </div>
+
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h4>Wöchentliche Trends</h4>
+                            <div class="chart-placeholder">
+                                <div class="chart-bar" style="height: 60%"></div>
+                                <div class="chart-bar" style="height: 80%"></div>
+                                <div class="chart-bar" style="height: 45%"></div>
+                                <div class="chart-bar" style="height: 90%"></div>
+                                <div class="chart-bar" style="height: 70%"></div>
+                                <div class="chart-bar" style="height: 85%"></div>
+                                <div class="chart-bar" style="height: 95%"></div>
+                            </div>
+                            <p class="chart-label">Mo - So</p>
+                        </div>
+
+                        <div class="analytics-card">
+                            <h4>Prioritäts-Verteilung</h4>
+                            <div class="priority-distribution">
+                                {% for priority, count in priority_distribution.items() %}
+                                <div class="priority-item">
+                                    <span class="priority-color {{ priority.lower() }}"></span>
+                                    <span>{{ priority }}: {{ count }} events</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="analytics-card">
+                            <h4>Recommendations</h4>
+                            <div class="recommendations-list">
+                                {% if recommendations %}
+                                    {% for recommendation in recommendations %}
+                                    <div class="recommendation-item">
+                                        <span class="recommendation-icon">💡</span>
+                                        <span>{{ recommendation.message }}</span>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                <div class="recommendation-item">
+                                    <span class="recommendation-icon">💡</span>
+                                    <span>Plane längere Pausen zwischen Meetings</span>
+                                </div>
+                                <div class="recommendation-item">
+                                    <span class="recommendation-icon">⚡</span>
+                                    <span>Beste Produktivitätszeit: 10:00-12:00</span>
+                                </div>
+                                <div class="recommendation-item">
+                                    <span class="recommendation-icon">📊</span>
+                                    <span>Reduziere Multitasking um 23%</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sync Status Section -->
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Synchronisation</h2>
+                        <div>
+                            <button class="btn btn-secondary btn-sm" onclick="triggerIncrementalSync()">
+                                🔄 Inkrementell
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="triggerFullSync()">
+                                ⚡ Vollständig
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="sync-info">
+                        <div class="sync-stat">
+                            <span class="sync-label">Letzte Synchronisation:</span>
+                            <span class="sync-value" id="lastSyncTime">vor 2 Minuten</span>
+                        </div>
+                        <div class="sync-stat">
+                            <span class="sync-label">Synchronisierte Events:</span>
+                            <span class="sync-value" id="syncedEvents">247</span>
+                        </div>
+                        <div class="sync-stat">
+                            <span class="sync-label">API Quota:</span>
+                            <span class="sync-value" id="apiQuota">89.432 / 100.000</span>
+                        </div>
+                        <div class="sync-stat">
+                            <span class="sync-label">Status:</span>
+                            <span class="sync-value status-connected">
+                                <span class="status-indicator active"></span>
+                                Verbunden
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
-{% endif %}
-{% endblock %}
 
-{% block extra_scripts %}
-<script>
-    // Initialize dashboard-specific functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        initializeTimeChart();
-        loadRecentActivity();
-        startAutoRefresh();
-    });
-    
-    function initializeTimeChart() {
-        // Time distribution chart would be implemented here
-        // Using Chart.js or similar library
-    }
-    
-    function loadRecentActivity() {
-        // Load recent system activity
-        // This would fetch from an API endpoint
-    }
-    
-    function startAutoRefresh() {
-        // Refresh dashboard data every 5 minutes
-        setInterval(refreshDashboard, 300000);
-    }
-</script>
-{% endblock %}
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading Overlay -->
+    <div class="modal-overlay" id="loadingOverlay" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        // App Initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChronosApp();
+            loadDashboardData();
+        });
+
+        // Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+
+        // Load saved sidebar state
+        function loadSidebarState() {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                document.getElementById('sidebar').classList.add('collapsed');
+            }
+        }
+
+        // Dashboard Functions
+        function refreshDashboard() {
+            showLoading();
+            loadDashboardData().finally(() => hideLoading());
+        }
+
+        function syncCalendar() {
+            showToast('Synchronisation gestartet', 'Kalender wird synchronisiert...', 'info');
+            // Hier würde die tatsächliche Sync-Logic stehen
+            setTimeout(() => {
+                showToast('Sync erfolgreich', 'Kalender wurde erfolgreich synchronisiert', 'success');
+            }, 2000);
+        }
+
+        function triggerFullSync() {
+            showLoading();
+            // API Call für Full Sync
+            fetch('/api/sync/full', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    showToast('Full Sync erfolgreich', data.message, 'success');
+                    refreshDashboard();
+                })
+                .catch(error => {
+                    showToast('Sync Fehler', 'Vollständige Synchronisation fehlgeschlagen', 'error');
+                })
+                .finally(() => hideLoading());
+        }
+
+        function triggerIncrementalSync() {
+            // API Call für Incremental Sync
+            fetch('/api/sync/incremental', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    showToast('Inkrementeller Sync erfolgreich', data.message, 'success');
+                    refreshDashboard();
+                })
+                .catch(error => {
+                    showToast('Sync Fehler', 'Inkrementelle Synchronisation fehlgeschlagen', 'error');
+                });
+        }
+
+        function toggleView() {
+            // Toggle zwischen Karten- und Listenansicht
+            showToast('Ansicht gewechselt', 'Ansichtsmodus wurde geändert', 'info');
+        }
+
+        function exportData() {
+            // Export-Funktionalität
+            showToast('Export gestartet', 'Daten werden exportiert...', 'info');
+        }
+
+        // Utility Functions
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showToast(title, message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <h4 class="toast-title">${title}</h4>
+                    <button class="modal-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            // Auto-remove nach 5 Sekunden
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+
+        // Dashboard Data Loading
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard/metrics');
+                const data = await response.json();
+
+                // Update Metrics
+                updateMetrics(data.metrics || {});
+
+                // Update Events List
+                updateEventsList(data.events || []);
+
+                // Update Sync Status
+                updateSyncStatus(data.sync_status || {});
+
+            } catch (error) {
+                console.error('Fehler beim Laden der Dashboard-Daten:', error);
+                showToast('Fehler', 'Dashboard-Daten konnten nicht geladen werden', 'error');
+            }
+        }
+
+        function updateMetrics(metrics) {
+            document.getElementById('totalEvents').textContent = metrics.total_events || 0;
+            document.getElementById('productivityRate').textContent = (metrics.completion_rate || 0) + '%';
+            document.getElementById('timeSaved').textContent = (metrics.total_hours || 0) + 'h';
+            document.getElementById('completedTasks').textContent = metrics.completed_tasks || 0;
+        }
+
+        function updateEventsList(events) {
+            const eventsList = document.getElementById('eventsList');
+            document.getElementById('eventCount').textContent = events.length;
+
+            // Hier würde die Liste dynamisch mit den echten Events gefüllt
+            // Das ist nur ein Platzhalter für die Demonstration
+        }
+
+        function updateSyncStatus(syncStatus) {
+            document.getElementById('lastSyncTime').textContent = syncStatus.last_update || 'Unbekannt';
+            document.getElementById('syncedEvents').textContent = syncStatus.total_events || 0;
+            document.getElementById('apiQuota').textContent =
+                `${syncStatus.quota_used || 0} / ${syncStatus.quota_limit || 100000}`;
+        }
+
+        // Load sidebar state on page load
+        loadSidebarState();
+    </script>
+
+    <style>
+        /* Additional Styles für spezielle Komponenten */
+        .badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: var(--border-radius-sm);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: var(--spacing-sm);
+        }
+
+        .btn-sm {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 12px;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-lg);
+            margin-top: var(--spacing-md);
+        }
+
+        .analytics-card {
+            background: var(--bg-tertiary);
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius-md);
+            border: 1px solid var(--border-light);
+        }
+
+        .analytics-card h4 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            font-size: 14px;
+        }
+
+        .chart-placeholder {
+            display: flex;
+            align-items: end;
+            gap: var(--spacing-xs);
+            height: 60px;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .chart-bar {
+            background: linear-gradient(to top, var(--primary-color), var(--secondary-color));
+            width: 100%;
+            border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+            min-height: 10px;
+        }
+
+        .chart-label {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .priority-distribution {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .priority-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .priority-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .priority-color.urgent { background: var(--danger-color); }
+        .priority-color.high { background: var(--warning-color); }
+        .priority-color.medium { background: var(--info-color); }
+        .priority-color.low { background: var(--success-color); }
+
+        .recommendations-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .recommendation-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: var(--spacing-xs);
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-sm);
+        }
+
+        .recommendation-icon {
+            font-size: 14px;
+        }
+
+        .sync-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-top: var(--spacing-md);
+        }
+
+        .sync-stat {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .sync-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .sync-value {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .status-connected {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        @media (max-width: 768px) {
+            .analytics-grid,
+            .sync-info {
+                grid-template-columns: 1fr;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+
+            .search-box {
+                width: 100%;
+            }
+        }
+    </style>
+</body>
+</html>
