@@ -1,110 +1,179 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Chronos Dashboard{% endblock %}</title>
-    
-    <!-- CSS - GUARANTEED LOADING -->
+    <title>{% block title %}Chronos Engine - Dashboard{% endblock %}</title>
+
+    <!-- CSS - Modern n8n-style design -->
     <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/dashboard.css') }}">
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
-    
+
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <span class="status-indicator status-online"></span>
-            <h1>Chronos Engine</h1>
-            <span class="version">v2.1.0</span>
-        </div>
-        
-        <div class="navbar-menu">
-            <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
-                Dashboard
-            </a>
-            <a href="/docs" class="nav-link" target="_blank">
-                API Docs
-            </a>
-            <a href="/api/v1/sync/health" class="nav-link" target="_blank">
-                Health
-            </a>
-        </div>
-        
-        <div class="navbar-actions">
-            <button class="btn btn-primary" onclick="syncCalendar()">
-                Sync
-            </button>
-            <div class="status-badge" id="connectionStatus">
-                <span class="status-dot status-online"></span>
-                Online
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <div class="logo-icon">C</div>
+                    <span class="logo-text">chronos</span>
+                </a>
             </div>
+
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item {% if request.url.path == '/dashboard' or request.url.path == '/' %}active{% endif %}">
+                    <span class="nav-item-icon">📊</span>
+                    <span class="nav-item-text">Übersicht</span>
+                </a>
+                <a href="/calendar" class="nav-item {% if request.url.path == '/calendar' %}active{% endif %}">
+                    <span class="nav-item-icon">📅</span>
+                    <span class="nav-item-text">Kalender</span>
+                </a>
+                <a href="/events" class="nav-item {% if request.url.path == '/events' %}active{% endif %}">
+                    <span class="nav-item-icon">📋</span>
+                    <span class="nav-item-text">Events</span>
+                </a>
+                <a href="/analytics" class="nav-item {% if request.url.path == '/analytics' %}active{% endif %}">
+                    <span class="nav-item-icon">📈</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <a href="/sync" class="nav-item {% if request.url.path == '/sync' %}active{% endif %}">
+                    <span class="nav-item-icon">🔄</span>
+                    <span class="nav-item-text">Sync</span>
+                </a>
+                <a href="/settings" class="nav-item {% if request.url.path == '/settings' %}active{% endif %}">
+                    <span class="nav-item-icon">⚙️</span>
+                    <span class="nav-item-text">Einstellungen</span>
+                </a>
+                <a href="/admin" class="nav-item {% if request.url.path.startswith('/admin') %}active{% endif %}">
+                    <span class="nav-item-icon">🔧</span>
+                    <span class="nav-item-text">Admin</span>
+                </a>
+            </nav>
         </div>
-    </nav>
 
-    <main class="main-content">
-        {% block content %}{% endblock %}
-    </main>
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Top Navigation Bar -->
+            <nav class="navbar">
+                <div class="navbar-brand">
+                    <h1 class="navbar-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                    <p class="navbar-subtitle">{% block page_subtitle %}Chronos Engine - Kalender Management System{% endblock %}</p>
+                </div>
 
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h4>Chronos Engine v2.1.0</h4>
-                <p>Advanced Calendar Management System</p>
-                <p>Powered by AI-driven optimization</p>
-            </div>
-            
-            <div class="footer-section">
-                <h4>System Status</h4>
-                <div class="status-list">
-                    <div class="status-item">
-                        <span class="status-dot status-online"></span>
-                        Calendar Sync: Active
-                    </div>
-                    <div class="status-item">
-                        <span class="status-dot status-online"></span>
-                        Analytics: Running
-                    </div>
-                    <div class="status-item">
-                        <span class="status-dot status-online"></span>
-                        AI Optimizer: Ready
+                <div class="navbar-actions">
+                    <button class="btn btn-secondary" onclick="toggleSidebar()">
+                        <span>☰</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshDashboard()">
+                        <span>🔄</span>
+                        Aktualisieren
+                    </button>
+                    <button class="btn btn-primary" onclick="syncCalendar()">
+                        <span>⚡</span>
+                        Sync starten
+                    </button>
+                    <div class="status-badge" id="connectionStatus">
+                        <span class="status-indicator active"></span>
+                        Online
                     </div>
                 </div>
-            </div>
-            
-            <div class="footer-section">
-                <h4>Quick Links</h4>
-                <div class="footer-actions">
-                    <button class="btn btn-sm" onclick="refreshDashboard()">Refresh</button>
-                    <button class="btn btn-sm" onclick="exportData()">Export</button>
-                    <button class="btn btn-sm" onclick="showHelp()">❓ Help</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="footer-bottom">
-            <p>&copy; 2025 Chronos Engine. Intelligent Calendar Management.</p>
-            <p>Last updated: <span id="lastUpdate">{{ generated_at or "Loading..." }}</span></p>
-        </div>
-    </footer>
+            </nav>
 
-    <!-- JavaScript - GUARANTEED LOADING -->
+            <!-- Page Content -->
+            <div class="dashboard-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading Overlay -->
+    <div class="modal-overlay" id="loadingOverlay" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- JavaScript -->
     <script src="{{ url_for('static', path='js/main.js') }}"></script>
     <script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
     {% block extra_scripts %}{% endblock %}
-    
-    <!-- Toast notifications container -->
-    <div id="toastContainer" class="toast-container"></div>
-    
-    <!-- Loading indicator -->
-    <div id="loadingIndicator" style="display: none;">
-        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                    background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; z-index: 9999;">
-            ⏳ Loading...
-        </div>
-    </div>
+
+    <script>
+        // Global functions for the modern interface
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+
+        function loadSidebarState() {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                document.getElementById('sidebar').classList.add('collapsed');
+            }
+        }
+
+        function refreshDashboard() {
+            showLoading();
+            window.location.reload();
+        }
+
+        function syncCalendar() {
+            showToast('Synchronisation gestartet', 'Kalender wird synchronisiert...', 'info');
+            fetch('/api/sync/incremental', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    showToast('Sync erfolgreich', 'Kalender wurde erfolgreich synchronisiert', 'success');
+                })
+                .catch(error => {
+                    showToast('Sync Fehler', 'Synchronisation fehlgeschlagen', 'error');
+                });
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showToast(title, message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const toastId = 'toast_' + Date.now();
+            toast.id = toastId;
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <h4 class="toast-title">${title}</h4>
+                    <button class="modal-close" onclick="document.getElementById('${toastId}').remove()">×</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                if (document.getElementById(toastId)) {
+                    document.getElementById(toastId).remove();
+                }
+            }, 5000);
+        }
+
+        // Load sidebar state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSidebarState();
+        });
+    </script>
 </body>
 </html>

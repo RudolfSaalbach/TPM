@@ -16,7 +16,8 @@
       "Bash(set API_PORT=8082)",
       "Bash(dir)",
       "Bash(pytest:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(dir templates)"
     ],
     "deny": [],
     "ask": []

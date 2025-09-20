@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Chronos Engine v2.2{% endblock %}</title>
 
-    <!-- Core CSS -->
+    <!-- Modern n8n-style CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
     {% block extra_css %}{% endblock %}
@@ -27,53 +29,82 @@
     {% block extra_scripts_head %}{% endblock %}
 </head>
 <body class="chronos-app">
-    <!-- App Container -->
-    <div id="chronos-root" class="app-container">
-
-        <!-- Navigation Header -->
-        <header class="app-header" id="app-header">
-            <div class="header-brand">
-                <h1>📊 Chronos Engine</h1>
-                <span class="version">v2.2</span>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <div class="logo-icon">C</div>
+                    <span class="logo-text">chronos</span>
+                </a>
             </div>
 
-            <nav class="header-nav" role="navigation">
-                <a href="{{ url_for('dashboard') }}" class="nav-link" data-nav="dashboard">
-                    Dashboard
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-item" data-nav="dashboard">
+                    <span class="nav-item-icon">📊</span>
+                    <span class="nav-item-text">Dashboard</span>
                 </a>
-                <a href="{{ url_for('events') }}" class="nav-link" data-nav="events">
-                    Events
+                <a href="{{ url_for('events') }}" class="nav-item" data-nav="events">
+                    <span class="nav-item-icon">📋</span>
+                    <span class="nav-item-text">Events</span>
                 </a>
-                <a href="{{ url_for('templates') }}" class="nav-link" data-nav="templates">
-                    Templates
+                <a href="{{ url_for('templates') }}" class="nav-item" data-nav="templates">
+                    <span class="nav-item-icon">📝</span>
+                    <span class="nav-item-text">Templates</span>
                 </a>
-                <a href="{{ url_for('analytics') }}" class="nav-link" data-nav="analytics">
-                    Analytics
+                <a href="{{ url_for('analytics') }}" class="nav-item" data-nav="analytics">
+                    <span class="nav-item-icon">📈</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <a href="/calendar" class="nav-item">
+                    <span class="nav-item-icon">📅</span>
+                    <span class="nav-item-text">Kalender</span>
+                </a>
+                <a href="/sync" class="nav-item">
+                    <span class="nav-item-icon">🔄</span>
+                    <span class="nav-item-text">Sync</span>
+                </a>
+                <a href="/settings" class="nav-item">
+                    <span class="nav-item-icon">⚙️</span>
+                    <span class="nav-item-text">Einstellungen</span>
                 </a>
             </nav>
-
-            <div class="header-actions">
-                <div class="connection-status" id="connection-status">
-                    <span class="status-dot status-online"></span>
-                    <span class="status-text">Online</span>
-                </div>
-
-                <button class="btn btn-icon" id="settings-btn" title="Settings">
-                    ⚙️
-                </button>
-
-                <button class="btn btn-icon" id="help-btn" title="Help">
-                    ❓
-                </button>
-            </div>
-        </header>
+        </div>
 
         <!-- Main Content Area -->
-        <main class="app-main" role="main">
-            {% block content %}
-            <!-- Page content will be inserted here -->
-            {% endblock %}
-        </main>
+        <div class="main-content">
+            <!-- Top Navigation Bar -->
+            <nav class="navbar">
+                <div class="navbar-brand">
+                    <h1 class="navbar-title">{% block page_title %}Chronos Engine{% endblock %}</h1>
+                    <p class="navbar-subtitle">{% block page_subtitle %}v2.2 - Modulare Architektur{% endblock %}</p>
+                </div>
+
+                <div class="navbar-actions">
+                    <button class="btn btn-secondary" onclick="toggleSidebar()">
+                        <span>☰</span>
+                    </button>
+                    <div class="connection-status" id="connection-status">
+                        <span class="status-indicator active"></span>
+                        <span class="status-text">Online</span>
+                    </div>
+                    <button class="btn btn-secondary" id="settings-btn" title="Einstellungen">
+                        <span>⚙️</span>
+                    </button>
+                    <button class="btn btn-secondary" id="help-btn" title="Hilfe">
+                        <span>❓</span>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Page Content -->
+            <div class="dashboard-content">
+                {% block content %}
+                <!-- Page content will be inserted here -->
+                {% endblock %}
+            </div>
+        </div>
+    </div>
 
         <!-- Global Modals Container -->
         <div id="modals-container">

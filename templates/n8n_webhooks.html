@@ -1,19 +1,15 @@
 {% extends "base.html" %}
 
 {% block title %}n8n Webhook Integration - Chronos Engine{% endblock %}
+{% block page_title %}n8n Webhook Integration{% endblock %}
+{% block page_subtitle %}Universal Automation Platform für Chronos Engine{% endblock %}
 
 {% block extra_head %}
 <style>
-    .main-content {
-        padding: 0 !important;
-        margin: 0 !important;
-        max-width: none !important;
-    }
-
     .container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
     }
 
     .header {
@@ -265,17 +261,28 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container">
-        <div class="header">
-            <h1>🔗 n8n Webhook Integration</h1>
-            <p>Universal Automation Platform für Chronos Engine</p>
-        </div>
+<div class="content-section">
+    <div class="section-header">
+        <h2 class="section-title">🔗 Webhook Konfigurationen</h2>
+        <button class="btn btn-primary" onclick="showCreateModal()">
+            <span>➕</span>
+            Neuer Webhook
+        </button>
+    </div>
 
-        <div class="main-layout">
-            <div class="sidebar">
-                <button class="btn" onclick="showCreateModal()" style="width: 100%; margin-bottom: 20px;">
-                    ➕ Neuer Webhook
+    <div class="main-layout">
+        <div class="webhook-sidebar">
+            <div class="content-section" style="margin-bottom: var(--spacing-lg);">
+                <h4 style="margin-bottom: var(--spacing-md);">Quick Actions</h4>
+                <button class="btn btn-secondary" onclick="loadWebhooks()" style="width: 100%; margin-bottom: var(--spacing-sm);">
+                    <span>🔄</span>
+                    Aktualisieren
                 </button>
+                <button class="btn btn-secondary" onclick="testAllWebhooks()" style="width: 100%;">
+                    <span>🧪</span>
+                    Alle Testen
+                </button>
+            </div>
 
                 <div style="margin-bottom: 30px;">
                     <h4 style="color: #2c3e50; margin-bottom: 15px;">Quick Actions</h4>
