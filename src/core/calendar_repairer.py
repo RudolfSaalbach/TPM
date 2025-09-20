@@ -1,12 +1,12 @@
 """
-Calendar Repairer Plugin - Repairs keyword-prefixed events in Google Calendar
+Calendar Repairer Plugin - Repairs keyword-prefixed events in calendar backends
 Pipeline: UndefinedGuard → CalendarRepairer → KeywordEnricher → command_handler
 
 This plugin:
 1. Parses keyword-prefixed events (BDAY:, RIP:, etc.)
 2. Formats them into nice titles
-3. Writes back to Google Calendar
-4. Sets idempotency markers
+3. Writes back to calendar backend (CalDAV/Google)
+4. Sets idempotency markers (X-CHRONOS-* or extendedProperties)
 5. Prepares enrichment data for later plugins
 """
 
@@ -71,15 +71,20 @@ class CalendarRepairer:
     """
     Calendar Repairer Plugin
 
-    Processes keyword-prefixed events and repairs them in Google Calendar
-    before any other processing takes place.
+    Processes keyword-prefixed events and repairs them in calendar backends
+    (CalDAV/Radicale or Google Calendar) before any other processing takes place.
     """
 
-    def __init__(self, config: Dict[str, Any], calendar_client=None):
-        self.config = config.get('calendar_repairer', {})
-        self.parsing_config = config.get('parsing', {})
-        self.rules_config = config.get('rules', [])
-        self.calendar_client = calendar_client
+    def __init__(self, config: Dict[str, Any], source_manager=None):
+        # Extract nested config from repair_and_enrich section
+        repair_config = config.get('repair_and_enrich', {})
+        self.parsing_config = repair_config.get('parsing', {})
+        self.rules_config = repair_config.get('rules', [])
+        self.idempotency_config = repair_config.get('idempotency', {})
+        self.series_policy_config = repair_config.get('series_policy', {})
+
+        # Store source manager for backend-agnostic operations
+        self.source_manager = source_manager
         self.logger = logging.getLogger(__name__)
 
         # Build rules lookup
@@ -87,11 +92,11 @@ class CalendarRepairer:
         self.keyword_to_rule = self._build_keyword_lookup()
 
         # Configuration
-        self.enabled = self.config.get('enabled', True)
+        self.enabled = repair_config.get('enabled', True)
         self.reserved_prefixes = set(
-            prefix.upper() for prefix in self.config.get('reserved_prefixes', ['ACTION', 'MEETING', 'CALL'])
+            prefix.upper() for prefix in repair_config.get('reserved_prefixes', ['ACTION', 'MEETING', 'CALL'])
         )
-        self.readonly_fallback = self.config.get('readonly_fallback', 'internal_enrich_only')
+        self.readonly_fallback = repair_config.get('readonly_fallback', 'internal_enrich_only')
 
         # Parsing settings
         self.day_first = self.parsing_config.get('day_first', True)
@@ -342,27 +347,55 @@ class CalendarRepairer:
 
     def needs_repair(self, event: Dict[str, Any]) -> Tuple[bool, str]:
         """
-        Check if event needs repair based on idempotency markers
+        Check if event needs repair based on backend-agnostic idempotency markers
 
         Returns:
             (needs_repair, reason)
         """
-        extended_props = event.get('extendedProperties', {})
-        private_props = extended_props.get('private', {})
+        # Extract idempotency markers (backend-agnostic)
+        chronos_markers = self._extract_chronos_markers(event)
 
         # Check if already cleaned
-        cleaned_marker = private_props.get(self.marker_key)
-        if cleaned_marker != self.marker_value:
+        marker_keys = self.idempotency_config.get('marker_keys', {})
+        cleaned_key = marker_keys.get('cleaned', 'X-CHRONOS-CLEANED')
+
+        if not chronos_markers.get('cleaned'):
             return True, "not_cleaned"
 
         # Check if signature changed
-        stored_signature = private_props.get('chronos.signature')
+        stored_signature = chronos_markers.get('signature')
         current_signature = self.calculate_signature(event)
 
         if stored_signature != current_signature:
             return True, "signature_changed"
 
         return False, "already_cleaned"
+
+    def _extract_chronos_markers(self, event: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract Chronos idempotency markers from event (backend-agnostic)"""
+        # First try to get from meta (unified format)
+        meta = event.get('meta', {})
+        chronos_markers = meta.get('chronos_markers', {})
+        if chronos_markers:
+            return chronos_markers
+
+        # Fall back to Google Calendar extended properties format
+        extended_props = event.get('extendedProperties', {})
+        private_props = extended_props.get('private', {})
+
+        markers = {}
+        if 'chronos.cleaned' in private_props:
+            markers['cleaned'] = private_props['chronos.cleaned']
+        if 'chronos.rule_id' in private_props:
+            markers['rule_id'] = private_props['chronos.rule_id']
+        if 'chronos.signature' in private_props:
+            markers['signature'] = private_props['chronos.signature']
+        if 'chronos.original_summary' in private_props:
+            markers['original_summary'] = private_props['chronos.original_summary']
+        if 'chronos.payload' in private_props:
+            markers['payload'] = private_props['chronos.payload']
+
+        return markers
 
     def prepare_enrichment_data(self, rule: RepairRule, payload: ParsedPayload, event: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare enrichment data for KeywordEnricher plugin"""
@@ -387,13 +420,13 @@ class CalendarRepairer:
 
         return enrichment
 
-    async def repair_event(self, event: Dict[str, Any], calendar_id: str) -> RepairResult:
+    async def repair_event(self, event: Dict[str, Any], calendar) -> RepairResult:
         """
         Repair a single event
 
         Args:
-            event: Google Calendar event object
-            calendar_id: Calendar ID
+            event: Normalized calendar event object
+            calendar: CalendarRef object
 
         Returns:
             RepairResult with operation details
@@ -447,21 +480,21 @@ class CalendarRepairer:
             # Prepare enrichment data
             enrichment_data = self.prepare_enrichment_data(rule, payload, event)
 
-            # Attempt to patch Google Calendar
+            # Attempt to patch calendar backend
             patched = False
             etag_before = event.get('etag')
             etag_after = etag_before
 
-            if self.calendar_client:
+            if self.source_manager:
                 try:
-                    patch_result = await self._patch_google_event(
-                        calendar_id, event, new_title, payload, rule_id
+                    patch_result = await self._patch_calendar_event(
+                        calendar, event, new_title, payload, rule_id
                     )
                     patched = patch_result['patched']
                     etag_after = patch_result.get('etag_after', etag_before)
 
                 except Exception as e:
-                    self.logger.warning(f"Failed to patch Google Calendar event {event.get('id')}: {e}")
+                    self.logger.warning(f"Failed to patch calendar event {event.get('id')}: {e}")
                     # Continue with internal enrichment only
                     enrichment_data['source_readonly'] = True
                     self.metrics['readonly_skip_total'] += 1
@@ -490,78 +523,72 @@ class CalendarRepairer:
                 elapsed_ms=(datetime.now() - start_time).total_seconds() * 1000
             )
 
-    async def _patch_google_event(self, calendar_id: str, event: Dict[str, Any],
+    async def _patch_calendar_event(self, calendar, event: Dict[str, Any],
                                 new_title: str, payload: ParsedPayload, rule_id: str) -> Dict[str, Any]:
         """
-        Patch Google Calendar event with new title and idempotency markers
+        Patch calendar event with new title and idempotency markers (backend-agnostic)
 
         Returns:
             Dictionary with 'patched' boolean and 'etag_after' if successful
         """
-        if not self.calendar_client:
+        if not self.source_manager:
             return {'patched': False}
 
         event_id = event['id']
         etag_before = event.get('etag')
 
-        # Prepare patch data
+        # Prepare patch data with unified idempotency markers
         patch_data = {
             'summary': new_title
         }
 
-        # Add idempotency markers
-        extended_props = event.get('extendedProperties', {})
-        private_props = extended_props.get('private', {})
-
-        private_props.update({
-            self.marker_key: self.marker_value,
-            'chronos.rule_id': rule_id,
-            'chronos.signature': self.calculate_signature(event),
-            'chronos.original_summary': event.get('summary', ''),
-            'chronos.payload': json.dumps(asdict(payload))
-        })
-
-        patch_data['extendedProperties'] = {
-            'private': private_props
+        # Add backend-agnostic idempotency markers
+        marker_keys = self.idempotency_config.get('marker_keys', {})
+        chronos_markers = {
+            'cleaned': marker_keys.get('cleaned', 'true'),
+            'rule_id': rule_id,
+            'signature': self.calculate_signature(event),
+            'original_summary': event.get('summary', ''),
+            'payload': json.dumps(asdict(payload))
         }
 
-        # Prepare headers
-        headers = {}
-        if self.use_if_match and etag_before:
-            headers['If-Match'] = etag_before
+        patch_data['chronos_markers'] = chronos_markers
 
-        # Patch the event
+        # Patch the event via SourceAdapter
         try:
-            patched_event = await self.calendar_client.patch_event(
-                calendar_id=calendar_id,
+            adapter = self.source_manager.get_adapter()
+            new_etag = await adapter.patch_event(
+                calendar=calendar,
                 event_id=event_id,
-                event_data=patch_data,
-                send_updates=self.send_updates,
-                headers=headers
+                patch_data=patch_data,
+                if_match_etag=etag_before if getattr(self, 'use_if_match', True) else None
             )
 
             return {
                 'patched': True,
-                'etag_after': patched_event.get('etag')
+                'etag_after': new_etag
             }
 
         except Exception as e:
-            # Handle specific Google API errors
-            if "412" in str(e):  # Precondition Failed
+            # Handle backend-agnostic errors
+            if "conflict" in str(e).lower() or "412" in str(e) or "ConflictError" in str(type(e).__name__):
                 self.metrics['repair_conflict_total']['etag_mismatch'] = \
                     self.metrics['repair_conflict_total'].get('etag_mismatch', 0) + 1
                 self.logger.warning(f"ETag conflict for event {event_id}, skipping patch")
                 return {'patched': False}
+            elif "permission" in str(e).lower() or "PermissionError" in str(type(e).__name__):
+                self.logger.warning(f"Permission denied for event {event_id} in calendar {calendar.alias}")
+                return {'patched': False}
 
             raise e
 
-    async def process_events(self, events: List[Dict[str, Any]], calendar_id: str) -> List[RepairResult]:
+    async def process_events(self, events: List[Dict[str, Any]], calendar) -> List[RepairResult]:
         """
         Process multiple events for repair
 
         Args:
-            events: List of Google Calendar event objects
-            calendar_id: Calendar ID
+            events: List of normalized calendar event objects
+            calendar: CalendarRef object or calendar identifier (for backward compatibility)
 
         Returns:
             List of RepairResult objects
@@ -569,15 +596,27 @@ class CalendarRepairer:
         if not self.enabled:
             return [RepairResult(success=True, skipped=True) for _ in events]
 
+        # Handle backward compatibility - if calendar is a string, try to get CalendarRef
+        if isinstance(calendar, str):
+            if self.source_manager:
+                calendar_ref = await self.source_manager.get_calendar_by_id(calendar)
+                if not calendar_ref:
+                    self.logger.error(f"Calendar {calendar} not found in source manager")
+                    return [RepairResult(success=False, error=f"Calendar {calendar} not found") for _ in events]
+                calendar = calendar_ref
+            else:
+                self.logger.error("Source manager not available for calendar lookup")
+                return [RepairResult(success=False, error="Source manager not available") for _ in events]
+
         results = []
 
         for event in events:
             try:
-                result = await self.repair_event(event, calendar_id)
+                result = await self.repair_event(event, calendar)
                 results.append(result)
 
                 # Log the operation
-                self._log_repair_operation(event, result, calendar_id)
+                self._log_repair_operation(event, result, calendar)
 
             except Exception as e:
                 self.logger.error(f"Failed to process event {event.get('id')}: {e}")
@@ -588,10 +627,14 @@ class CalendarRepairer:
 
         return results
 
-    def _log_repair_operation(self, event: Dict[str, Any], result: RepairResult, calendar_id: str):
+    def _log_repair_operation(self, event: Dict[str, Any], result: RepairResult, calendar):
         """Log repair operation with structured context"""
+        calendar_id = calendar.id if hasattr(calendar, 'id') else str(calendar)
+        calendar_alias = calendar.alias if hasattr(calendar, 'alias') else calendar_id
+
         context = {
             'calendar_id': calendar_id,
+            'calendar_alias': calendar_alias,
             'event_id': event.get('id'),
             'rule_id': result.rule_id,
             'etag_before': result.etag_before,

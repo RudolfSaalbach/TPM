@@ -1668,6 +1668,391 @@ class ChronosUnifiedAPIRoutes:
                 "title": "System Information"
             })
 
+        # CALDAV BACKEND ROUTES
+
+        @self.router.get("/caldav/backend/info")
+        async def get_caldav_backend_info(
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Get CalDAV backend information and status"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'source_manager'):
+                    raise HTTPException(status_code=503, detail="Calendar source manager not available")
+
+                source_manager = self.scheduler.source_manager
+                backend_info = await source_manager.get_backend_info()
+
+                return {
+                    "success": True,
+                    "backend_info": backend_info,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error getting CalDAV backend info: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to get backend info: {e}")
+
+        @self.router.get("/caldav/calendars")
+        async def list_caldav_calendars(
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """List all available CalDAV calendars"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'source_manager'):
+                    raise HTTPException(status_code=503, detail="Calendar source manager not available")
+
+                source_manager = self.scheduler.source_manager
+                calendars = await source_manager.list_calendars()
+
+                calendar_info = []
+                for calendar in calendars:
+                    calendar_info.append({
+                        "id": calendar.id,
+                        "alias": calendar.alias,
+                        "url": calendar.url,
+                        "read_only": calendar.read_only,
+                        "timezone": calendar.timezone
+                    })
+
+                return {
+                    "success": True,
+                    "calendars": calendar_info,
+                    "count": len(calendars),
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error listing CalDAV calendars: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to list calendars: {e}")
+
+        @self.router.post("/caldav/calendars/{calendar_id}/sync")
+        async def sync_caldav_calendar(
+            calendar_id: str,
+            days_ahead: int = Query(7, description="Number of days ahead to sync"),
+            force_refresh: bool = Query(False, description="Force full refresh instead of incremental sync"),
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Manually trigger sync for specific CalDAV calendar"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'source_manager'):
+                    raise HTTPException(status_code=503, detail="Calendar source manager not available")
+
+                source_manager = self.scheduler.source_manager
+                calendar = await source_manager.get_calendar_by_id(calendar_id)
+
+                if not calendar:
+                    raise HTTPException(status_code=404, detail=f"Calendar {calendar_id} not found")
+
+                adapter = source_manager.get_adapter()
+
+                # Calculate time window
+                since = datetime.utcnow()
+                until = since + timedelta(days=days_ahead)
+
+                # Fetch events from calendar
+                event_result = await adapter.list_events(
+                    calendar=calendar,
+                    since=since,
+                    until=until,
+                    sync_token=None if force_refresh else "latest"
+                )
+
+                return {
+                    "success": True,
+                    "calendar_id": calendar_id,
+                    "calendar_alias": calendar.alias,
+                    "events_fetched": len(event_result.events),
+                    "sync_token": event_result.sync_token,
+                    "next_page_token": event_result.next_page_token,
+                    "time_window": {
+                        "since": since.isoformat(),
+                        "until": until.isoformat()
+                    },
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error syncing CalDAV calendar {calendar_id}: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to sync calendar: {e}")
+
+        @self.router.post("/caldav/calendars/{calendar_id}/events")
+        async def create_caldav_event(
+            calendar_id: str,
+            event_data: dict,
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Create new event in CalDAV calendar"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'source_manager'):
+                    raise HTTPException(status_code=503, detail="Calendar source manager not available")
+
+                source_manager = self.scheduler.source_manager
+                calendar = await source_manager.get_calendar_by_id(calendar_id)
+
+                if not calendar:
+                    raise HTTPException(status_code=404, detail=f"Calendar {calendar_id} not found")
+
+                if calendar.read_only:
+                    raise HTTPException(status_code=403, detail=f"Calendar {calendar.alias} is read-only")
+
+                # Validate required fields
+                if 'summary' not in event_data:
+                    raise HTTPException(status_code=400, detail="Event summary is required")
+
+                # Parse datetime fields
+                start_time = None
+                end_time = None
+                if 'start_time' in event_data:
+                    start_time = datetime.fromisoformat(event_data['start_time'])
+                if 'end_time' in event_data:
+                    end_time = datetime.fromisoformat(event_data['end_time'])
+
+                # Normalize event data
+                normalized_event = {
+                    'summary': event_data['summary'],
+                    'description': event_data.get('description', ''),
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'all_day': event_data.get('all_day', False),
+                    'timezone': event_data.get('timezone', calendar.timezone),
+                    'rrule': event_data.get('rrule'),
+                    'chronos_markers': event_data.get('chronos_markers', {})
+                }
+
+                # Create event via adapter
+                adapter = source_manager.get_adapter()
+                event_id = await adapter.create_event(calendar, normalized_event)
+
+                return {
+                    "success": True,
+                    "event_id": event_id,
+                    "calendar_id": calendar_id,
+                    "calendar_alias": calendar.alias,
+                    "created_at": datetime.utcnow().isoformat()
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error creating CalDAV event in {calendar_id}: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to create event: {e}")
+
+        @self.router.get("/caldav/calendars/{calendar_id}/events/{event_id}")
+        async def get_caldav_event(
+            calendar_id: str,
+            event_id: str,
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Get specific event from CalDAV calendar"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'source_manager'):
+                    raise HTTPException(status_code=503, detail="Calendar source manager not available")
+
+                source_manager = self.scheduler.source_manager
+                calendar = await source_manager.get_calendar_by_id(calendar_id)
+
+                if not calendar:
+                    raise HTTPException(status_code=404, detail=f"Calendar {calendar_id} not found")
+
+                adapter = source_manager.get_adapter()
+                event = await adapter.get_event(calendar, event_id)
+
+                if not event:
+                    raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
+
+                return {
+                    "success": True,
+                    "event": event,
+                    "calendar_id": calendar_id,
+                    "calendar_alias": calendar.alias,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error getting CalDAV event {event_id} from {calendar_id}: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to get event: {e}")
+
+        @self.router.patch("/caldav/calendars/{calendar_id}/events/{event_id}")
+        async def patch_caldav_event(
+            calendar_id: str,
+            event_id: str,
+            patch_data: dict,
+            if_match: Optional[str] = Header(None, description="ETag for conflict detection"),
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Patch existing event in CalDAV calendar"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'source_manager'):
+                    raise HTTPException(status_code=503, detail="Calendar source manager not available")
+
+                source_manager = self.scheduler.source_manager
+                calendar = await source_manager.get_calendar_by_id(calendar_id)
+
+                if not calendar:
+                    raise HTTPException(status_code=404, detail=f"Calendar {calendar_id} not found")
+
+                if calendar.read_only:
+                    raise HTTPException(status_code=403, detail=f"Calendar {calendar.alias} is read-only")
+
+                # Parse datetime fields in patch data
+                if 'start_time' in patch_data and isinstance(patch_data['start_time'], str):
+                    patch_data['start_time'] = datetime.fromisoformat(patch_data['start_time'])
+                if 'end_time' in patch_data and isinstance(patch_data['end_time'], str):
+                    patch_data['end_time'] = datetime.fromisoformat(patch_data['end_time'])
+
+                # Apply patch via adapter
+                adapter = source_manager.get_adapter()
+                new_etag = await adapter.patch_event(calendar, event_id, patch_data, if_match)
+
+                return {
+                    "success": True,
+                    "event_id": event_id,
+                    "calendar_id": calendar_id,
+                    "calendar_alias": calendar.alias,
+                    "new_etag": new_etag,
+                    "patched_at": datetime.utcnow().isoformat()
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error patching CalDAV event {event_id} in {calendar_id}: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to patch event: {e}")
+
+        @self.router.delete("/caldav/calendars/{calendar_id}/events/{event_id}")
+        async def delete_caldav_event(
+            calendar_id: str,
+            event_id: str,
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Delete event from CalDAV calendar"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'source_manager'):
+                    raise HTTPException(status_code=503, detail="Calendar source manager not available")
+
+                source_manager = self.scheduler.source_manager
+                calendar = await source_manager.get_calendar_by_id(calendar_id)
+
+                if not calendar:
+                    raise HTTPException(status_code=404, detail=f"Calendar {calendar_id} not found")
+
+                if calendar.read_only:
+                    raise HTTPException(status_code=403, detail=f"Calendar {calendar.alias} is read-only")
+
+                adapter = source_manager.get_adapter()
+                success = await adapter.delete_event(calendar, event_id)
+
+                if success:
+                    return {
+                        "success": True,
+                        "event_id": event_id,
+                        "calendar_id": calendar_id,
+                        "calendar_alias": calendar.alias,
+                        "deleted_at": datetime.utcnow().isoformat()
+                    }
+                else:
+                    raise HTTPException(status_code=500, detail="Failed to delete event")
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error deleting CalDAV event {event_id} from {calendar_id}: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to delete event: {e}")
+
+        @self.router.post("/caldav/backend/switch")
+        async def switch_caldav_backend(
+            switch_data: dict,
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Switch between CalDAV and Google Calendar backends"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'source_manager'):
+                    raise HTTPException(status_code=503, detail="Calendar source manager not available")
+
+                new_type = switch_data.get('backend_type')
+                if new_type not in ['caldav', 'google']:
+                    raise HTTPException(status_code=400, detail="backend_type must be 'caldav' or 'google'")
+
+                new_config = switch_data.get('config')
+                source_manager = self.scheduler.source_manager
+
+                # Attempt backend switch
+                success = await source_manager.switch_backend(new_type, new_config)
+
+                if success:
+                    # Get updated backend info
+                    backend_info = await source_manager.get_backend_info()
+
+                    return {
+                        "success": True,
+                        "switched_to": new_type,
+                        "backend_info": backend_info,
+                        "switched_at": datetime.utcnow().isoformat()
+                    }
+                else:
+                    raise HTTPException(status_code=500, detail=f"Failed to switch to {new_type} backend")
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error switching CalDAV backend: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to switch backend: {e}")
+
+        @self.router.post("/caldav/connection/test")
+        async def test_caldav_connection(
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Test CalDAV backend connection"""
+            self._verify_api_key(credentials)
+
+            try:
+                if not self.scheduler or not hasattr(self.scheduler, 'source_manager'):
+                    raise HTTPException(status_code=503, detail="Calendar source manager not available")
+
+                source_manager = self.scheduler.source_manager
+                connection_valid = await source_manager.validate_connection()
+
+                # Get additional connection details
+                backend_info = await source_manager.get_backend_info()
+
+                return {
+                    "success": True,
+                    "connection_valid": connection_valid,
+                    "backend_type": backend_info.get('type'),
+                    "calendars_available": len(backend_info.get('calendars', [])),
+                    "test_timestamp": datetime.utcnow().isoformat()
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                self.logger.error(f"Error testing CalDAV connection: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to test connection: {e}")
+
     def _verify_api_key(self, credentials: Optional[HTTPAuthorizationCredentials]):
         """Verify API key authentication"""
         if not credentials or credentials.credentials != self.api_key:

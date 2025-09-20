@@ -1,12 +1,14 @@
 # Chronos Engine v2.1.0
 
-Chronos Engine is an async FastAPI service that keeps calendars, templates and command workflows in sync with a SQLite database.  
-The project ships with a scheduler that can pull data from Google Calendar (real OAuth or mocked), normalize it into the local store, run it through plugins (including the command handler), and expose the result through a modern API and dashboard.
+Chronos Engine is an async FastAPI service that keeps calendars, templates and command workflows in sync with a SQLite database.
+The project ships with a scheduler that can pull data from **CalDAV/Radicale servers** (primary) or Google Calendar (fallback), normalize it into the local store, run it through plugins (including the command handler), and expose the result through a modern API and dashboard.
 
 ---
 
 ## 🚀 Highlights
 - **FastAPI + Async SQLAlchemy** – non-blocking API backed by SQLite (`data/chronos.db`) with UTC-indexed columns for fast range queries.
+- **CalDAV/Radicale Integration** – native support for self-hosted CalDAV servers with RFC 6578 sync-collection for efficient updates.
+- **Backend-Agnostic Design** – unified SourceAdapter interface supports CalDAV and Google Calendar with seamless switching.
 - **Pluggable scheduler** – fetches external events, parses them, runs plugins (command handler, analytics, wellness, …) and persists results.
 - **Advanced event queries** – `/api/v1/events` supports pagination, time-window filtering, text search and calendar scoping.
 - **Template & command workflow** – manage reusable templates, record template usage, and deliver commands to external systems via a queue with completion/failure callbacks.
@@ -15,11 +17,12 @@ The project ships with a scheduler that can pull data from Google Calendar (real
 ---
 
 ## 🏗️ Architecture Overview
-1. **Scheduler (`src/core/scheduler.py`)** pulls calendar events, invokes the plugin pipeline and persists every event (including UTC timestamps) through the `DatabaseService`.
-2. **Database layer (`src/core/database.py`)** provides async sessions and schema creation for events, templates, analytics data, commands and notes.
-3. **API routers (`src/api/…`)** expose CRUD endpoints for events, templates, commands and manual synchronization. The enhanced router contains the advanced filtering logic and command lifecycle endpoints.
-4. **Plugins (`plugins/custom/…`)** extend the system – the command handler translates calendar entries into actionable commands and removes them once consumed.
-5. **Dashboard & client** assets live in `templates/` and `static/` and can be served from the running FastAPI app.
+1. **CalendarSourceManager (`src/core/calendar_source_manager.py`)** provides unified access to CalDAV and Google Calendar backends via the SourceAdapter interface.
+2. **Scheduler (`src/core/scheduler.py`)** pulls calendar events from multiple sources, invokes the plugin pipeline and persists every event (including UTC timestamps) through the `DatabaseService`.
+3. **Database layer (`src/core/database.py`)** provides async sessions and schema creation for events, templates, analytics data, commands and notes.
+4. **API routers (`src/api/…`)** expose CRUD endpoints for events, templates, commands, CalDAV management and manual synchronization.
+5. **Plugins (`plugins/custom/…`)** extend the system – the command handler translates calendar entries into actionable commands and removes them once consumed.
+6. **Dashboard & client** assets live in `templates/` and `static/` and can be served from the running FastAPI app.
 
 ---
 
@@ -53,10 +56,14 @@ This builds the application image, mounts the project files and exposes the API 
 
 ## 🔐 Configuration & Secrets
 Configuration lives in `config/chronos.yaml`. Important sections:
+- `calendar_source.type` – choose between `"caldav"` (default) or `"google"` for the primary backend.
+- `caldav.calendars` – list of CalDAV calendar collections with URLs, authentication and sync settings.
+- `caldav.auth` – authentication mode: `"none"`, `"basic"`, or `"digest"` with credential references.
 - `api.api_key` – bearer token required for most endpoints (default: `development-key-change-in-production`).
-- `calendar.credentials_file` / `token_file` – point to Google OAuth/service-account credentials. If the files are missing the client falls back to the mock calendar implementation.
+- `google.credentials_file` / `token_file` – Google OAuth/service-account credentials (when using Google backend).
 - `plugins` – enable/disable plugins and set the custom directory (defaults to `plugins/custom`).
-- `command_handler.action_whitelist` – allow-listed command keywords that the command plugin can emit.
+
+See `config/examples/` for CalDAV setup examples including production, multi-server and hybrid configurations.
 
 Override values via environment variables when running in production (e.g. `export CHRONOS_API_KEY="super-secret"`).
 
@@ -79,6 +86,17 @@ All protected endpoints expect `Authorization: Bearer <api_key>`.
 | `/api/v1/templates` | GET/POST/PUT/DELETE | Manage reusable event templates with ranking and metadata updates. |
 | `/api/v1/templates/{template_id}/use` | POST | Record template usage for analytics. |
 
+### CalDAV Management
+| Endpoint | Method | Description |
+| --- | --- | --- |
+| `/caldav/backend/info` | GET | Get current backend information and capabilities. |
+| `/caldav/connection/test` | POST | Test CalDAV server connection. |
+| `/caldav/backend/switch` | POST | Switch between CalDAV and Google Calendar backends. |
+| `/caldav/calendars` | GET | List all available CalDAV calendars. |
+| `/caldav/calendars/{id}/sync` | POST | Manually sync a specific calendar. |
+| `/caldav/calendars/{id}/events` | POST | Create event in CalDAV calendar. |
+| `/caldav/calendars/{id}/events/{event_id}` | GET/PATCH/DELETE | Manage CalDAV events. |
+
 ### Command queue
 | Endpoint | Method | Description |
 | --- | --- | --- |
@@ -98,11 +116,12 @@ Interactive API docs are available at `http://localhost:8080/docs` once the serv
 ---
 
 ## 🧠 Scheduler & Plugin Workflow
-1. Fetch events from Google Calendar (real API when configured, mock data otherwise).
-2. Parse raw events into `ChronosEvent` domain objects.
+1. Fetch events from CalDAV/Radicale servers or Google Calendar via the unified SourceAdapter interface.
+2. Parse raw events into `ChronosEvent` domain objects with backend-agnostic idempotency markers.
 3. Run each event through the plugin pipeline. The command handler can turn specially formatted events into actionable commands; when a plugin consumes an event it is removed from SQLite and the external calendar.
-4. Persist remaining events with UTC-normalized timestamps and analytics metadata.
-5. Background tasks (timeboxing, re-planning, analytics) leverage the stored data via async sessions.
+4. Process calendar repair rules (birthday formatting, anniversary detection) that work identically across CalDAV and Google backends.
+5. Persist remaining events with UTC-normalized timestamps and analytics metadata.
+6. Background tasks (timeboxing, re-planning, analytics) leverage the stored data via async sessions.
 
 Custom plugins can be added under `plugins/custom/` by subclassing `EventPlugin` or `SchedulingPlugin` from `src/core/plugin_manager.py`.
 
@@ -141,9 +160,13 @@ static/              # Front-end assets for the dashboard/client
 
 ## 🛠️ Troubleshooting
 - **Authorization errors** – ensure the `Authorization` header matches `api.api_key` in `config/chronos.yaml`.
+- **CalDAV connection issues** – verify server URLs, check network connectivity and authentication credentials. Use `/caldav/connection/test` to diagnose.
 - **Google Calendar authentication** – add OAuth or service account credentials; without them the client runs in mock mode and serves sample events.
+- **Backend switching** – use `/caldav/backend/switch` API or update `calendar_source.type` in config and restart.
 - **Database issues** – delete `data/chronos.db` for a clean slate, then restart the API to recreate tables.
 - **Static assets missing** – confirm the `templates/` and `static/` directories are present before launching the app.
+
+For CalDAV setup guidance, see `docs/CalDAV_Integration_Guide.md` and configuration examples in `config/examples/`.
 
 ---
 

@@ -167,6 +167,219 @@ async def client(test_app):
         yield ac
 
 
+# CalDAV-specific fixtures
+from src.core.source_adapter import CalendarRef, AdapterCapabilities, EventListResult
+from src.core.caldav_adapter import CalDAVAdapter
+from src.core.calendar_source_manager import CalendarSourceManager
+from unittest.mock import Mock, AsyncMock
+import yaml
+
+
+@pytest.fixture
+def caldav_test_config():
+    """Test configuration for CalDAV"""
+    return {
+        'calendar_source': {'type': 'caldav'},
+        'caldav': {
+            'calendars': [
+                {
+                    'id': 'test-calendar',
+                    'alias': 'Test Calendar',
+                    'url': 'http://test.radicale.local:5232/user/calendar/',
+                    'read_only': False,
+                    'timezone': 'Europe/Berlin'
+                }
+            ],
+            'auth': {'mode': 'none'},
+            'transport': {'verify_tls': False},
+            'sync': {'use_sync_collection': True},
+            'write': {'if_match': True}
+        },
+        'repair_and_enrich': {
+            'idempotency': {
+                'marker_keys': {
+                    'cleaned': 'X-CHRONOS-CLEANED',
+                    'rule_id': 'X-CHRONOS-RULE-ID',
+                    'signature': 'X-CHRONOS-SIGNATURE',
+                    'original_summary': 'X-CHRONOS-ORIGINAL-SUMMARY',
+                    'payload': 'X-CHRONOS-PAYLOAD'
+                }
+            },
+            'rules': [
+                {
+                    'id': 'bday',
+                    'keywords': ['BDAY', 'BIRTHDAY'],
+                    'title_template': '🎉 Birthday: {name} ({date_display})',
+                    'all_day': True,
+                    'rrule': 'FREQ=YEARLY',
+                    'enrich': {
+                        'event_type': 'birthday',
+                        'tags': ['personal']
+                    }
+                }
+            ]
+        }
+    }
+
+
+@pytest.fixture
+def sample_calendar_refs():
+    """Sample calendar references for testing"""
+    return [
+        CalendarRef(
+            id='automation',
+            alias='Automation',
+            url='http://10.210.1.1:5232/radicaleuser/automation/',
+            read_only=False,
+            timezone='Europe/Berlin'
+        ),
+        CalendarRef(
+            id='dates',
+            alias='Dates',
+            url='http://10.210.1.1:5232/radicaleuser/dates/',
+            read_only=False,
+            timezone='Europe/Berlin'
+        ),
+        CalendarRef(
+            id='special',
+            alias='Special',
+            url='http://10.210.1.1:5232/radicaleuser/special/',
+            read_only=True,
+            timezone='Europe/Berlin'
+        )
+    ]
+
+
+@pytest.fixture
+def sample_caldav_events():
+    """Sample CalDAV events for testing"""
+    return [
+        {
+            'id': 'caldav-event-1',
+            'uid': 'caldav-event-1',
+            'summary': 'CalDAV Test Event',
+            'description': 'Test event from CalDAV',
+            'start_time': datetime.utcnow(),
+            'end_time': datetime.utcnow() + timedelta(hours=1),
+            'all_day': False,
+            'calendar_id': 'automation',
+            'etag': '"caldav-etag-1"',
+            'rrule': None,
+            'recurrence_id': None,
+            'is_series_master': False,
+            'timezone': 'Europe/Berlin',
+            'meta': {
+                'chronos_markers': {}
+            }
+        },
+        {
+            'id': 'birthday-event',
+            'uid': 'birthday-event',
+            'summary': 'BDAY: John Doe 15.01.1990',
+            'description': '',
+            'start_time': datetime(2025, 1, 15),
+            'end_time': datetime(2025, 1, 16),
+            'all_day': True,
+            'calendar_id': 'automation',
+            'etag': '"birthday-etag"',
+            'rrule': None,
+            'recurrence_id': None,
+            'is_series_master': False,
+            'timezone': 'Europe/Berlin',
+            'meta': {
+                'chronos_markers': {}
+            }
+        }
+    ]
+
+
+@pytest.fixture
+def mock_caldav_adapter():
+    """Mock CalDAV adapter for testing"""
+    adapter = Mock(spec=CalDAVAdapter)
+    adapter.enabled = True
+    adapter.list_calendars.return_value = []
+    adapter.capabilities.return_value = AdapterCapabilities(
+        name="CalDAV/Radicale",
+        can_write=True,
+        supports_sync_token=True,
+        timezone="Europe/Berlin"
+    )
+    adapter.validate_connection.return_value = True
+    return adapter
+
+
+@pytest.fixture
+def mock_source_manager(mock_caldav_adapter):
+    """Mock calendar source manager for testing"""
+    manager = Mock(spec=CalendarSourceManager)
+    manager.source_type = 'caldav'
+    manager.get_adapter.return_value = mock_caldav_adapter
+    manager.list_calendars = AsyncMock(return_value=[])
+    manager.get_backend_info = AsyncMock(return_value={
+        'type': 'caldav',
+        'calendars': [],
+        'connection_valid': True
+    })
+    manager.validate_connection = AsyncMock(return_value=True)
+    return manager
+
+
+@pytest.fixture
+def mock_http_session():
+    """Mock aiohttp session for CalDAV testing"""
+    session = AsyncMock()
+
+    # Create mock response
+    def create_response(status=200, text="", headers=None):
+        response = AsyncMock()
+        response.status = status
+        response.text = AsyncMock(return_value=text)
+        response.headers = headers or {}
+        return response
+
+    # Configure default responses
+    session.get.return_value.__aenter__.return_value = create_response()
+    session.put.return_value.__aenter__.return_value = create_response(status=201)
+    session.delete.return_value.__aenter__.return_value = create_response(status=204)
+    session.request.return_value.__aenter__.return_value = create_response(status=207)
+
+    return session
+
+
+@pytest.fixture
+def sample_icalendar_data():
+    """Sample iCalendar data for testing"""
+    return {
+        'simple_event': """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//Test//EN
+BEGIN:VEVENT
+UID:simple-event-123
+SUMMARY:Simple Test Event
+DTSTART:20250115T100000Z
+DTEND:20250115T110000Z
+END:VEVENT
+END:VCALENDAR""",
+
+        'birthday_with_markers': """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Chronos//CalDAV Adapter//EN
+BEGIN:VEVENT
+UID:birthday-event-123
+SUMMARY:🎉 Birthday: John Doe (15.01)
+DTSTART;VALUE=DATE:20250115
+DTEND;VALUE=DATE:20250116
+RRULE:FREQ=YEARLY
+X-CHRONOS-CLEANED:true
+X-CHRONOS-RULE-ID:bday
+X-CHRONOS-SIGNATURE:abc123def456
+X-CHRONOS-ORIGINAL-SUMMARY:BDAY: John Doe 15.01.1990
+END:VEVENT
+END:VCALENDAR"""
+    }
+
+
 # Test configuration
 def pytest_configure(config):
     """Configure pytest"""
@@ -178,4 +391,16 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers", "slow: mark test as slow running"
+    )
+    config.addinivalue_line(
+        "markers", "caldav: mark test as CalDAV integration test"
+    )
+    config.addinivalue_line(
+        "markers", "api: mark test as API endpoint test"
+    )
+    config.addinivalue_line(
+        "markers", "e2e: mark test as end-to-end test"
+    )
+    config.addinivalue_line(
+        "markers", "performance: mark test as performance test"
     )

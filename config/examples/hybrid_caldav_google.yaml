@@ -1,0 +1,155 @@
+# Hybrid CalDAV + Google Calendar Configuration
+# Setup for using both CalDAV and Google Calendar with easy switching
+
+version: 1
+
+# CalDAV as default, but easy to switch to Google
+calendar_source:
+  type: "caldav"  # Change to "google" to switch primary backend
+  timezone_default: "Europe/Berlin"
+
+# CalDAV configuration (primary)
+caldav:
+  calendars:
+    - id: "automation"
+      alias: "Automation"
+      url: "http://10.210.1.1:5232/radicaleuser/automation/"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "dates"
+      alias: "Important Dates"
+      url: "http://10.210.1.1:5232/radicaleuser/dates/"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "special"
+      alias: "Special Events"
+      url: "http://10.210.1.1:5232/radicaleuser/special/"
+      read_only: true
+      timezone: "Europe/Berlin"
+
+  auth:
+    mode: "none"
+
+  transport:
+    verify_tls: false
+    connect_timeout_s: 5
+    read_timeout_s: 15
+
+  sync:
+    use_sync_collection: true
+    window_days: 400
+    parallel_requests: 3
+
+  write:
+    if_match: true
+    retry_conflict: 1
+    include_vtimezone: true
+
+# Google Calendar configuration (fallback)
+google:
+  enabled: true  # Keep enabled for easy switching
+  calendars:
+    - id: "primary"
+      alias: "Google Primary"
+      google_calendar_id: "primary"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "work"
+      alias: "Work Calendar"
+      google_calendar_id: "work@company.com"
+      read_only: false
+      timezone: "Europe/Berlin"
+
+  credentials_file: "config/credentials.json"
+  token_file: "config/token.json"
+
+  sync:
+    window_days: 400
+    parallel_requests: 3
+    use_sync_token: true
+
+  write:
+    include_conference_data: false
+
+# Unified repair configuration (works with both backends)
+repair_and_enrich:
+  enabled: true
+
+  # Backend-agnostic idempotency markers
+  idempotency:
+    marker_keys:
+      cleaned: "X-CHRONOS-CLEANED"       # CalDAV property / Google extendedProperty
+      rule_id: "X-CHRONOS-RULE-ID"       # CalDAV property / Google extendedProperty
+      signature: "X-CHRONOS-SIGNATURE"   # CalDAV property / Google extendedProperty
+      original_summary: "X-CHRONOS-ORIGINAL-SUMMARY"
+      payload: "X-CHRONOS-PAYLOAD"
+
+  # Repair rules work identically for both backends
+  rules:
+    - id: "bday"
+      keywords: ["BDAY", "BIRTHDAY", "GEBURTSTAG"]
+      title_template: "🎉 Birthday: {name} ({date_display})"
+      all_day: true
+      rrule: "FREQ=YEARLY"
+      enrich:
+        event_type: "birthday"
+        tags: ["personal"]
+
+    - id: "anniversary"
+      keywords: ["ANNIV", "ANNIVERSARY", "JAHRESTAG"]
+      title_template: "🎖️ {label}: {name_or_label} since {date_display}{years_since_suffix}"
+      all_day: true
+      rrule: "FREQ=YEARLY"
+      enrich:
+        event_type: "anniversary"
+        tags: ["anniversary"]
+
+# Database configuration
+database:
+  url: "sqlite:///data/chronos_hybrid.db"
+  echo: false
+
+# API configuration
+api:
+  api_key: "your-hybrid-api-key"
+  host: "0.0.0.0"
+  port: 8080
+  cors_origins: ["*"]
+
+# Scheduler configuration
+scheduler:
+  sync_interval: 3600  # 1 hour
+  max_workers: 2
+  enabled: true
+
+# Analytics
+analytics:
+  enabled: false
+
+# AI features
+ai:
+  enabled: false
+
+# Notifications
+notifications:
+  enabled: false
+
+# Logging
+logging:
+  level: "INFO"
+  structured: true
+  file: "logs/chronos_hybrid.log"
+
+# Note: To switch backends, use the API:
+# POST /caldav/backend/switch
+# {
+#   "backend_type": "google",
+#   "config": {
+#     "google": {
+#       "enabled": true,
+#       "credentials_file": "config/credentials.json"
+#     }
+#   }
+# }
+#
+# Or manually change calendar_source.type in this file and restart

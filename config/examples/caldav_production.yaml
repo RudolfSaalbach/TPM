@@ -1,0 +1,95 @@
+# Production CalDAV Configuration Example
+# Secure setup for production deployment with authentication
+
+version: 1
+
+# CalDAV as primary backend
+calendar_source:
+  type: "caldav"
+  timezone_default: "Europe/Berlin"
+
+# Production CalDAV configuration
+caldav:
+  calendars:
+    - id: "automation"
+      alias: "Automation Calendar"
+      url: "https://caldav.company.com/radicale/user/automation/"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "team-calendar"
+      alias: "Team Events"
+      url: "https://caldav.company.com/radicale/user/team/"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "holidays"
+      alias: "Company Holidays"
+      url: "https://caldav.company.com/radicale/shared/holidays/"
+      read_only: true
+      timezone: "Europe/Berlin"
+
+  # HTTP Basic Authentication
+  auth:
+    mode: "basic"
+    username: "chronos-service"
+    password_ref: "env:CALDAV_PASSWORD"
+
+  # Production transport settings
+  transport:
+    verify_tls: true
+    connect_timeout_s: 10
+    read_timeout_s: 30
+
+  # Optimized sync settings
+  sync:
+    use_sync_collection: true
+    window_days: 180
+    parallel_requests: 4
+
+  # Safe write settings
+  write:
+    if_match: true
+    retry_conflict: 3
+    include_vtimezone: true
+
+# Secure database configuration
+database:
+  url: "postgresql://chronos:${DB_PASSWORD}@db.company.com:5432/chronos_prod"
+  echo: false
+
+# Production API configuration
+api:
+  api_key: "env:CHRONOS_API_KEY"
+  host: "0.0.0.0"
+  port: 8080
+  cors_origins: ["https://chronos.company.com", "https://admin.company.com"]
+
+# Production scheduler
+scheduler:
+  sync_interval: 1800  # 30 minutes
+  max_workers: 4
+  enabled: true
+
+# Analytics and monitoring
+analytics:
+  enabled: true
+  retention_days: 90
+
+# Disable AI features for production
+ai:
+  enabled: false
+
+# Production notifications
+notifications:
+  enabled: true
+  channels:
+    - type: "webhook"
+      url: "https://monitoring.company.com/chronos/alerts"
+      events: ["sync.failed", "connection.lost"]
+
+# Structured logging
+logging:
+  level: "INFO"
+  structured: true
+  file: "/var/log/chronos/chronos.log"
+  max_size_mb: 100
+  backup_count: 5

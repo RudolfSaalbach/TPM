@@ -1,0 +1,195 @@
+# Chronos Engine v2.1 - Unified Configuration
+# Default: CalDAV/Radicale backend with optional Google Calendar support
+
+version: 1
+
+# Calendar source configuration - CalDAV is now the default
+calendar_source:
+  type: "caldav"                       # DEFAULT: Radicale/CalDAV
+  timezone_default: "Europe/Berlin"
+
+# CalDAV/Radicale Configuration (PRIMARY BACKEND)
+caldav:
+  calendars:                           # All collections processed identically
+    - id: "automation"
+      alias: "Automation"
+      url: "http://10.210.1.1:5232/radicaleuser/8a04a78f-0785-8dc1-8593-ae54b948b5c5/"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "dates"
+      alias: "Dates"
+      url: "http://10.210.1.1:5232/radicaleuser/78fad4eb-17fd-a588-bbe6-96c0b615c123/"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "special"
+      alias: "Special"
+      url: "http://10.210.1.1:5232/radicaleuser/bb4d93ef-f55d-bda2-63b8-82a4962dbed5/"
+      read_only: false
+      timezone: "Europe/Berlin"
+
+  auth:
+    mode: "none"              # "none" | "basic" | "digest"
+    username: "radicaleuser"  # only used if mode ≠ "none"
+    password_ref: "env:RADICALE_PASSWORD"
+
+  transport:
+    verify_tls: false         # false for http/WireGuard, true for https
+    connect_timeout_s: 5
+    read_timeout_s: 15
+
+  sync:
+    use_sync_collection: true # RFC 6578 sync-token preferred
+    window_days: 400          # Fallback time window
+    parallel_requests: 3
+
+  write:
+    if_match: true            # ETag protection
+    retry_conflict: 1
+    include_vtimezone: true
+
+# Google Calendar Configuration (OPTIONAL BACKEND)
+google:
+  enabled: false              # Switch to true to use Google instead of CalDAV
+  credentials_file: "config/credentials.json"
+  token_file: "config/token.json"
+  calendar_ids: ["primary"]   # or detailed config with aliases
+  timezone: "Europe/Berlin"
+
+# Database Configuration
+database:
+  url: "sqlite:///data/chronos.db"
+  echo: false
+
+# API Configuration
+api:
+  api_key: "development-key"
+  host: "0.0.0.0"
+  port: 8080
+  cors_origins: ["*"]
+
+# Processing Pipeline Configuration
+pipeline:
+  order: ["UndefinedGuard","CalendarRepairer","KeywordEnricher","command_handler"]
+
+# Repair and Enrichment Configuration (BACKEND-AGNOSTIC)
+repair_and_enrich:
+  reserved_prefixes: ["ACTION","MEETING","CALL"]  # never rewrite these
+
+  parsing:
+    accept_date_separators: [".","-","/"]
+    day_first: true
+    year_optional: true
+    strict_when_ambiguous: true
+
+  series_policy:
+    edit_master_if_keyword_on_master: true
+    edit_instance_if_keyword_on_instance: true
+    do_not_edit_past_instances: true
+
+  idempotency:
+    marker_keys:
+      cleaned: "X-CHRONOS-CLEANED"
+      rule_id: "X-CHRONOS-RULE-ID"
+      signature: "X-CHRONOS-SIGNATURE"
+      original_summary: "X-CHRONOS-ORIGINAL-SUMMARY"
+      payload: "X-CHRONOS-PAYLOAD"
+
+  # Repair Rules (identical processing for all calendars; short EN titles, DE/EN keywords)
+  rules:
+    - id: "bday"
+      keywords: ["BDAY","BIRTHDAY","GEB","GEBURTSTAG"]
+      title_template: "🎉 Birthday: {name} ({date_display}){age_suffix}"
+      age_suffix_template: " – turns {age}."
+      all_day: true
+      rrule: "FREQ=YEARLY"
+      leap_day_policy: "FEB_28"
+      enrich:
+        event_type: "birthday"
+        tags: ["personal","birthday"]
+        sub_tasks:
+          - { text: "Buy card", completed: false }
+          - { text: "Get gift", completed: false }
+
+    - id: "bdaywarn"
+      keywords: ["BDAYWARN","BIRTHDAYWARN","GEBWARN","GEBURTSTAGWARN"]
+      title_template: "⏰ {name}'s birthday in {warn_abs_days} days ({date_day_month})"
+      all_day: true
+      rrule: "FREQ=YEARLY"
+      warn_offset_days: -4
+      link_to_rule: "bday"
+      enrich:
+        event_type: "birthday_warning"
+        tags: ["personal","reminder"]
+
+    - id: "rip"
+      keywords: ["RIP","DEATH","MEMORIAL","TOD","GEDENKEN"]
+      title_template: "🕯️ In memory of {name} († {date_display}){years_since_suffix}"
+      years_since_suffix_template: " – {years_since}th."
+      all_day: true
+      rrule: "FREQ=YEARLY"
+      enrich:
+        event_type: "memorial"
+        tags: ["memorial"]
+        sub_tasks:
+          - { text: "Flowers/visit", completed: false }
+
+    - id: "ripwarn"
+      keywords: ["RIPWARN","MEMORIALWARN","TODWARN","GEDENKWARN"]
+      title_template: "🕯️ Memorial for {name} in {warn_abs_days} days ({date_day_month})"
+      all_day: true
+      rrule: "FREQ=YEARLY"
+      warn_offset_days: -3
+      link_to_rule: "rip"
+      enrich:
+        event_type: "memorial_warning"
+        tags: ["memorial","reminder"]
+
+    - id: "anniv"
+      keywords: ["ANNIV","ANNIVERSARY","JUBI","JUBILÄUM"]
+      title_template: "🎖️ {label}: {name_or_label} since {date_display}{years_since_suffix}"
+      label_from_payload: true
+      years_since_suffix_template: " – {years_since}th."
+      all_day: true
+      rrule: "FREQ=YEARLY"
+      enrich:
+        event_type: "anniversary"
+        tags: ["anniversary"]
+
+    - id: "annivwarn"
+      keywords: ["ANNIVWARN","ANNIVERSARYWARN","JUBIWARN","JUBILÄUMWARN"]
+      title_template: "⏰ {label}: {name_or_label} in {warn_abs_days} days ({date_day_month})"
+      all_day: true
+      rrule: "FREQ=YEARLY"
+      warn_offset_days: -7
+      link_to_rule: "anniv"
+      enrich:
+        event_type: "anniversary_warning"
+        tags: ["anniversary","reminder"]
+
+# Scheduler Configuration
+scheduler:
+  sync_interval: 3600       # Sync every hour
+  max_workers: 5
+  enabled: true
+
+# Analytics Configuration
+analytics:
+  enabled: true
+  cache_dir: "data/analytics"
+
+# AI Configuration
+ai:
+  enabled: false
+  openai_api_key: "env:OPENAI_API_KEY"
+  timebox:
+    enabled: false
+
+# Notification Configuration
+notifications:
+  enabled: false
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  structured: true
+  file: "logs/chronos.log"

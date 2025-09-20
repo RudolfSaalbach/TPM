@@ -1,0 +1,104 @@
+# Multi-Server CalDAV Configuration Example
+# Setup for multiple Radicale servers or CalDAV providers
+
+version: 1
+
+# CalDAV as primary backend
+calendar_source:
+  type: "caldav"
+  timezone_default: "Europe/Berlin"
+
+# Multi-server CalDAV configuration
+caldav:
+  calendars:
+    # Home server calendars
+    - id: "personal"
+      alias: "Personal Calendar"
+      url: "http://home.local:5232/user/personal/"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "family"
+      alias: "Family Events"
+      url: "http://home.local:5232/user/family/"
+      read_only: false
+      timezone: "Europe/Berlin"
+
+    # Work server calendars
+    - id: "work-meetings"
+      alias: "Work Meetings"
+      url: "https://caldav.work.com/user/meetings/"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "work-projects"
+      alias: "Project Deadlines"
+      url: "https://caldav.work.com/user/projects/"
+      read_only: false
+      timezone: "Europe/Berlin"
+
+    # External CalDAV provider
+    - id: "shared-calendar"
+      alias: "Shared Team Calendar"
+      url: "https://external-caldav.com/calendars/team123/"
+      read_only: true
+      timezone: "Europe/Berlin"
+
+  # Authentication per server (basic for work, none for home)
+  auth:
+    mode: "basic"
+    username: "chronos-user"
+    password_ref: "env:WORK_CALDAV_PASSWORD"
+    # Note: Currently single auth config - multi-auth would need adapter enhancement
+
+  # Conservative transport settings for mixed environments
+  transport:
+    verify_tls: true  # Will fail for home.local - consider per-calendar settings
+    connect_timeout_s: 8
+    read_timeout_s: 20
+
+  # Balanced sync settings for multiple servers
+  sync:
+    use_sync_collection: true
+    window_days: 120
+    parallel_requests: 2  # Lower to avoid overwhelming servers
+
+  # Conservative write settings
+  write:
+    if_match: true
+    retry_conflict: 2
+    include_vtimezone: true
+
+# Database configuration
+database:
+  url: "sqlite:///data/chronos_multi.db"
+  echo: false
+
+# API configuration
+api:
+  api_key: "your-multi-server-api-key"
+  host: "0.0.0.0"
+  port: 8080
+  cors_origins: ["*"]
+
+# Scheduler configuration
+scheduler:
+  sync_interval: 2400  # 40 minutes (longer for multiple servers)
+  max_workers: 3
+  enabled: true
+
+# Enable analytics for monitoring multiple sources
+analytics:
+  enabled: true
+
+# Disable AI for simplicity
+ai:
+  enabled: false
+
+# Enable notifications for multi-server monitoring
+notifications:
+  enabled: true
+
+# Logging for troubleshooting
+logging:
+  level: "INFO"
+  structured: true
+  file: "logs/chronos_multi.log"

@@ -1,0 +1,81 @@
+# CalDAV with Digest Authentication Example
+# Configuration for CalDAV servers requiring digest authentication
+
+version: 1
+
+# CalDAV as primary backend
+calendar_source:
+  type: "caldav"
+  timezone_default: "Europe/Berlin"
+
+# CalDAV with digest authentication
+caldav:
+  calendars:
+    - id: "secure-calendar"
+      alias: "Secure Calendar"
+      url: "https://secure-caldav.example.com/calendars/user123/calendar/"
+      read_only: false
+      timezone: "Europe/Berlin"
+    - id: "shared-calendar"
+      alias: "Shared Team Calendar"
+      url: "https://secure-caldav.example.com/calendars/shared/team/"
+      read_only: true
+      timezone: "Europe/Berlin"
+
+  # HTTP Digest Authentication
+  auth:
+    mode: "digest"
+    username: "caldav-user"
+    password_ref: "env:CALDAV_DIGEST_PASSWORD"
+
+  # Secure transport settings
+  transport:
+    verify_tls: true
+    connect_timeout_s: 10
+    read_timeout_s: 25
+
+  # Standard sync settings
+  sync:
+    use_sync_collection: true
+    window_days: 365
+    parallel_requests: 2
+
+  # Secure write settings
+  write:
+    if_match: true
+    retry_conflict: 2
+    include_vtimezone: true
+
+# Database configuration
+database:
+  url: "sqlite:///data/chronos_digest.db"
+  echo: false
+
+# API configuration
+api:
+  api_key: "env:CHRONOS_API_KEY"
+  host: "127.0.0.1"  # More restrictive for security
+  port: 8080
+  cors_origins: ["https://trusted-frontend.com"]
+
+# Scheduler configuration
+scheduler:
+  sync_interval: 3600  # 1 hour
+  max_workers: 2
+  enabled: true
+
+# Minimal features for security
+analytics:
+  enabled: false
+
+ai:
+  enabled: false
+
+notifications:
+  enabled: false
+
+# Security-focused logging
+logging:
+  level: "WARNING"  # Reduce log verbosity for security
+  structured: true
+  file: "logs/chronos_secure.log"
