@@ -96,7 +96,7 @@ def status():
         click.echo(f"{status} {directory}/")
     
     # Check config files
-    config_files = ['config/credentials.json', 'config/token.json', 'config/chronos.yaml']
+    config_files = ['config/credentials.json', 'config/token.json', 'config.yaml']
     
     click.echo("\nConfiguration Files:")
     for config_file in config_files:

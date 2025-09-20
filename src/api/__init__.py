@@ -3,7 +3,7 @@ Chronos Engine API Module
 Complete API package initialization
 """
 
-from .routes import ChronosAPIRoutes
+from .routes import ChronosUnifiedAPIRoutes
 from .dashboard import ChronosDashboard
 from .exceptions import (
     ChronosException,
@@ -16,15 +16,15 @@ from .exceptions import (
 )
 
 __all__ = [
-    'ChronosAPIRoutes',
+    'ChronosUnifiedAPIRoutes',
     'ChronosDashboard',
     'ChronosException',
     'CalendarConnectionError',
-    'EventParsingError', 
+    'EventParsingError',
     'AnalyticsError',
     'PluginError',
     'TaskQueueError',
     'ChronosErrorHandler'
 ]
 
-__version__ = "2.0.0"
+__version__ = "2.2.0"

@@ -34,6 +34,7 @@ GET /api/v1/events
 ```
 
 **Query Parameters:**
+
 - `skip` (int, optional): Number of events to skip (default: 0)
 - `limit` (int, optional): Maximum number of events to return (default: 100)
 - `status` (string, optional): Filter by event status (`scheduled`, `in_progress`, `completed`, `cancelled`)
@@ -41,6 +42,7 @@ GET /api/v1/events
 - `event_type` (string, optional): Filter by type (`task`, `meeting`, `deadline`, `reminder`)
 
 **Response:**
+
 ```json
 {
   "events": [
@@ -83,6 +85,7 @@ GET /api/v1/events/{event_id}
 ```
 
 **Path Parameters:**
+
 - `event_id` (string): Unique event identifier
 
 **Response:** Single event object (same structure as list response)
@@ -94,6 +97,7 @@ POST /api/v1/events
 ```
 
 **Request Body:**
+
 ```json
 {
   "title": "New Project Meeting",
@@ -150,6 +154,7 @@ GET /api/v2.2/events/{event_id}/sub-tasks
 ```
 
 **Response:**
+
 ```json
 {
   "sub_tasks": [
@@ -178,6 +183,7 @@ POST /api/v2.2/events/{event_id}/sub-tasks
 ```
 
 **Request Body:**
+
 ```json
 {
   "text": "New task to complete",
@@ -194,6 +200,7 @@ PUT /api/v2.2/events/{event_id}/sub-tasks/{task_id}
 ```
 
 **Request Body:**
+
 ```json
 {
   "text": "Updated task description",
@@ -220,11 +227,13 @@ GET /api/v2.2/event-links
 ```
 
 **Query Parameters:**
+
 - `source_event_id` (string, optional): Filter by source event
 - `target_event_id` (string, optional): Filter by target event
 - `link_type` (string, optional): Filter by link type
 
 **Response:**
+
 ```json
 {
   "links": [
@@ -240,6 +249,7 @@ GET /api/v2.2/event-links
 ```
 
 **Link Types:**
+
 - `related` - General relationship
 - `depends_on` - Source depends on target
 - `blocks` - Source blocks target
@@ -254,6 +264,7 @@ POST /api/v2.2/event-links
 ```
 
 **Request Body:**
+
 ```json
 {
   "source_event_id": "event-1",
@@ -281,6 +292,7 @@ POST /api/v2.2/availability/check
 ```
 
 **Request Body:**
+
 ```json
 {
   "start_time": "2025-01-22T09:00:00Z",
@@ -291,6 +303,7 @@ POST /api/v2.2/availability/check
 ```
 
 **Response:**
+
 ```json
 {
   "availability": [
@@ -317,6 +330,7 @@ POST /api/v2.2/availability/free-slots
 ```
 
 **Request Body:**
+
 ```json
 {
   "start_time": "2025-01-22T09:00:00Z",
@@ -328,6 +342,7 @@ POST /api/v2.2/availability/free-slots
 ```
 
 **Response:**
+
 ```json
 {
   "free_slots": [
@@ -354,6 +369,7 @@ GET /api/v2.2/workflows
 ```
 
 **Response:**
+
 ```json
 {
   "workflows": [
@@ -381,6 +397,7 @@ POST /api/v2.2/workflows
 ```
 
 **Request Body:**
+
 ```json
 {
   "trigger_command": "BACKUP",
@@ -414,9 +431,11 @@ GET /api/v2.2/commands/poll/{system_name}
 ```
 
 **Path Parameters:**
+
 - `system_name` (string): Name of the system requesting commands
 
 **Response:**
+
 ```json
 {
   "commands": [
@@ -441,6 +460,7 @@ POST /api/v2.2/commands/{command_id}/complete
 ```
 
 **Request Body:**
+
 ```json
 {
   "status": "success",
@@ -458,6 +478,7 @@ POST /api/v2.2/commands/{command_id}/failed
 ```
 
 **Request Body:**
+
 ```json
 {
   "status": "failed",
@@ -477,6 +498,7 @@ GET /api/v1/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -497,6 +519,7 @@ GET /api/v1/status
 ```
 
 **Response:**
+
 ```json
 {
   "version": "2.2.0",
@@ -514,6 +537,7 @@ GET /api/v1/status
 All endpoints return consistent error responses:
 
 ### 400 Bad Request
+
 ```json
 {
   "error": "validation_error",
@@ -526,6 +550,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 401 Unauthorized
+
 ```json
 {
   "error": "unauthorized",
@@ -534,6 +559,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 404 Not Found
+
 ```json
 {
   "error": "not_found",
@@ -543,6 +569,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 409 Conflict
+
 ```json
 {
   "error": "conflict",
@@ -555,6 +582,7 @@ All endpoints return consistent error responses:
 ```
 
 ### 500 Internal Server Error
+
 ```json
 {
   "error": "internal_error",
@@ -568,15 +596,18 @@ All endpoints return consistent error responses:
 API requests are rate limited based on configuration:
 
 **Default Limits:**
+
 - 100 requests per minute per API key
 - 1000 requests per hour per API key
 
 **Headers:**
+
 - `X-RateLimit-Limit`: Current rate limit
 - `X-RateLimit-Remaining`: Remaining requests in current window
 - `X-RateLimit-Reset`: Time when limit resets (Unix timestamp)
 
 **Rate Limit Exceeded (429):**
+
 ```json
 {
   "error": "rate_limit_exceeded",

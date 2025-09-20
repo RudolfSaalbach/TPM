@@ -87,16 +87,21 @@ def load_config() -> Dict[str, Any]:
     }
     
     # Load YAML configuration if it exists
-    yaml_path = Path('config/chronos.yaml')
-    if yaml_path.exists():
-        try:
-            with open(yaml_path, 'r') as f:
-                yaml_config = yaml.safe_load(f)
-                if yaml_config:
-                    _deep_update(config, yaml_config)
-                    logger.info("Configuration loaded from config/chronos.yaml")
-        except Exception as e:
-            logger.warning(f"Could not load config/chronos.yaml: {e}")
+    # First try the new unified config.yaml at root
+    yaml_paths = [Path('config.yaml'), Path('config/chronos.yaml')]
+
+    for yaml_path in yaml_paths:
+        if yaml_path.exists():
+            try:
+                with open(yaml_path, 'r') as f:
+                    yaml_config = yaml.safe_load(f)
+                    if yaml_config:
+                        _deep_update(config, yaml_config)
+                        logger.info(f"Configuration loaded from {yaml_path}")
+                        break
+            except Exception as e:
+                logger.warning(f"Could not load {yaml_path}: {e}")
+                continue
     
     # Override with environment variables
     if os.getenv('CHRONOS_API_KEY'):

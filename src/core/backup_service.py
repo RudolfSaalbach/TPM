@@ -163,8 +163,9 @@ class BackupService:
             # Add configuration files
             if config.include_config:
                 config_files = [
-                    "chronos.yaml",
-                    "config/chronos.yaml",
+                    "config.yaml",              # NEW: Unified config
+                    "chronos.yaml",             # Legacy
+                    "config/chronos.yaml",      # Legacy
                     "data/signature_secret.key"
                 ]
                 for config_file in config_files:
@@ -303,7 +304,7 @@ RESTORE STEPS:
 
 WHAT'S INCLUDED:
 - SQLite database (data/chronos.db)
-- Configuration files (chronos.yaml, etc.)
+- Configuration files (config.yaml, etc.)
 - Templates directory
 - Static assets
 - Backup metadata

@@ -27,8 +27,7 @@ from src.core.database import db_service
 from src.core.scheduler import ChronosScheduler
 
 # Import API routes
-from src.api.routes import ChronosAPIRoutes
-from src.api.enhanced_routes_fixed import ChronosEnhancedRoutes
+from src.api.routes import ChronosUnifiedAPIRoutes
 from src.api.dashboard import ChronosDashboard
 
 
@@ -90,14 +89,8 @@ class ChronosApp:
             allow_headers=["*"]
         )
         
-        # Initialize API routes
-        api_routes = ChronosAPIRoutes(
-            scheduler=self.scheduler,
-            api_key=config.get('api', {}).get('api_key', 'development-key')
-        )
-
-        # Initialize enhanced routes
-        enhanced_routes = ChronosEnhancedRoutes(
+        # Initialize unified API routes
+        unified_routes = ChronosUnifiedAPIRoutes(
             scheduler=self.scheduler,
             api_key=config.get('api', {}).get('api_key', 'development-key')
         )
@@ -110,8 +103,7 @@ class ChronosApp:
         )
         
         # Register routes
-        self.app.include_router(api_routes.router, prefix="/api/v1")
-        self.app.include_router(enhanced_routes.router, prefix="/api/v1")
+        self.app.include_router(unified_routes.router, prefix="/api")
         self.app.include_router(dashboard.router)
         
         # Serve static files

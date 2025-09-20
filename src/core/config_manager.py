@@ -202,12 +202,13 @@ class ConfigManager:
     def _find_config_file(self) -> Optional[str]:
         """Find configuration file in standard locations"""
         possible_files = [
+            "config.yaml",              # NEW: Unified config at root
             "chronos.yaml",
             "chronos.yml",
-            "config/chronos.yaml",
+            "config/chronos.yaml",      # Legacy location
             "config/chronos.yml",
-            "/etc/chronos/chronos.yaml",
-            "/etc/chronos/config.yaml"
+            "/etc/chronos/config.yaml",
+            "/etc/chronos/chronos.yaml"
         ]
 
         for file_path in possible_files:
@@ -382,7 +383,7 @@ class ConfigManager:
     def save_config(self, config: ChronosConfig, file_path: Optional[str] = None):
         """Save configuration to file"""
         if not file_path:
-            file_path = self.config_file or "chronos.yaml"
+            file_path = self.config_file or "config.yaml"
 
         try:
             # Convert to dictionary
