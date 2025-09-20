@@ -24,8 +24,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-# Create non-root user
-RUN groupadd -r chronos && useradd -r -g chronos chronos
+# Create non-root user with specific UID/GID for volume compatibility
+RUN groupadd -r chronos --gid=1000 && useradd -r -g chronos --uid=1000 chronos
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -41,9 +41,10 @@ COPY --from=builder /root/.local /home/chronos/.local
 # Copy application code
 COPY --chown=chronos:chronos . .
 
-# Create required directories
+# Create required directories with proper permissions
 RUN mkdir -p logs data config templates static plugins/custom && \
-    chown -R chronos:chronos /app
+    chown -R chronos:chronos /app && \
+    chmod -R 755 /app/logs /app/data /app/config /app/plugins
 
 # Switch to non-root user
 USER chronos

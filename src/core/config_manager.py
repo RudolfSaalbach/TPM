@@ -120,7 +120,7 @@ class LoggingConfig:
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     file_enabled: bool = True
-    file_path: str = "/tmp/chronos.log"
+    file_path: str = "logs/chronos.log"
     file_max_size: int = 10 * 1024 * 1024  # 10MB
     file_backup_count: int = 5
     console_enabled: bool = True
@@ -274,6 +274,7 @@ class ConfigManager:
         env_mappings = {
             f"{self.env_prefix}ENVIRONMENT": "environment",
             f"{self.env_prefix}DB_URL": "database.url",
+            f"{self.env_prefix}DATABASE_URL": "database.url",
             f"{self.env_prefix}DB_MAX_CONNECTIONS": "database.max_connections",
             f"{self.env_prefix}API_HOST": "api.host",
             f"{self.env_prefix}API_PORT": "api.port",
@@ -526,7 +527,7 @@ logging:
   level: INFO
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file_enabled: true
-  file_path: /tmp/chronos.log
+  file_path: logs/chronos.log
   file_max_size: 10485760  # 10MB
   file_backup_count: 5
   console_enabled: true
