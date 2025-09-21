@@ -10,6 +10,8 @@ from pydantic import ValidationError
 from typing import Dict, Any, Optional, List
 import logging
 import uuid
+import json
+from datetime import datetime
 
 from .standard_schemas import (
     ErrorCode, APIErrorResponse, APIErrorDetail,
@@ -17,6 +19,20 @@ from .standard_schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles datetime objects"""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
+def safe_json_response(content: Dict[str, Any], status_code: int = 200) -> JSONResponse:
+    """Create JSONResponse with datetime-safe serialization"""
+    json_content = json.loads(json.dumps(content, cls=DateTimeEncoder))
+    return JSONResponse(status_code=status_code, content=json_content)
 
 
 class APIError(Exception):
@@ -135,9 +151,9 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
         request_id=exc.request_id
     )
 
-    return JSONResponse(
-        status_code=exc.status_code,
-        content=error_response.dict()
+    return safe_json_response(
+        content=error_response.dict(),
+        status_code=exc.status_code
     )
 
 
@@ -169,9 +185,9 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         request_id=request_id
     )
 
-    return JSONResponse(
-        status_code=exc.status_code,
-        content=error_response.dict()
+    return safe_json_response(
+        content=error_response.dict(),
+        status_code=exc.status_code
     )
 
 
@@ -203,9 +219,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         request_id=request_id
     )
 
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=error_response.dict()
+    return safe_json_response(
+        content=error_response.dict(),
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
     )
 
 
@@ -225,9 +241,9 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
         request_id=request_id
     )
 
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=error_response.dict()
+    return safe_json_response(
+        content=error_response.dict(),
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
     )
 
 

@@ -123,11 +123,15 @@ async def get_sync_status(
         # Get sync status from scheduler
         # This would require the scheduler to track sync state
 
+        # Get actual status from scheduler if available
+        last_sync_time = getattr(scheduler, 'last_sync_time', None)
+        is_running = getattr(scheduler, 'is_running', False)
+
         return SyncStatusResponse(
-            is_running=False,  # TODO: Get from scheduler
-            last_sync=None,    # TODO: Get from scheduler
-            next_sync=None,    # TODO: Get from scheduler
-            status="idle"      # TODO: Get actual status
+            is_running=is_running,
+            last_sync=last_sync_time,
+            next_sync=None,  # Could be calculated based on sync_interval
+            status="running" if is_running else "idle"
         )
 
     except Exception as e:
@@ -179,9 +183,12 @@ async def sync_full(
         # Trigger full sync
         sync_result = await scheduler.sync_events(incremental=False)
 
-        return APISuccessResponse(
-            message="Full synchronization completed"
-        )
+        return {
+            "success": True,
+            "message": "Full synchronization completed",
+            "events_processed": sync_result.get("events_processed", 0),
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
     except Exception as e:
         logger.error(f"Error during full sync: {e}")
