@@ -21,7 +21,9 @@
       "Bash(dir:*)",
       "Bash(rd:*)",
       "Bash(docker-compose logs:*)",
-      "Bash(docker compose logs:*)"
+      "Bash(docker compose logs:*)",
+      "Bash(grep:*)",
+      "Bash(xargs rm:*)"
     ],
     "deny": [],
     "ask": []

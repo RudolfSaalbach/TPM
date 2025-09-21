@@ -37,8 +37,6 @@ from src.api.error_handling import (
 from src.api.dashboard import ChronosDashboard
 from src.api.n8n_routes import n8n_webhook_api
 
-# Legacy import for backward compatibility (remove after full migration)
-# from src.api.routes import ChronosUnifiedAPIRoutes
 
 
 # Initialize basic console logging first
