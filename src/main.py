@@ -27,10 +27,18 @@ from src.config.config_loader import load_config
 from src.core.database import db_service
 from src.core.scheduler import ChronosScheduler
 
-# Import API routes
-from src.api.routes import ChronosUnifiedAPIRoutes
+# Import API routes (new modular structure)
+from src.api import events, caldav, sync, commands, admin
+from src.api.dependencies import init_api_dependencies
+from src.api.error_handling import (
+    api_error_handler, http_exception_handler, validation_exception_handler,
+    general_exception_handler, APIError
+)
 from src.api.dashboard import ChronosDashboard
 from src.api.n8n_routes import n8n_webhook_api
+
+# Legacy import for backward compatibility (remove after full migration)
+# from src.api.routes import ChronosUnifiedAPIRoutes
 
 
 # Initialize basic console logging first
@@ -41,6 +49,13 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Global scheduler instance for dependency injection
+_scheduler_instance = None
+
+def get_scheduler_instance():
+    """Get the global scheduler instance for dependency injection"""
+    return _scheduler_instance
 
 def setup_file_logging():
     """Set up file logging after ensuring directories exist"""
@@ -106,21 +121,37 @@ class ChronosApp:
             allow_headers=["*"]
         )
         
-        # Initialize unified API routes
-        unified_routes = ChronosUnifiedAPIRoutes(
-            scheduler=self.scheduler,
-            api_key=config.get('api', {}).get('api_key', 'development-key')
-        )
-        
+        # Store scheduler instance globally for dependency injection
+        global _scheduler_instance
+        _scheduler_instance = self.scheduler
+
+        # Initialize API dependencies
+        api_key = config.get('api', {}).get('api_key', 'development-key')
+        init_api_dependencies(api_key)
+
+        # Add enhanced error handlers
+        from fastapi.exceptions import RequestValidationError
+
+        self.app.exception_handler(APIError)(api_error_handler)
+        self.app.exception_handler(HTTPException)(http_exception_handler)
+        self.app.exception_handler(RequestValidationError)(validation_exception_handler)
+        self.app.exception_handler(Exception)(general_exception_handler)
+
+        # Register modular API routes with versioning
+        self.app.include_router(events.router, prefix="/api/v1", tags=["Events & Templates"])
+        self.app.include_router(caldav.router, prefix="/api/v1/caldav", tags=["CalDAV Management"])
+        self.app.include_router(sync.router, prefix="/api/v1/sync", tags=["Synchronization"])
+        self.app.include_router(commands.router, prefix="/api/v1/commands", tags=["Command Queue"])
+        self.app.include_router(admin.router, prefix="/api/v1/admin", tags=["Administration"])
+
         # Initialize dashboard
         dashboard = ChronosDashboard(
             analytics_engine=self.scheduler.analytics,
             timebox_engine=self.scheduler.timebox,
             replan_engine=self.scheduler.replan
         )
-        
-        # Register routes
-        self.app.include_router(unified_routes.router, prefix="/api")
+
+        # Register dashboard and n8n routes
         self.app.include_router(dashboard.router)
         self.app.include_router(n8n_webhook_api.router)
         

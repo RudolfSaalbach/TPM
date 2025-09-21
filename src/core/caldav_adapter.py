@@ -108,6 +108,39 @@ class CalDAVAdapter(SourceAdapter):
             return os.getenv(env_var)
         return password_ref
 
+    def _normalize_href(self, href: str, calendar: CalendarRef) -> str:
+        """Normalize href to absolute URL"""
+        if href.startswith('http://') or href.startswith('https://'):
+            return href
+
+        # Handle relative URLs by prepending calendar base URL
+        base_url = calendar.url.rstrip('/')
+        if href.startswith('/'):
+            # Absolute path - need to extract protocol and host from calendar URL
+            from urllib.parse import urlparse
+            parsed = urlparse(base_url)
+            return f"{parsed.scheme}://{parsed.netloc}{href}"
+        else:
+            # Relative path
+            return f"{base_url}/{href.lstrip('/')}"
+
+    def _get_event_href(self, event: Dict[str, Any], calendar: CalendarRef, event_id: str) -> str:
+        """Get event href from cache or construct as fallback"""
+        # Try to get cached href first
+        cached_href = event.get('meta', {}).get('caldav_href')
+        if cached_href:
+            self.logger.debug(f"Using cached href for event {event_id}: {cached_href}")
+            return cached_href
+
+        # Fallback to constructed href with warning
+        constructed_href = f"{calendar.url.rstrip('/')}/{event_id}.ics"
+        self.logger.warning(
+            f"No cached CalDAV href available for event {event_id}, "
+            f"using constructed href: {constructed_href}. "
+            f"This may fail with some CalDAV servers."
+        )
+        return constructed_href
+
     async def capabilities(self) -> AdapterCapabilities:
         """Get CalDAV adapter capabilities"""
         return AdapterCapabilities(
@@ -247,6 +280,9 @@ class CalDAVAdapter(SourceAdapter):
                         try:
                             event = self._parse_ics_event(ics_data, etag, calendar)
                             if event:
+                                # Cache the CalDAV href for later use in patch/delete operations
+                                absolute_href = self._normalize_href(href.text, calendar)
+                                event['meta']['caldav_href'] = absolute_href
                                 events.append(event)
                         except Exception as e:
                             self.logger.warning(f"Failed to parse event from {href.text}: {e}")
@@ -388,8 +424,8 @@ class CalDAVAdapter(SourceAdapter):
         # Build the patched iCalendar data
         patched_ics = self._build_ics_with_patches(current_event, patch_data)
 
-        # Determine the href for PUT (this is simplified - real implementation needs href tracking)
-        href = f"{calendar.url.rstrip('/')}/{event_id}.ics"
+        # Get the correct href from cache or construct as fallback
+        href = self._get_event_href(current_event, calendar, event_id)
 
         session = await self._get_session()
         headers = {
@@ -579,8 +615,14 @@ class CalDAVAdapter(SourceAdapter):
             raise PermissionError(f"Calendar {calendar.alias} is read-only")
 
         try:
-            # DELETE from CalDAV server
-            href = f"{calendar.url.rstrip('/')}/{event_id}.ics"
+            # Get the current event to extract cached href
+            current_event = await self.get_event(calendar, event_id)
+            if not current_event:
+                self.logger.warning(f"Event {event_id} not found for deletion, attempting constructed href")
+                href = f"{calendar.url.rstrip('/')}/{event_id}.ics"
+            else:
+                href = self._get_event_href(current_event, calendar, event_id)
+
             session = await self._get_session()
 
             async with session.delete(href) as response:
