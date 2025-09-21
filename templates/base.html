@@ -127,7 +127,7 @@
 
         function syncCalendar() {
             showToast('Synchronisation gestartet', 'Kalender wird synchronisiert...', 'info');
-            fetch('/api/sync/incremental', { method: 'POST' })
+            fetch('/api/v1/sync/incremental', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     showToast('Sync erfolgreich', 'Kalender wurde erfolgreich synchronisiert', 'success');

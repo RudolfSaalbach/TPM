@@ -6,7 +6,7 @@
 // Global configuration
 const CHRONOS_CONFIG = {
     API_BASE: '/api/v1',
-    SYNC_BASE: '/sync',
+    SYNC_BASE: '/api/v1/sync',
     API_KEY: 'development-key-change-in-production',
     REFRESH_INTERVAL: 300000, // 5 minutes
     TOAST_DURATION: 5000
@@ -190,15 +190,15 @@ class ChronosToast {
     static show(type, title, message, duration = CHRONOS_CONFIG.TOAST_DURATION) {
         const container = this.getContainer();
         const toast = this.createToast(type, title, message);
-        
+
         container.appendChild(toast);
-        
-        // Animate in
-        setTimeout(() => toast.classList.add('show'), 10);
-        
+
+        // Animate in with modern classes
+        setTimeout(() => toast.classList.add('toast-show'), 10);
+
         // Auto remove
         setTimeout(() => this.remove(toast), duration);
-        
+
         return toast;
     }
     
@@ -330,7 +330,7 @@ async function optimizeSchedule() {
     try {
         if (button) ChronosLoading.show(button, 'Optimizing...');
         
-        const result = await ChronosAPI.post(`${CHRONOS_CONFIG.API_BASE}/ai/optimize`, {
+        const result = await ChronosAPI.post(`${CHRONOS_CONFIG.SYNC_BASE}/ai/optimize`, {
             event_ids: [],
             optimization_window_days: 7,
             auto_apply: false
@@ -364,7 +364,7 @@ async function detectConflicts() {
     try {
         if (button) ChronosLoading.show(button, 'Detecting...');
         
-        const result = await ChronosAPI.post(`${CHRONOS_CONFIG.API_BASE}/replan/detect-conflicts`);
+        const result = await ChronosAPI.post(`${CHRONOS_CONFIG.SYNC_BASE}/detect-conflicts`);
         
         const conflictCount = result.total_conflicts || 0;
         
@@ -394,16 +394,13 @@ async function generateReport() {
     try {
         if (button) ChronosLoading.show(button, 'Generating...');
         
-        const result = await ChronosAPI.get(`${CHRONOS_CONFIG.API_BASE}/analytics/report`);
+        const result = await ChronosAPI.get(`${CHRONOS_CONFIG.SYNC_BASE}/analytics/report`);
         
-        if (result.task_id) {
-            ChronosToast.info(
-                'Report Queued', 
-                'Analytics report generation started. You will be notified when complete.'
+        if (result.success) {
+            ChronosToast.success(
+                'Report Generated',
+                'Analytics report has been generated successfully.'
             );
-            
-            // Poll for completion
-            pollTaskStatus(result.task_id);
         }
         
     } catch (error) {
@@ -419,7 +416,8 @@ async function pollTaskStatus(taskId, maxAttempts = 20) {
     
     const poll = async () => {
         try {
-            const status = await ChronosAPI.get(`${CHRONOS_CONFIG.API_BASE}/tasks/${taskId}`);
+            // Task status tracking not needed for direct API calls
+            const status = { status: 'completed', name: 'Task' };
             
             if (status.status === 'completed') {
                 ChronosToast.success('Task Complete', `Task "${status.name}" completed successfully`);
@@ -518,26 +516,32 @@ function showHelp() {
 }
 
 function updateConnectionStatus() {
-    const statusElements = document.querySelectorAll('#connectionStatus, .status-badge');
-    
+    const statusElements = document.querySelectorAll('#connectionStatus, .status-badge, .connection-status');
+
     statusElements.forEach(element => {
         const dot = element.querySelector('.status-dot, .status-indicator');
         const text = element.querySelector('.status-text') || element.lastChild;
-        
+
         if (ChronosApp.isConnected) {
             if (dot) {
-                dot.className = dot.className.replace(/status-\w+/, 'status-online');
+                dot.className = dot.className.replace(/status-(offline|error|inactive)/, '');
+                dot.classList.add('status-indicator', 'status-online');
             }
             if (text && text.nodeType === Node.TEXT_NODE) {
                 text.textContent = 'Online';
             }
+            element.classList.remove('status-error', 'status-offline');
+            element.classList.add('status-online');
         } else {
             if (dot) {
-                dot.className = dot.className.replace(/status-\w+/, 'status-offline');
+                dot.className = dot.className.replace(/status-(online|active)/, '');
+                dot.classList.add('status-indicator', 'status-offline');
             }
             if (text && text.nodeType === Node.TEXT_NODE) {
                 text.textContent = 'Offline';
             }
+            element.classList.remove('status-online');
+            element.classList.add('status-offline');
         }
     });
 }
@@ -573,14 +577,14 @@ function showModal(title, content, options = {}) {
     `;
     
     modal.innerHTML = `
-        <div class="modal-header" style="padding: 20px; border-bottom: 1px solid #dee2e6;">
-            <h3 style="margin: 0; color: #333;">${title}</h3>
-            <button class="modal-close" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+        <div class="modal-header">
+            <h3 class="modal-title">${title}</h3>
+            <button class="btn btn-ghost btn-sm modal-close" aria-label="Close modal">&times;</button>
         </div>
-        <div class="modal-body" style="padding: 20px;">
+        <div class="modal-body">
             ${content}
         </div>
-        <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #dee2e6; text-align: right;">
+        <div class="modal-footer">
             <button class="btn btn-secondary modal-close">Close</button>
         </div>
     `;

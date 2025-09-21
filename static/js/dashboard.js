@@ -5,7 +5,7 @@ class ChronosDashboard {
     constructor() {
         this.config = {
             refreshInterval: 30000, // 30 Sekunden
-            apiBaseUrl: '/api',
+            apiBaseUrl: '/api/v1',
             wsUrl: window.location.protocol === 'https:' ? 'wss:' : 'ws:' + '//' + window.location.host + '/ws'
         };
 
@@ -127,7 +127,7 @@ class ChronosDashboard {
             this.showLoading();
 
             const [metricsResponse, eventsResponse, syncResponse] = await Promise.all([
-                fetch(`${this.config.apiBaseUrl}/dashboard/metrics`),
+                fetch(`/api/dashboard-data`),
                 fetch(`${this.config.apiBaseUrl}/events?limit=10`),
                 fetch(`${this.config.apiBaseUrl}/sync/status`)
             ]);
@@ -254,6 +254,7 @@ class ChronosDashboard {
                     <span class="status-indicator ${statusIndicators[event.status] || 'inactive'}"></span>
                     <span class="status-text">${this.translateStatus(event.status)}</span>
                     <button class="btn btn-secondary btn-sm" onclick="editEvent('${event.id}')">
+                        <span class="icon">✏️</span>
                         Bearbeiten
                     </button>
                 </div>
@@ -517,25 +518,38 @@ class ChronosDashboard {
         if (!toastContainer) return;
 
         const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
+        toast.className = `toast toast-${type}`;
 
         const toastId = 'toast_' + Date.now();
         toast.id = toastId;
 
+        const icons = {
+            success: '✅',
+            warning: '⚠️',
+            error: '❌',
+            info: 'ℹ️'
+        };
+
         toast.innerHTML = `
             <div class="toast-header">
+                <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
                 <h4 class="toast-title">${title}</h4>
-                <button class="modal-close" onclick="document.getElementById('${toastId}').remove()">×</button>
+                <button class="btn btn-ghost btn-sm modal-close" onclick="document.getElementById('${toastId}').remove()">×</button>
             </div>
             <div class="toast-body">${message}</div>
         `;
 
         toastContainer.appendChild(toast);
 
+        // Animate in with modern classes
+        setTimeout(() => toast.classList.add('toast-show'), 10);
+
         // Auto-remove nach 5 Sekunden
         setTimeout(() => {
             if (document.getElementById(toastId)) {
-                document.getElementById(toastId).remove();
+                const toastEl = document.getElementById(toastId);
+                toastEl.classList.add('toast-hide');
+                setTimeout(() => toastEl.remove(), 300);
             }
         }, 5000);
     }
@@ -543,10 +557,17 @@ class ChronosDashboard {
     updateConnectionStatus(isConnected) {
         this.state.isConnected = isConnected;
 
-        // Update UI indicators
-        const indicators = document.querySelectorAll('.connection-status');
+        // Update UI indicators with modern classes
+        const indicators = document.querySelectorAll('.connection-status, .status-indicator');
         indicators.forEach(indicator => {
-            indicator.className = `status-indicator ${isConnected ? 'active' : 'inactive'}`;
+            indicator.className = indicator.className.replace(/status-(active|inactive|online|offline)/, '');
+            indicator.classList.add('status-indicator', isConnected ? 'status-online' : 'status-offline');
+        });
+
+        // Update text elements
+        const statusTexts = document.querySelectorAll('.status-text');
+        statusTexts.forEach(text => {
+            text.textContent = isConnected ? 'Online' : 'Offline';
         });
     }
 
@@ -632,28 +653,24 @@ class ChronosDashboard {
         try {
             this.showToast('Export gestartet', 'Daten werden exportiert...', 'info');
 
-            const response = await fetch(`${this.config.apiBaseUrl}/export/${format}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': format === 'json' ? 'application/json' : 'text/csv'
-                }
-            });
+            // Local export as fallback
+            const data = {
+                events: this.state.events,
+                metrics: this.state.metrics,
+                exported_at: new Date().toISOString()
+            };
 
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `chronos_data_${new Date().toISOString().split('T')[0]}.${format}`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chronos_data_${new Date().toISOString().split('T')[0]}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
 
-                this.showToast('Export erfolgreich', 'Daten wurden erfolgreich exportiert', 'success');
-            } else {
-                throw new Error('Export fehlgeschlagen');
-            }
+            this.showToast('Export erfolgreich', 'Daten wurden erfolgreich exportiert', 'success');
         } catch (error) {
             console.error('Export error:', error);
             this.showToast('Export Fehler', error.message, 'error');

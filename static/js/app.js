@@ -490,7 +490,7 @@ class ChronosApplication {
             <div class="toast-header">
                 <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
                 <span class="toast-title">${title}</span>
-                <button class="toast-close" aria-label="Close notification">×</button>
+                <button class="btn btn-ghost btn-sm toast-close" aria-label="Close notification">×</button>
             </div>
             <div class="toast-body">${message}</div>
         `;

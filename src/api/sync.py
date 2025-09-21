@@ -270,3 +270,67 @@ async def optimize_schedule(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Schedule optimization failed: {str(e)}"
         )
+
+
+@router.post("/detect-conflicts", response_model=Dict[str, Any])
+@handle_api_errors
+async def detect_conflicts(
+    authenticated: bool = Depends(verify_api_key),
+    scheduler = Depends(get_scheduler)
+):
+    """Detect scheduling conflicts in calendar events"""
+    try:
+        replan_engine = scheduler.replan
+        events = await scheduler.get_events()
+
+        conflicts = await replan_engine.detect_conflicts(events)
+
+        return {
+            "success": True,
+            "total_conflicts": len(conflicts),
+            "conflicts": [
+                {
+                    "type": conflict.conflict_type,
+                    "severity": conflict.severity,
+                    "description": conflict.description,
+                    "events": [event.id for event in conflict.events]
+                }
+                for conflict in conflicts
+            ],
+            "message": f"Found {len(conflicts)} scheduling conflicts"
+        }
+
+    except Exception as e:
+        logging.error(f"Conflict detection failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Conflict detection failed: {str(e)}"
+        )
+
+
+@router.get("/analytics/report", response_model=Dict[str, Any])
+@handle_api_errors
+async def generate_analytics_report(
+    authenticated: bool = Depends(verify_api_key),
+    scheduler = Depends(get_scheduler)
+):
+    """Generate comprehensive analytics report"""
+    try:
+        analytics_engine = scheduler.analytics
+
+        # Generate comprehensive report
+        report = await analytics_engine.generate_report()
+
+        return {
+            "success": True,
+            "report": report,
+            "generated_at": datetime.now().isoformat(),
+            "message": "Analytics report generated successfully"
+        }
+
+    except Exception as e:
+        logging.error(f"Report generation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Report generation failed: {str(e)}"
+        )

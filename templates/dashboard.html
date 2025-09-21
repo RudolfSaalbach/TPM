@@ -376,7 +376,7 @@
         function triggerFullSync() {
             showLoading();
             // API Call für Full Sync
-            fetch('/api/sync/full', { method: 'POST' })
+            fetch('/api/v1/sync/full', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     showToast('Full Sync erfolgreich', data.message, 'success');
@@ -390,7 +390,7 @@
 
         function triggerIncrementalSync() {
             // API Call für Incremental Sync
-            fetch('/api/sync/incremental', { method: 'POST' })
+            fetch('/api/v1/sync/incremental', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     showToast('Inkrementeller Sync erfolgreich', data.message, 'success');
@@ -446,7 +446,7 @@
         // Dashboard Data Loading
         async function loadDashboardData() {
             try {
-                const response = await fetch('/api/dashboard/metrics');
+                const response = await fetch('/api/dashboard-data');
                 const data = await response.json();
 
                 // Update Metrics
