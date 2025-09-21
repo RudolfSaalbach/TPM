@@ -5,31 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Chronos Engine v2.2{% endblock %}</title>
 
-    <!-- CSS - Unified modern design system -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/core.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/chronos-unified.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chronos.css') }}">
+    
     {% block extra_css %}{% endblock %}
 
-    <!-- Core JavaScript - Load order is important -->
     <script src="{{ url_for('static', filename='js/core/EventBus.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/core/ComponentBase.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/services/StateManager.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/services/APIService.js') }}" defer></script>
 
-    <!-- Component Scripts -->
     <script src="{{ url_for('static', filename='js/components/FilterPanel.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/components/EventList.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/components/TemplateModal.js') }}" defer></script>
 
-    <!-- Application Script -->
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
 
     {% block extra_scripts_head %}{% endblock %}
 </head>
 <body class="chronos-app">
     <div class="app-container">
-        <!-- Sidebar Navigation -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="/" class="logo">
@@ -70,9 +64,7 @@
             </nav>
         </div>
 
-        <!-- Main Content Area -->
         <div class="main-content">
-            <!-- Top Navigation Bar -->
             <nav class="navbar">
                 <div class="navbar-brand">
                     <h1 class="navbar-title">{% block page_title %}Chronos Engine{% endblock %}</h1>
@@ -96,19 +88,15 @@
                 </div>
             </nav>
 
-            <!-- Page Content -->
             <div class="dashboard-content">
                 {% block content %}
-                <!-- Page content will be inserted here -->
                 {% endblock %}
             </div>
         </div>
     </div>
 
-        <!-- Global Modals Container -->
         <div id="modals-container">
             {% block modals %}
-            <!-- Template Modal -->
             <dialog id="template-modal" class="modal template-modal" aria-modal="true" aria-labelledby="template-modal-title">
                 <div class="modal-backdrop" data-ref="backdrop"></div>
                 <div class="modal-content" role="document">
@@ -129,8 +117,7 @@
                                        aria-label="Search templates">
                             </div>
                             <div class="templates-list" data-ref="templates-list" aria-label="Templates list">
-                                <!-- Template items will be populated by component -->
-                            </div>
+                                </div>
                         </div>
 
                         <div class="template-details">
@@ -144,7 +131,6 @@
                 </div>
             </dialog>
 
-            <!-- Settings Modal -->
             <dialog id="settings-modal" class="modal settings-modal" aria-modal="true" aria-labelledby="settings-modal-title">
                 <div class="modal-backdrop"></div>
                 <div class="modal-content">
@@ -153,19 +139,15 @@
                         <button class="btn btn-icon modal-close" aria-label="Close modal">✕</button>
                     </header>
                     <div class="modal-body">
-                        <!-- Settings content will be populated -->
-                    </div>
+                        </div>
                 </div>
             </dialog>
             {% endblock %}
         </div>
 
-        <!-- Toast Notifications Container -->
         <div id="toast-container" class="toast-container" aria-live="polite" aria-label="Notifications">
-            <!-- Toast notifications will be inserted here -->
-        </div>
+            </div>
 
-        <!-- Loading Overlay -->
         <div id="global-loading" class="loading-overlay" aria-hidden="true">
             <div class="loading-content">
                 <div class="loading-spinner"></div>
@@ -174,7 +156,6 @@
         </div>
     </div>
 
-    <!-- Application Configuration -->
     <script>
         // Global configuration object
         window.ChronosConfig = {

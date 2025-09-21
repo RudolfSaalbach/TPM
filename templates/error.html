@@ -1,179 +1,64 @@
-﻿{% extends "base.html" %}
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fehler - Chronos Engine</title>
 
-{% block title %}Error - Chronos Engine{% endblock %}
-{% block page_title %}
-    {% if error_code == 404 %}
-        Seite nicht gefunden
-    {% elif error_code == 500 %}
-        Server Fehler
-    {% elif error_code == 403 %}
-        Zugriff verweigert
-    {% else %}
-        Fehler {{ error_code or "Unbekannt" }}
-    {% endif %}
-{% endblock %}
-{% block page_subtitle %}Ein unerwarteter Fehler ist aufgetreten{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/chronos.css') }}">
 
-{% block content %}
-<div class="content-section">
+    <style>
+        .error-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: var(--spacing-lg);
+        }
+        .error-card {
+            max-width: 600px;
+        }
+        .error-code {
+            font-size: 6rem;
+            font-weight: var(--font-weight-bold);
+            color: var(--primary);
+            margin: 0;
+            line-height: 1;
+        }
+        .error-title {
+            font-size: var(--font-size-xxl);
+            color: var(--text-primary);
+            margin-top: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        .error-message {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xl);
+        }
+    </style>
+</head>
+<body class="chronos-app">
+
     <div class="error-container">
-        <div class="error-content">
-            <div class="error-icon">
-                {% if error_code == 404 %}
-                    🔍
-                {% elif error_code == 500 %}
-                    ⚠️
-                {% elif error_code == 403 %}
-                    🔒
-                {% else %}
-                    ❌
-                {% endif %}
-            </div>
-
-            <h1 class="error-title">
-                {% if error_code == 404 %}
-                    Seite nicht gefunden
-                {% elif error_code == 500 %}
-                    Server Fehler
-                {% elif error_code == 403 %}
-                    Zugriff verweigert
-                {% else %}
-                    Fehler {{ error_code or "Unbekannt" }}
-                {% endif %}
-            </h1>
-
+        <div class="error-card">
+            <h1 class="error-code">{{ error_code|default('500') }}</h1>
+            <h2 class="error-title">{{ error_title|default('Unerwarteter Fehler') }}</h2>
             <p class="error-message">
-                {% if error_message %}
-                    {{ error_message }}
-                {% elif error_code == 404 %}
-                    Die gesuchte Seite existiert nicht.
-                {% elif error_code == 500 %}
-                    Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut.
-                {% elif error_code == 403 %}
-                    Sie haben keine Berechtigung für diese Ressource.
-                {% else %}
-                    Ein unerwarteter Fehler ist aufgetreten.
-                {% endif %}
+                {{ error_message|default('Es ist ein interner Serverfehler aufgetreten. Unser Team wurde benachrichtigt.') }}
             </p>
-
-            <div class="error-actions">
-                <button class="btn btn-primary" onclick="history.back()">
-                    <span>←</span>
-                    Zurück
-                </button>
-
-                <button class="btn btn-secondary" onclick="location.href='/'">
-                    <span>🏠</span>
-                    Startseite
-                </button>
-
-                <button class="btn btn-secondary" onclick="location.reload()">
-                    <span>🔄</span>
-                    Erneut versuchen
-                </button>
+            <div class="form-actions">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                    <span class="btn-icon">🏠</span>
+                    Zurück zum Dashboard
+                </a>
+                <a href="javascript:history.back()" class="btn btn-secondary">
+                    <span class="btn-icon">⬅️</span>
+                    Zurück zur letzten Seite
+                </a>
             </div>
-
-            {% if error_details and request.app.debug %}
-            <details class="error-details">
-                <summary>Technische Details</summary>
-                <pre><code>{{ error_details }}</code></pre>
-            </details>
-            {% endif %}
         </div>
     </div>
-</div>
 
-<style>
-.error-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 50vh;
-    padding: var(--spacing-lg);
-}
-
-.error-content {
-    text-align: center;
-    max-width: 600px;
-}
-
-.error-icon {
-    font-size: 6rem;
-    margin-bottom: var(--spacing-lg);
-    opacity: 0.8;
-}
-
-.error-title {
-    font-size: 2.5rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-lg);
-}
-
-.error-message {
-    font-size: 1.2rem;
-    color: var(--text-secondary);
-    margin-bottom: var(--spacing-xl);
-    line-height: 1.6;
-}
-
-.error-actions {
-    display: flex;
-    gap: var(--spacing-md);
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-bottom: var(--spacing-xl);
-}
-
-.error-details {
-    margin-top: var(--spacing-xl);
-    text-align: left;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-light);
-    border-radius: var(--border-radius-md);
-    padding: var(--spacing-lg);
-}
-
-.error-details summary {
-    color: var(--text-primary);
-    font-weight: 600;
-    cursor: pointer;
-    margin-bottom: var(--spacing-md);
-}
-
-.error-details pre {
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-    color: var(--text-secondary);
-    font-size: 12px;
-    background: var(--bg-secondary);
-    padding: var(--spacing-md);
-    border-radius: var(--border-radius-sm);
-    border: 1px solid var(--border-dark);
-}
-
-@media (max-width: 768px) {
-    .error-icon {
-        font-size: 4rem;
-    }
-
-    .error-title {
-        font-size: 2rem;
-    }
-
-    .error-message {
-        font-size: 1rem;
-    }
-
-    .error-actions {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .error-actions .btn {
-        min-width: 200px;
-    }
-}
-</style>
-{% endblock %}
+</body>
+</html>

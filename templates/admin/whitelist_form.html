@@ -1,108 +1,76 @@
 {% extends "admin/base.html" %}
 
-{% set is_edit = whitelist is not none %}
+{% block title %}Whitelist-Eintrag bearbeiten{% endblock %}
 
-{% block title %}{% if is_edit %}Whitelist bearbeiten{% else %}Whitelist anlegen{% endif %} - Chronos Admin{% endblock %}
-{% block header_title %}System Whitelists{% endblock %}
-{% block header_subtitle %}Granulare Freigaben f&uuml;r externe Systeme definieren{% endblock %}
+{% if entry and entry.id %}
+    {% block header_title %}Whitelist-Eintrag bearbeiten{% endblock %}
+    {% block header_subtitle %}Bearbeiten Sie einen bestehenden Eintrag für die System-Whitelist.{% endblock %}
+{% else %}
+    {% block header_title %}Neuen Whitelist-Eintrag erstellen{% endblock %}
+    {% block header_subtitle %}Fügen Sie einen neuen Eintrag zur System-Whitelist hinzu.{% endblock %}
+{% endif %}
 
 {% block content %}
-<nav class="breadcrumb">
-    <a href="/admin">Admin</a>
-    <span>/</span>
-    <a href="/admin/whitelists">Whitelists</a>
-    <span>/</span>
-    <span>{% if is_edit %}Bearbeiten{% else %}Neu{% endif %}</span>
-</nav>
-
 <div class="page-header">
     <div>
-        <h1>{% if is_edit %}Whitelist-Eintrag bearbeiten{% else %}Whitelist-Eintrag anlegen{% endif %}</h1>
-        <p>Steuere, welche Aktionen ein externes System ausf&uuml;hren darf und welche Parameter erlaubt sind.</p>
+        {% if entry and entry.id %}
+            <h1>Eintrag <code class="code-inline">{{ entry.id }}</code> bearbeiten</h1>
+            <p>Passen Sie die Details für diesen Whitelist-Eintrag an.</p>
+        {% else %}
+            <h1>Neuer Whitelist-Eintrag</h1>
+            <p>Erstellen Sie eine neue Regel für die Governance-Engine.</p>
+        {% endif %}
     </div>
     <div class="header-actions">
-        <a class="btn btn-secondary" href="/admin/whitelists">Zur&uuml;ck zur &Uuml;bersicht</a>
+        <a href="{{ url_for('admin_routes.view_whitelists') }}" class="btn btn-secondary">
+            <span class="btn-icon">⬅️</span>
+            Zurück zur Übersicht
+        </a>
     </div>
 </div>
 
-<div class="form-card">
-    <form method="post" class="form-grid" id="whitelistForm">
-        <div class="form-field">
-            <label for="system_name">Systemname *</label>
-            <input type="text" id="system_name" name="system_name" value="{{ whitelist.system_name if whitelist else '' }}" required placeholder="z. B. TELEGRAM, N8N, SMTP">
-            <span class="help-text">Eindeutiger Identifikator des Zielsystems (Empfehlung: Gro&szlig;schreibung).</span>
-        </div>
+<div class="content-card">
+    <form method="post">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="entry_type" class="form-label">Eintragstyp</label>
+                <select id="entry_type" name="entry_type" class="form-select" required>
+                    <option value="user" {% if entry and entry.entry_type == 'user' %}selected{% endif %}>Benutzer</option>
+                    <option value="system" {% if entry and entry.entry_type == 'system' %}selected{% endif %}>System</option>
+                    <option value="ip_address" {% if entry and entry.entry_type == 'ip_address' %}selected{% endif %}>IP-Adresse</option>
+                    <option value="action" {% if entry and entry.entry_type == 'action' %}selected{% endif %}>Aktion</option>
+                </select>
+                <p class="form-hint">Der Typ des Eintrags, der auf die Whitelist gesetzt wird.</p>
+            </div>
 
-        <div class="form-field">
-            <label for="action_name">Aktionsname *</label>
-            <input type="text" id="action_name" name="action_name" value="{{ whitelist.action_name if whitelist else '' }}" required placeholder="z. B. SEND_MESSAGE, NOTIFY, EXECUTE">
-            <span class="help-text">Definiere den konkreten Befehl oder Workflow, der erlaubt werden soll.</span>
-        </div>
+            <div class="form-group">
+                <label for="value" class="form-label">Wert</label>
+                <input type="text" id="value" name="value" class="form-input" value="{{ entry.value if entry else '' }}" required placeholder="z.B. user@example.com, system_name, 192.168.1.100">
+                <p class="form-hint">Der genaue Wert des Eintrags.</p>
+            </div>
 
-        <div class="form-field">
-            <label for="allowed_params">Erlaubte Parameter (JSON)</label>
-            <textarea id="allowed_params" name="allowed_params" placeholder='{"message": "string", "priority": "int", "channels": "list"}'>{{ allowed_params_json if allowed_params_json else '' }}</textarea>
-            <span class="help-text">Optionales JSON-Objekt zur Eingrenzung erlaubter Parameter. Leer lassen f&uuml;r keine Einschr&auml;nkungen.</span>
-        </div>
+            <div class="form-group full-width">
+                <label for="description" class="form-label">Beschreibung</label>
+                <textarea id="description" name="description" class="form-textarea" rows="3" placeholder="Zweck dieses Eintrags, z.B. 'Zulassen des n8n-Produktivsystems'">{{ entry.description if entry else '' }}</textarea>
+                <p class="form-hint">Eine optionale Beschreibung für den Kontext.</p>
+            </div>
 
-        <div class="info-panel" style="margin: 0;">
-            <h4>Beispiele f&uuml;r Parameterdefinitionen</h4>
-            <pre>{"message": "string", "priority": "int"}</pre>
-            <pre>{"recipient": "email", "subject": "string", "html": "string"}</pre>
-            <pre>{"webhook_url": "url", "payload": "object"}</pre>
-        </div>
-
-        <div class="form-field checkbox-field">
-            <input type="checkbox" id="enabled" name="enabled" {% if not whitelist or whitelist.enabled %}checked{% endif %}>
-            <label for="enabled">Eintrag aktiv</label>
-            <span class="help-text">Deaktivierte Eintr&auml;ge wirken nicht auf eingehende Befehle.</span>
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" id="is_active" name="is_active" class="form-check-input" {% if not entry or entry.is_active %}checked{% endif %}>
+                    <label for="is_active" class="form-check-label">Aktiv</label>
+                </div>
+                <p class="form-hint">Deaktivieren Sie diesen Schalter, um die Regel temporär auszusetzen, ohne sie zu löschen.</p>
+            </div>
         </div>
 
         <div class="form-actions">
-            <a class="btn btn-secondary" href="/admin/whitelists">Abbrechen</a>
-            <button type="submit" class="btn btn-primary">{% if is_edit %}Eintrag aktualisieren{% else %}Eintrag erstellen{% endif %}</button>
+            <button type="submit" class="btn btn-primary">
+                <span class="btn-icon">💾</span>
+                Eintrag speichern
+            </button>
+            <a href="{{ url_for('admin_routes.view_whitelists') }}" class="btn btn-secondary">Abbrechen</a>
         </div>
     </form>
 </div>
-
-<div class="info-panel">
-    <h4>Parameter-Typ Referenz</h4>
-    <ul>
-        <li><code>"string"</code> - Textwerte</li>
-        <li><code>"int"</code> - Ganzzahlen</li>
-        <li><code>"float"</code> - Dezimalzahlen</li>
-        <li><code>"bool"</code> - Wahr/Falsch</li>
-        <li><code>"email"</code> - E-Mail-Adressen</li>
-        <li><code>"url"</code> - URLs</li>
-        <li><code>"list"</code> - Listen/Arrays</li>
-        <li><code>"object"</code> - JSON-Objekte</li>
-    </ul>
-</div>
 {% endblock %}
-
-{% block extra_scripts %}
-<script>
-(function() {
-    const textarea = document.getElementById('allowed_params');
-    if (!textarea) { return; }
-
-    textarea.addEventListener('blur', function() {
-        const value = this.value.trim();
-        if (!value) {
-            this.style.borderColor = '';
-            return;
-        }
-        try {
-            JSON.parse(value);
-            this.style.borderColor = 'rgba(0, 200, 81, 0.6)';
-        } catch (error) {
-            this.style.borderColor = 'rgba(255, 71, 87, 0.8)';
-            window.alert('Ung&uuml;ltiges JSON-Format. Bitte Syntax pr&uuml;fen.');
-        }
-    });
-})();
-</script>
-{% endblock %}
-
-
-

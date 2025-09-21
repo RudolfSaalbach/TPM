@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chronos Engine - Dashboard</title>
-    <!-- CSS - Unified modern design system -->
-    <link rel="stylesheet" href="/static/css/core.css">
-    <link rel="stylesheet" href="/static/css/chronos-unified.css">
+    <link rel="stylesheet" href="/static/css/chronos.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar Navigation -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="/" class="logo">
@@ -47,9 +44,7 @@
             </nav>
         </div>
 
-        <!-- Main Content Area -->
         <div class="main-content">
-            <!-- Top Navigation Bar -->
             <nav class="navbar">
                 <div class="navbar-brand">
                     <h1 class="navbar-title">Dashboard</h1>
@@ -71,9 +66,7 @@
                 </div>
             </nav>
 
-            <!-- Dashboard Content -->
             <div class="dashboard-content">
-                <!-- Metrics Overview -->
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <div class="metric-header">
@@ -149,7 +142,6 @@
                     </div>
                 </div>
 
-                <!-- Controls Bar -->
                 <div class="controls-bar">
                     <input type="text" class="search-box" placeholder="Events durchsuchen..." id="searchInput">
                     <div class="filter-controls">
@@ -168,7 +160,6 @@
                     </div>
                 </div>
 
-                <!-- Recent Events Section -->
                 <div class="content-section">
                     <div class="section-header">
                         <h2 class="section-title">Aktuelle Events</h2>
@@ -176,7 +167,6 @@
                     </div>
 
                     <div id="eventsList">
-                        <!-- Events werden hier dynamisch geladen -->
                         <div class="list-item">
                             <div class="list-item-info">
                                 <h4 class="list-item-title">
@@ -224,7 +214,6 @@
                     </div>
                 </div>
 
-                <!-- Analytics Section -->
                 <div class="content-section">
                     <div class="section-header">
                         <h2 class="section-title">Produktivitäts-Analytics</h2>
@@ -287,7 +276,6 @@
                     </div>
                 </div>
 
-                <!-- Sync Status Section -->
                 <div class="content-section">
                     <div class="section-header">
                         <h2 class="section-title">Synchronisation</h2>
@@ -327,15 +315,12 @@
         </div>
     </div>
 
-    <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Loading Overlay -->
     <div class="modal-overlay" id="loadingOverlay" style="display: none;">
         <div class="spinner"></div>
     </div>
 
-    <!-- JavaScript -->
     <script src="/static/js/dashboard.js"></script>
     <script>
         // App Initialization
@@ -489,158 +474,5 @@
         // Load sidebar state on page load
         loadSidebarState();
     </script>
-
-    <style>
-        /* Additional Styles für spezielle Komponenten */
-        .badge {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: var(--border-radius-sm);
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-left: var(--spacing-sm);
-        }
-
-        .btn-sm {
-            padding: var(--spacing-xs) var(--spacing-sm);
-            font-size: 12px;
-        }
-
-        .analytics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: var(--spacing-lg);
-            margin-top: var(--spacing-md);
-        }
-
-        .analytics-card {
-            background: var(--bg-tertiary);
-            padding: var(--spacing-md);
-            border-radius: var(--border-radius-md);
-            border: 1px solid var(--border-light);
-        }
-
-        .analytics-card h4 {
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-md);
-            font-size: 14px;
-        }
-
-        .chart-placeholder {
-            display: flex;
-            align-items: end;
-            gap: var(--spacing-xs);
-            height: 60px;
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .chart-bar {
-            background: linear-gradient(to top, var(--primary-color), var(--secondary-color));
-            width: 100%;
-            border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
-            min-height: 10px;
-        }
-
-        .chart-label {
-            text-align: center;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin: 0;
-        }
-
-        .priority-distribution {
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
-        }
-
-        .priority-item {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .priority-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
-        .priority-color.urgent { background: var(--danger-color); }
-        .priority-color.high { background: var(--warning-color); }
-        .priority-color.medium { background: var(--info-color); }
-        .priority-color.low { background: var(--success-color); }
-
-        .recommendations-list {
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
-        }
-
-        .recommendation-item {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            font-size: 12px;
-            color: var(--text-secondary);
-            padding: var(--spacing-xs);
-            background: var(--bg-secondary);
-            border-radius: var(--border-radius-sm);
-        }
-
-        .recommendation-icon {
-            font-size: 14px;
-        }
-
-        .sync-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: var(--spacing-lg);
-            margin-top: var(--spacing-md);
-        }
-
-        .sync-stat {
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-xs);
-        }
-
-        .sync-label {
-            font-size: 12px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .sync-value {
-            font-size: 14px;
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-
-        .status-connected {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-        }
-
-        @media (max-width: 768px) {
-            .analytics-grid,
-            .sync-info {
-                grid-template-columns: 1fr;
-            }
-
-            .controls-bar {
-                flex-direction: column;
-                gap: var(--spacing-md);
-            }
-
-            .search-box {
-                width: 100%;
-            }
-        }
-    </style>
 </body>
 </html>

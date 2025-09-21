@@ -1,82 +1,93 @@
 {% extends "admin/base.html" %}
 
-{% block title %}Systeminformationen - Chronos Admin{% endblock %}
-{% block header_title %}System &amp; Infrastruktur{% endblock %}
-{% block header_subtitle %}Status&uuml;berblick, Datenbankgesundheit und Laufzeitumgebung{% endblock %}
+{% block title %}Systeminformationen{% endblock %}
+{% block header_title %}Systeminformationen{% endblock %}
+{% block header_subtitle %}Datenbankgesundheit, Tabellenstatistiken und Systemmetriken analysieren.{% endblock %}
 
 {% block content %}
-<nav class="breadcrumb">
-    <a href="/admin">Admin</a>
-    <span>/</span>
-    <span>Systeminformationen</span>
-</nav>
-
 <div class="page-header">
     <div>
-        <h1>Systemstatus</h1>
-        <p>Version 2.1.0 &middot; Umgebung: {{ db_info.environment | default('Unknown') }}</p>
-    </div>
-    <div class="header-actions">
-        <a class="btn btn-secondary" href="/docs" target="_blank">API Docs</a>
-        <a class="btn btn-secondary" href="/health" target="_blank">Health Check</a>
+        <h1>Systeminformationen & Metriken</h1>
+        <p>Überwachen Sie den Zustand der Chronos Engine und der zugrundeliegenden Datenbank.</p>
     </div>
 </div>
 
-{% if db_info.error %}
-<div class="info-panel" style="border-color: rgba(255, 71, 87, 0.4); background: rgba(255, 71, 87, 0.08);">
-    <h4>Datenbank-Fehler</h4>
-    <p>{{ db_info.error }}</p>
-</div>
-{% else %}
-<div class="stats-grid">
-    <div class="stat-card">
-        <span class="stat-label">Tabellen</span>
-        <span class="stat-value">{{ db_info.tables | length }}</span>
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <h3 class="metric-title">Datenbank Größe</h3>
+                <p class="metric-subtitle">Gesamtgröße auf der Festplatte</p>
+            </div>
+            <span class="metric-icon">💽</span>
+        </div>
+        <div class="metric-value">{{ metrics.db_size_mb or 'N/A' }} MB</div>
     </div>
-    <div class="stat-card">
-        <span class="stat-label">Laufzeit (Uptime)</span>
-        <span class="stat-value">{{ db_info.uptime | default('n/a') }}</span>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <h3 class="metric-title">Chronos Version</h3>
+                <p class="metric-subtitle">Aktuell installierte Version</p>
+            </div>
+            <span class="metric-icon">🏷️</span>
+        </div>
+        <div class="metric-value">{{ metrics.chronos_version or 'N/A' }}</div>
     </div>
-    <div class="stat-card">
-        <span class="stat-label">Python Version</span>
-        <span class="stat-value">{{ db_info.python_version | default('n/a') }}</span>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <h3 class="metric-title">Python Version</h3>
+                <p class="metric-subtitle">Laufzeitumgebung</p>
+            </div>
+            <span class="metric-icon">🐍</span>
+        </div>
+        <div class="metric-value">{{ metrics.python_version or 'N/A' }}</div>
     </div>
-    <div class="stat-card">
-        <span class="stat-label">Plattform</span>
-        <span class="stat-value">{{ db_info.platform | default('n/a') }}</span>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <h3 class="metric-title">Uptime</h3>
+                <p class="metric-subtitle">Seit dem letzten Start</p>
+            </div>
+            <span class="metric-icon">⏱️</span>
+        </div>
+        <div class="metric-value">{{ metrics.uptime or 'N/A' }}</div>
     </div>
 </div>
 
-{% set table_counts = db_info.table_counts | default({}, true) %}
-<div class="table-card">
-    <table>
-        <thead>
-            <tr>
-                <th>Tabelle</th>
-                <th>Eintr&auml;ge</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for table in db_info.tables %}
-            {% if not table.startswith('sqlite_') %}
-            <tr>
-                <td>{{ table }}</td>
-                <td>{{ table_counts.get(table) | default('n/a') }}</td>
-            </tr>
-            {% endif %}
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endif %}
-
-<div class="info-panel">
-    <h4>Systemhinweise</h4>
-    <ul>
-        <li>Nutze den Health Check, um die API-Verf&uuml;gbarkeit zu pr&uuml;fen.</li>
-        <li>Datenbanktabellen mit hoher Eintragszahl sollten regelma&szlig;ig archiviert werden.</li>
-        <li>Die Plattform- und Python-Version helfen bei der Fehlerdiagnose.</li>
-    </ul>
+<div class="content-card">
+    <div class="section-header">
+        <h2 class="section-title">Datenbank-Tabellenstatistiken</h2>
+        <p class="section-meta">Anzahl der Einträge pro Tabelle</p>
+    </div>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tabelle</th>
+                    <th>Anzahl der Einträge</th>
+                    <th>Indexgröße</th>
+                    <th>Tabellengröße</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for table in table_stats %}
+                <tr>
+                    <td><code class="code-inline">{{ table.name }}</code></td>
+                    <td>{{ "{:,}".format(table.row_count)|replace(',', '.') }}</td>
+                    <td>{{ table.index_size_kb or 'N/A' }} KB</td>
+                    <td>{{ table.table_size_kb or 'N/A' }} KB</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">Keine Tabellenstatistiken verfügbar.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}
-

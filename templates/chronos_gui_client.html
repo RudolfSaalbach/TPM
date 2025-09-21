@@ -1,364 +1,313 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chronos – Event Manager v1.2.0</title>
-  <style>
-    :root {
-      --gap: 12px; --radius: 12px; --shadow: 0 2px 10px rgba(0,0,0,.08);
-      --bg: #0b0f14; --panel: #121821; --panel-2: #10151d; --txt: #e5eef7; --muted:#9fb0c6;
-      --accent: #3aa0ff; --accent-2: #66d9e8; --danger:#ff6b6b; --ok: #51cf66; --warn:#fcc419;
-    }
-    html, body { height: 100%; }
-    body {
-      margin:0; background: linear-gradient(180deg, var(--bg), #0e131b 120%);
-      color:var(--txt); font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
-    }
-    .app { display:grid; grid-template-columns: 320px 1fr; height:100%; }
-    aside { background:var(--panel); padding:var(--gap); border-right:1px solid #1c2532; }
-    main { display:flex; flex-direction:column; gap:var(--gap); padding:var(--gap); }
-    header { display:flex; align-items:center; gap:var(--gap); justify-content:space-between; }
-    .filters { display:grid; grid-template-columns: 1fr; gap:var(--gap); background:var(--panel-2); padding:var(--gap); border-radius:var(--radius); box-shadow:var(--shadow); }
-    .filters .row { display:flex; flex-wrap:wrap; gap:var(--gap); align-items:center; }
-    .seg { display:inline-flex; gap:2px; background:#0d131b; padding:2px; border-radius:999px; border:1px solid #1c2532; }
-    .seg input{ display:none; }
-    .seg label{ padding:6px 10px; border-radius:999px; cursor:pointer; color:var(--muted); }
-    .seg input:checked + label{ background:var(--accent); color:#06203a; font-weight:600; }
-    select, input[type="text"], button { background:#0d131b; color:var(--txt); border:1px solid #1c2532; border-radius:10px; padding:8px 10px; }
-    button.primary{ background:linear-gradient(180deg, var(--accent), var(--accent-2)); color:#031321; font-weight:700; border:none; }
-    button.ghost{ background:transparent; border-color:#203046; }
-    .list { flex:1; overflow:auto; display:grid; gap:var(--gap); grid-auto-rows:min-content; }
-    .card { background:var(--panel-2); border:1px solid #1c2532; border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--gap); display:grid; gap:8px; }
-    .muted{ color:var(--muted) }
-    .row-sb{ display:flex; justify-content:space-between; align-items:center; gap:10px }
-    .kpi{ display:flex; gap:10px; align-items:center }
-    .badge{ font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid #254669; color:#9fc2e8; }
-    .danger{ color:var(--danger) }
-    .ok{ color:var(--ok) }
-    dialog { border:none; border-radius:16px; background:#0d131b; color:var(--txt); padding:0; box-shadow:0 20px 100px rgba(0,0,0,.5); width:min(920px, 92vw) }
-    dialog::backdrop{ background:rgba(0,0,0,.5) }
-    .modal { display:grid; grid-template-columns: 320px 1fr; }
-    .modal aside{ border-right:1px solid #1c2532 }
-    .modal header{ padding:14px; border-bottom:1px solid #1c2532 }
-    .modal .content{ padding:14px; display:grid; gap:12px; }
-    .grid{ display:grid; gap:10px }
-    .templates-list{ display:grid; gap:8px; max-height:60vh; overflow:auto }
-    .tpl{ border:1px solid #213148; border-radius:12px; padding:10px; background:#0b111a; display:grid; gap:4px }
-    mark{ background:transparent; color:var(--accent-2); font-weight:600; }
-    .sr-only{ position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
-  </style>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chronos – Event Manager v2.2 (Refactored)</title>
+    
+    <link rel="stylesheet" href="/static/css/chronos.css">
+    
+    <style>
+        .client-container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            height: 100vh;
+        }
+        .client-main {
+            padding: var(--spacing-lg);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+            height: 100%;
+            overflow: hidden;
+        }
+        .events-list-container {
+            flex: 1;
+            overflow-y: auto;
+            display: grid;
+            grid-auto-rows: min-content;
+            gap: var(--spacing-md);
+        }
+        .template-list-item {
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            border-radius: var(--border-radius-md);
+            border: 1px solid transparent;
+        }
+        .template-list-item:hover {
+            background-color: var(--surface-hover);
+            border-color: var(--border);
+        }
+    </style>
 </head>
-<body>
-<div class="app" id="app">
-  <aside>
-    <h2 style="margin:8px 4px">Kalender</h2>
-    <div class="filters" role="region" aria-labelledby="filters-title">
-      <div id="filters-title" class="sr-only">Event-Filter</div>
-      <div class="row">
-        <label for="range">Zeitbereich</label>
-        <select id="range" aria-label="Zeitbereich">
-          <option value="7">7 Tage</option>
-          <option value="14">14 Tage</option>
-          <option value="30">30 Tage</option>
-          <option value="60">60 Tage</option>
-          <option value="360">360 Tage</option>
-          <option value="-1">Alle</option>
-        </select>
-      </div>
-      <div class="row" role="radiogroup" aria-label="Richtung">
-        <div class="seg">
-          <input type="radio" name="direction" id="dir-past" value="past">
-          <label for="dir-past">Vergangenheit</label>
-          <input type="radio" name="direction" id="dir-future" value="future" checked>
-          <label for="dir-future">Zukunft</label>
-          <input type="radio" name="direction" id="dir-all" value="all">
-          <label for="dir-all">Alles</label>
+<body class="chronos-app">
+<div class="app-container client-container" id="app">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2 class="sidebar-title">Kalender-Filter</h2>
         </div>
-      </div>
-      <div class="row">
-        <input id="q" type="text" placeholder="Suche in Titel/Beschreibung…" aria-label="Suche">
-      </div>
-      <div class="row">
-        <button id="btn-new" class="ghost" type="button">Neuer Termin</button>
-        <button id="btn-templates" class="primary" type="button">Vorlage einfügen…</button>
-      </div>
-    </div>
-  </aside>
-  <main>
-    <header>
-      <div class="kpi">
-        <strong>Events</strong>
-        <span id="kpi-count" class="badge">–</span>
-      </div>
-      <div class="muted" id="status" role="status" aria-live="polite"></div>
-    </header>
-    <section id="list" class="list" aria-busy="false" aria-label="Eventliste"></section>
-  </main>
+        <div class="sidebar-content">
+            <div class="form-group">
+                <label for="range-select" class="form-label">Zeitbereich</label>
+                <select id="range-select" class="form-select">
+                    <option value="7">7 Tage</option>
+                    <option value="14">14 Tage</option>
+                    <option value="30">30 Tage</option>
+                    <option value="60">60 Tage</option>
+                    <option value="360">360 Tage</option>
+                    <option value="-1">Alle Events</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Richtung</label>
+                <div class="btn-group">
+                    <input type="radio" class="btn-check" name="direction" id="dir-past" value="past">
+                    <label class="btn btn-secondary" for="dir-past">Vergangenheit</label>
+                    <input type="radio" class="btn-check" name="direction" id="dir-future" value="future" checked>
+                    <label class="btn btn-secondary" for="dir-future">Zukunft</label>
+                    <input type="radio" class="btn-check" name="direction" id="dir-all" value="all">
+                    <label class="btn btn-secondary" for="dir-all">Alle</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="search-input" class="form-label">Suche</label>
+                <input id="search-input" type="text" class="form-input" placeholder="Titel/Beschreibung...">
+            </div>
+            <div class="form-actions">
+                <button id="btn-new" class="btn btn-secondary">Neuer Termin</button>
+                <button id="btn-templates" class="btn btn-primary">Vorlage nutzen</button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="client-main">
+        <header class="navbar">
+            <div class="navbar-brand">
+                <h1 class="navbar-title">Events</h1>
+                <p class="navbar-subtitle" id="status" role="status" aria-live="polite">Bereit</p>
+            </div>
+            <div class="navbar-actions">
+                <div class="status-badge">
+                    <span>Events:</span>
+                    <span class="badge" id="kpi-count">—</span>
+                </div>
+            </div>
+        </header>
+        <section id="list" class="events-list-container" aria-busy="false" aria-label="Eventliste">
+            </section>
+    </main>
 </div>
 
-<!-- Templates Modal -->
-<dialog id="tplDialog" aria-modal="true" aria-labelledby="tplTitle">
-  <div class="modal" role="document">
-    <aside>
-      <header>
-        <strong id="tplTitle">Vorlagen</strong>
-      </header>
-      <div class="content">
-        <input id="tplSearch" type="text" placeholder="Suchen (Titel, Tags, Beschreibung)…" aria-label="Vorlagen suchen">
-        <div class="templates-list" id="tplList" aria-label="Suchergebnisse" aria-busy="false"></div>
-      </div>
-    </aside>
-    <section>
-      <header class="row-sb">
-        <div style="padding:14px"><span class="muted">Details</span></div>
-        <div style="padding:14px"><button id="tplClose" class="ghost" type="button">Schließen</button></div>
-      </header>
-      <div class="content grid" id="tplDetails">
-        <div class="muted">Wähle links eine Vorlage aus.</div>
-      </div>
-    </section>
-  </div>
+<dialog id="tplDialog" class="modal" aria-modal="true" aria-labelledby="tplTitle">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-lg">
+        <header class="modal-header">
+            <h2 class="modal-title" id="tplTitle">Vorlagen</h2>
+            <button id="tplClose" class="btn btn-icon modal-close" aria-label="Schließen">✕</button>
+        </header>
+        <div class="modal-body" style="display: grid; grid-template-columns: 320px 1fr; gap: var(--spacing-lg);">
+            <div class="template-sidebar">
+                <input id="tplSearch" type="text" class="form-input" placeholder="Vorlagen suchen..." style="margin-bottom: var(--spacing-md);">
+                <div class="templates-list" id="tplList" style="max-height: 60vh; overflow-y: auto;"></div>
+            </div>
+            <div class="template-details" id="tplDetails">
+                <div class="placeholder">
+                    <div class="placeholder-icon">📝</div>
+                    <div class="placeholder-title">Vorlage auswählen</div>
+                    <div class="placeholder-text">Wähle eine Vorlage aus der Liste, um Details anzuzeigen.</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </dialog>
 
 <script>
 (function(){
-  // ====== CONFIG ======
-  const API_BASE = localStorage.getItem('chronos_api') || 'http://localhost:8000/api/v1';
+  // CONFIG & HELPERS (bleiben größtenteils unverändert)
+  const API_BASE = localStorage.getItem('chronos_api') || '/api/v1';
   const API_KEY  = localStorage.getItem('chronos_api_key') || '';
   const DEFAULT_CAL = localStorage.getItem('chronos_calendar') || 'primary';
   const TZ = 'Europe/Berlin';
 
-  // ====== HELPERS ======
   const $ = (sel, root=document) => root.querySelector(sel);
   const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-  const fmtDateTime = (isoUtc) => {
-    if (!isoUtc) return '';
-    try{
-      const d = new Date(isoUtc);
-      return d.toLocaleString('de-DE', { timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-    }catch{ return isoUtc }
-  };
-  const fmtDate = (yyyy_mm_dd) => yyyy_mm_dd;
-  const todayLocalDate = () => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const da = String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${da}`;
-  };
+  const escapeHtml = (s='') => s.replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const debounce = (fn, ms=300) => {
     let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
   };
-  const escapeHtml = (s='') => s.replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  function highlight(text, tokens){
-    const safe = escapeHtml(text);
-    if (!tokens || !tokens.length) return safe;
-    return tokens.reduce((acc, tk)=> acc.replace(new RegExp(`(${tk.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'ig'), '<mark>$1</mark>'), safe);
-  }
+  const fmtDateTime = (isoUtc) => {
+    if (!isoUtc) return '';
+    try{
+      return new Date(isoUtc).toLocaleString('de-DE', { timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    }catch{ return isoUtc }
+  };
 
-  // ====== STATE ======
+  // STATE
   const state = {
-    range: '7', direction: 'future', q:'', page:1, pageSize:100, anchor: todayLocalDate(),
+    range: '7', direction: 'future', q:'', page:1, pageSize:100,
     events: [], templates: [], selectedTemplate: null
   };
 
-  // ====== API ======
+  // API (unverändert)
   async function api(path, {method='GET', params=null, body=null}={}){
-    const url = new URL(API_BASE + path);
+    const url = new URL(API_BASE + path, window.location.origin);
     if (params) Object.entries(params).forEach(([k,v])=> (v!==undefined && v!==null && v!=='') && url.searchParams.append(k, v));
     const res = await fetch(url.toString(), {
       method,
-      headers: {
-        'Accept': 'application/json', 'Content-Type': 'application/json',
-        ...(API_KEY ? {'X-API-Key': API_KEY} : {})
-      },
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(API_KEY ? {'X-API-Key': API_KEY} : {}) },
       body: body ? JSON.stringify(body) : null
     });
-    if (res.status === 401 || res.status === 403){ throw new Error('Nicht autorisiert – API-Key prüfen.'); }
-    if (!res.ok){ const txt=await res.text().catch(()=> ''); throw new Error(`API-Fehler ${res.status}: ${txt}`); }
+    if (!res.ok) { const txt=await res.text().catch(()=>''); throw new Error(`API-Fehler ${res.status}: ${txt}`); }
     return res.json();
   }
 
+  // LOGIC
   async function fetchEvents(){
-    const list = $('#list'); list.setAttribute('aria-busy','true');
-    $('#status').textContent = 'Lade…';
-    const params = {
-      calendar: DEFAULT_CAL,
-      anchor: state.anchor,
-      range: state.range,
-      direction: (state.range === '-1') ? 'all' : state.direction,
-      q: state.q,
-      page: state.page,
-      page_size: state.pageSize
-    };
+    $('#list').setAttribute('aria-busy','true');
+    $('#status').textContent = 'Lade Events...';
     try{
-      const data = await api('/events', { params });
+      const data = await api('/events', { params: {
+        calendar: DEFAULT_CAL,
+        range: state.range,
+        direction: (state.range === '-1') ? 'all' : state.direction,
+        q: state.q,
+        page: state.page,
+        page_size: state.pageSize
+      }});
       state.events = data.items || [];
       renderEvents();
       $('#status').textContent = `${state.events.length} Einträge geladen`;
       $('#kpi-count').textContent = String(state.events.length);
     }catch(err){
       $('#status').textContent = String(err.message||err);
-      $('#status').classList.add('danger');
-      $('#kpi-count').textContent = '–';
-      $('#list').innerHTML = `<div class="card danger">Fehler beim Laden. <button id="retry" class="ghost">Erneut versuchen</button></div>`;
+      $('#list').innerHTML = `<div class="placeholder"><div class="placeholder-icon">⚠️</div><div class="placeholder-title">Fehler beim Laden</div><div class="placeholder-text">${escapeHtml(String(err.message||err))}</div><button id="retry" class="btn btn-secondary">Erneut versuchen</button></div>`;
       $('#retry')?.addEventListener('click', fetchEvents);
-    }finally{ list.setAttribute('aria-busy','false'); }
+    }finally{ $('#list').setAttribute('aria-busy','false'); }
   }
 
   async function searchTemplates(q){
-    const elList = $('#tplList'); elList.setAttribute('aria-busy','true');
+    const listEl = $('#tplList'); listEl.setAttribute('aria-busy','true');
     try{
       const data = await api('/templates', { params: { q, page:1, page_size:100 } });
       state.templates = data.items || [];
       renderTemplates(q);
     }catch(err){
-      elList.innerHTML = `<div class="muted">Fehler: ${escapeHtml(String(err.message||err))}</div>`;
-    }finally{ elList.setAttribute('aria-busy','false'); }
+      listEl.innerHTML = `<div class="placeholder-text">${escapeHtml(String(err.message||err))}</div>`;
+    }finally{ listEl.setAttribute('aria-busy','false'); }
   }
-
+  
   async function useTemplate(id){
     try{ await api(`/templates/${id}/use`, { method:'POST' }); }
     catch(e){ console.warn('useTemplate fehlgeschlagen:', e); }
   }
 
-  async function deleteTemplate(id){
-    if (!confirm('Diese Vorlage wirklich löschen?')) return false;
-    try{
-      await api(`/templates/${id}`, { method:'DELETE' });
-      return true;
-    }
-    catch(e){
-      console.warn('deleteTemplate fehlgeschlagen:', e);
-      alert('Fehler beim Löschen: ' + (e.message || e));
-      return false;
-    }
-  }
-
-  // ====== RENDER ======
+  // RENDER
   function renderEvents(){
-    const list = $('#list');
-    const tokens = (state.q||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
-    list.innerHTML = '';
+    const listEl = $('#list');
+    listEl.innerHTML = '';
     if (!state.events.length){
-      list.innerHTML = `<div class="card"><div class="muted">Keine Einträge gefunden.</div></div>`; return;
+      listEl.innerHTML = `<div class="placeholder"><div class="placeholder-icon">📭</div><div class="placeholder-title">Keine Einträge gefunden</div><div class="placeholder-text">Ändere die Filter oder erstelle neue Events.</div></div>`;
+      return;
     }
     const frag = document.createDocumentFragment();
     for (const ev of state.events){
-      const card = document.createElement('div'); card.className = 'card';
-      const title = highlight(ev.title || '(ohne Titel)', tokens);
+      const item = document.createElement('div');
+      item.className = 'list-item';
       const isAllDay = !!ev.all_day;
-      const when = isAllDay ? fmtDate(ev.all_day_date) : `${fmtDateTime(ev.start_utc)} – ${fmtDateTime(ev.end_utc)}`;
-      card.innerHTML = `
-        <div class="row-sb">
-          <div>
-            <div style="font-weight:700">${title}</div>
-            <div class="muted">${highlight(ev.description||'', tokens)}</div>
-          </div>
-          <div><span class="badge">${isAllDay ? 'Ganztägig' : 'Zeitgebunden'}</span></div>
+      const when = isAllDay ? ev.all_day_date : `${fmtDateTime(ev.start_utc)} - ${fmtDateTime(ev.end_utc)}`;
+      item.innerHTML = `
+        <div class="list-item-info">
+            <h4 class="list-item-title">${escapeHtml(ev.title || '(ohne Titel)')}</h4>
+            <p class="list-item-meta">${escapeHtml(ev.description||'')}</p>
+            <p class="list-item-meta muted">${when}</p>
         </div>
-        <div class="muted">${when}</div>
+        <div class="list-item-actions">
+            <span class="badge">${isAllDay ? 'Ganztägig' : 'Zeitgebunden'}</span>
+        </div>
       `;
-      frag.appendChild(card);
+      frag.appendChild(item);
     }
-    list.appendChild(frag);
+    listEl.appendChild(frag);
   }
-
+  
   function renderTemplates(q=''){
-    const el = $('#tplList'); el.innerHTML='';
-    const tokens = (q||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (!state.templates.length){ el.innerHTML = `<div class="muted">Keine Vorlagen gefunden.</div>`; return; }
+    const listEl = $('#tplList'); listEl.innerHTML='';
+    if (!state.templates.length){ listEl.innerHTML = `<div class="placeholder-text">Keine Vorlagen gefunden.</div>`; return; }
     const frag = document.createDocumentFragment();
     state.templates.forEach(t => {
-      const item = document.createElement('button');
-      item.type='button'; item.className='tpl'; item.setAttribute('data-id', t.id);
+      const item = document.createElement('div');
+      item.className='template-list-item';
+      item.setAttribute('data-id', t.id);
       item.innerHTML = `
-        <div style="font-weight:700">${highlight(t.title, tokens)}</div>
-        <div class="muted">${highlight(t.description||'', tokens)}</div>
-        <div class="muted">Tags: ${(t.tags||[]).map(escapeHtml).join(', ')}</div>
+        <h4 class="list-item-title">${escapeHtml(t.title)}</h4>
+        <p class="list-item-meta muted">${escapeHtml(t.description||'')}</p>
       `;
       item.addEventListener('click', ()=> selectTemplate(t));
       frag.appendChild(item);
     });
-    el.appendChild(frag);
+    listEl.appendChild(frag);
   }
 
   function selectTemplate(t){
     state.selectedTemplate = t;
     $('#tplDetails').innerHTML = `
-      <div class="grid">
-        <div><strong>${escapeHtml(t.title)}</strong></div>
-        <div class="muted">${escapeHtml(t.description||'')}</div>
-        <div class="muted">${t.all_day ? 'Ganztägig' : `Default-Zeit: ${escapeHtml(t.default_time||'—')}`} · Dauer: ${t.duration_minutes||'—'} min</div>
-        <div class="muted">Tags: ${(t.tags||[]).map(escapeHtml).join(', ') || '—'}</div>
-        <div class="row-sb">
-          <button id="tplApply" class="primary" type="button">Vorlage verwenden</button>
-          <span class="muted">Verwendet: ${t.usage_count ?? 0}×</span>
+        <h3 class="modal-subtitle">${escapeHtml(t.title)}</h3>
+        <p>${escapeHtml(t.description||'')}</p>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Typ</span>
+                <span class="info-value">${t.all_day ? 'Ganztägig' : `Default-Zeit: ${escapeHtml(t.default_time||'—')}`}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Dauer</span>
+                <span class="info-value">${t.duration_minutes||'—'} Minuten</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Tags</span>
+                <span class="info-value">${(t.tags||[]).map(escapeHtml).join(', ') || '—'}</span>
+            </div>
+             <div class="info-item">
+                <span class="info-label">Verwendet</span>
+                <span class="info-value">${t.usage_count ?? 0} mal</span>
+            </div>
         </div>
-        <div class="row-sb" style="margin-top: 10px;">
-          <button id="tplDelete" class="ghost danger" type="button" style="color: var(--danger); border-color: var(--danger);">Vorlage löschen</button>
-          <small class="muted">ID: ${t.id}</small>
+        <div class="form-actions" style="margin-top: auto;">
+            <button id="tplApply" class="btn btn-primary">Vorlage verwenden</button>
         </div>
-      </div>
     `;
     $('#tplApply').addEventListener('click', async ()=>{
       await useTemplate(t.id);
       closeTemplates();
       fetchEvents();
     });
-    $('#tplDelete').addEventListener('click', async ()=>{
-      const deleted = await deleteTemplate(t.id);
-      if (deleted) {
-        // Refresh templates list and clear details
-        searchTemplates($('#tplSearch').value);
-        $('#tplDetails').innerHTML = '<div class="muted">Wähle links eine Vorlage aus.</div>';
-      }
-    });
   }
 
-  // ====== MODAL MANAGEMENT (Focus Trap) ======
+  // MODAL
   const dlg = $('#tplDialog');
   function openTemplates(){
     dlg.showModal();
-    document.body.style.overflow = 'hidden';
-    $('#tplSearch').focus();
-    const onKey = (e)=>{ if(e.key==='Escape'){ e.preventDefault(); closeTemplates(); } };
-    dlg.addEventListener('keydown', onKey, { once:true });
     searchTemplates('');
+    $('#tplSearch').focus();
   }
   function closeTemplates(){
     if (dlg.open) dlg.close();
-    document.body.style.overflow = '';
-    $('#btn-templates').focus();
   }
 
-  // ====== INIT & EVENTS ======
+  // INIT
   function init(){
-    // Range / Direction
-    $('#range').value = state.range;
-    $(`#dir-${state.direction}`).checked = true;
-
-    $('#range').addEventListener('change', ()=>{ state.range = $('#range').value; debouncedFetch(); });
-    $$('input[name="direction"]').forEach(r => r.addEventListener('change', ()=>{ state.direction = $('input[name="direction"]:checked').value; debouncedFetch(); }));
-
-    // Suche
-    $('#q').addEventListener('input', debounce((e)=>{ state.q = e.target.value; state.page = 1; fetchEvents(); }, 300));
-
-    // Templates
+    const debouncedFetch = debounce(fetchEvents, 300);
+    
+    $('#range-select').addEventListener('change', (e)=>{ state.range = e.target.value; debouncedFetch(); });
+    $$('input[name="direction"]').forEach(r => r.addEventListener('change', (e)=>{ state.direction = e.target.value; debouncedFetch(); }));
+    $('#search-input').addEventListener('input', debounce((e)=>{ state.q = e.target.value; fetchEvents(); }, 300));
+    
     $('#btn-templates').addEventListener('click', openTemplates);
     $('#tplClose').addEventListener('click', closeTemplates);
+    dlg.querySelector('.modal-backdrop').addEventListener('click', closeTemplates);
     $('#tplSearch').addEventListener('input', debounce((e)=> searchTemplates(e.target.value), 300));
-
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', (e)=>{
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't'){ e.preventDefault(); openTemplates(); }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r'){ e.preventDefault(); fetchEvents(); }
-    });
 
     fetchEvents();
   }
-  const debouncedFetch = debounce(()=>{ state.page=1; fetchEvents(); }, 250);
 
   window.addEventListener('DOMContentLoaded', init);
 })();
