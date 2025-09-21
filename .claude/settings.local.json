@@ -17,7 +17,9 @@
       "Bash(dir)",
       "Bash(pytest:*)",
       "Bash(git pull:*)",
-      "Bash(dir templates)"
+      "Bash(dir templates)",
+      "Bash(dir:*)",
+      "Bash(rd:*)"
     ],
     "deny": [],
     "ask": []
