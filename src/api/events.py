@@ -92,7 +92,7 @@ async def get_events_advanced(
     authenticated: bool = Depends(verify_api_key),
     anchor: str = Query(default_factory=lambda: datetime.utcnow().strftime('%Y-%m-%d'),
                        description="Anchor date in YYYY-MM-DD format"),
-    direction: EventDirection = Query(EventDirection.FORWARD, description="Direction from anchor"),
+    direction: EventDirection = Query(EventDirection.FUTURE, description="Direction from anchor"),
     days: int = Query(7, ge=1, le=365, description="Number of days to retrieve"),
     calendar: Optional[str] = Query(None, description="Filter by calendar ID"),
     q: Optional[str] = Query(None, description="Full-text search query"),
@@ -105,12 +105,15 @@ async def get_events_advanced(
         anchor_date = datetime.strptime(anchor, '%Y-%m-%d').date()
 
         # Calculate date range
-        if direction == EventDirection.FORWARD:
+        if direction == EventDirection.FUTURE:
             start_date = anchor_date
             end_date = anchor_date + timedelta(days=days)
-        else:  # BACKWARD
+        elif direction == EventDirection.PAST:
             end_date = anchor_date
             start_date = anchor_date - timedelta(days=days)
+        else:  # ALL
+            start_date = anchor_date - timedelta(days=days//2)
+            end_date = anchor_date + timedelta(days=days//2)
 
         async with db_service.get_session() as session:
             # Build query
