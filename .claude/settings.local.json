@@ -23,7 +23,8 @@
       "Bash(docker-compose logs:*)",
       "Bash(docker compose logs:*)",
       "Bash(grep:*)",
-      "Bash(xargs rm:*)"
+      "Bash(xargs rm:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
