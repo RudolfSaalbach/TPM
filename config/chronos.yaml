@@ -28,7 +28,7 @@ caldav:
       timezone: "Europe/Berlin"
 
   auth:
-    mode: "none"              # "none" | "basic" | "digest"
+    mode: "basic"              # "none" | "basic" | "digest"
     username: "radicaleuser"  # only used if mode ≠ "none"
     password_ref: "env:RADICALE_PASSWORD"
 
