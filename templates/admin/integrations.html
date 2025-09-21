@@ -4,9 +4,413 @@
 {% block header_title %}Integrationen{% endblock %}
 
 {% block content %}
-<div class="placeholder">
-    <div class="placeholder-icon">🔗</div>
-    <div class="placeholder-title">Integrationen</div>
-    <div class="placeholder-text">Integration-Management wird implementiert.</div>
+<div class="integrations-overview animate-fade-in">
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Aktive Integrationen</span>
+                <div class="metric-icon">🔗</div>
+            </div>
+            <div class="metric-value">{{ active_integrations|default(8) }}</div>
+            <div class="metric-change positive">+2 neue</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">API Aufrufe (24h)</span>
+                <div class="metric-icon">📡</div>
+            </div>
+            <div class="metric-value">{{ api_calls|default(15847) }}</div>
+            <div class="metric-change positive">+12.4%</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Erfolgsrate</span>
+                <div class="metric-icon">✅</div>
+            </div>
+            <div class="metric-value">{{ success_rate|default('99.2%') }}</div>
+            <div class="metric-change positive">+0.3%</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Verfügbare APIs</span>
+                <div class="metric-icon">🛠️</div>
+            </div>
+            <div class="metric-value">{{ available_apis|default(23) }}</div>
+            <div class="metric-change">Stabil</div>
+        </div>
+    </div>
+
+    <!-- Integration Categories -->
+    <div class="content-grid">
+        <!-- Active Integrations -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Aktive Integrationen</h2>
+                <button class="btn btn-primary">
+                    <span class="icon">➕</span>
+                    Neue Integration
+                </button>
+            </div>
+            <div class="card-content">
+                <div class="integrations-list">
+                    <div class="integration-item connected">
+                        <div class="integration-icon">📅</div>
+                        <div class="integration-info">
+                            <h3>Google Calendar</h3>
+                            <p>Synchronisation von Terminen und Events</p>
+                            <div class="integration-status">
+                                <span class="status-indicator connected"></span>
+                                <span class="status-text">Verbunden</span>
+                            </div>
+                        </div>
+                        <div class="integration-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Sync heute</span>
+                                <span class="stat-value">247</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Letzter Sync</span>
+                                <span class="stat-value">vor 5 Min</span>
+                            </div>
+                        </div>
+                        <div class="integration-actions">
+                            <button class="btn btn-secondary btn-sm">Konfigurieren</button>
+                            <button class="btn btn-danger btn-sm">Trennen</button>
+                        </div>
+                    </div>
+
+                    <div class="integration-item connected">
+                        <div class="integration-icon">📧</div>
+                        <div class="integration-info">
+                            <h3>Microsoft Outlook</h3>
+                            <p>E-Mail und Kalender Integration</p>
+                            <div class="integration-status">
+                                <span class="status-indicator connected"></span>
+                                <span class="status-text">Verbunden</span>
+                            </div>
+                        </div>
+                        <div class="integration-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">E-Mails heute</span>
+                                <span class="stat-value">89</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Letzter Check</span>
+                                <span class="stat-value">vor 2 Min</span>
+                            </div>
+                        </div>
+                        <div class="integration-actions">
+                            <button class="btn btn-secondary btn-sm">Konfigurieren</button>
+                            <button class="btn btn-danger btn-sm">Trennen</button>
+                        </div>
+                    </div>
+
+                    <div class="integration-item connected">
+                        <div class="integration-icon">💬</div>
+                        <div class="integration-info">
+                            <h3>Slack</h3>
+                            <p>Team-Kommunikation und Benachrichtigungen</p>
+                            <div class="integration-status">
+                                <span class="status-indicator connected"></span>
+                                <span class="status-text">Verbunden</span>
+                            </div>
+                        </div>
+                        <div class="integration-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Nachrichten</span>
+                                <span class="stat-value">156</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Kanäle</span>
+                                <span class="stat-value">8</span>
+                            </div>
+                        </div>
+                        <div class="integration-actions">
+                            <button class="btn btn-secondary btn-sm">Konfigurieren</button>
+                            <button class="btn btn-danger btn-sm">Trennen</button>
+                        </div>
+                    </div>
+
+                    <div class="integration-item warning">
+                        <div class="integration-icon">📋</div>
+                        <div class="integration-info">
+                            <h3>Trello</h3>
+                            <p>Aufgaben- und Projektmanagement</p>
+                            <div class="integration-status">
+                                <span class="status-indicator warning"></span>
+                                <span class="status-text">Fehler</span>
+                            </div>
+                        </div>
+                        <div class="integration-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Letzte Sync</span>
+                                <span class="stat-value">vor 2h</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Fehler</span>
+                                <span class="stat-value">3</span>
+                            </div>
+                        </div>
+                        <div class="integration-actions">
+                            <button class="btn btn-warning btn-sm">Reparieren</button>
+                            <button class="btn btn-secondary btn-sm">Konfigurieren</button>
+                        </div>
+                    </div>
+
+                    <div class="integration-item disconnected">
+                        <div class="integration-icon">📊</div>
+                        <div class="integration-info">
+                            <h3>Google Analytics</h3>
+                            <p>Website-Analytics und Berichte</p>
+                            <div class="integration-status">
+                                <span class="status-indicator disconnected"></span>
+                                <span class="status-text">Getrennt</span>
+                            </div>
+                        </div>
+                        <div class="integration-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Letzte Aktivität</span>
+                                <span class="stat-value">vor 3 Tagen</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Status</span>
+                                <span class="stat-value">Inaktiv</span>
+                            </div>
+                        </div>
+                        <div class="integration-actions">
+                            <button class="btn btn-success btn-sm">Verbinden</button>
+                            <button class="btn btn-secondary btn-sm">Konfigurieren</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Integrations -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Verfügbare Integrationen</h2>
+                <div class="search-box">
+                    <input type="text" placeholder="Integrationen suchen..." class="search-input">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="available-integrations">
+                    <div class="integration-category">
+                        <h3>Produktivität</h3>
+                        <div class="category-integrations">
+                            <div class="available-integration">
+                                <div class="integration-icon">📝</div>
+                                <div class="integration-name">Notion</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                            <div class="available-integration">
+                                <div class="integration-icon">🗂️</div>
+                                <div class="integration-name">Asana</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                            <div class="available-integration">
+                                <div class="integration-icon">📋</div>
+                                <div class="integration-name">Monday.com</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="integration-category">
+                        <h3>Kommunikation</h3>
+                        <div class="category-integrations">
+                            <div class="available-integration">
+                                <div class="integration-icon">💻</div>
+                                <div class="integration-name">Microsoft Teams</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                            <div class="available-integration">
+                                <div class="integration-icon">🎥</div>
+                                <div class="integration-name">Zoom</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                            <div class="available-integration">
+                                <div class="integration-icon">💬</div>
+                                <div class="integration-name">Discord</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="integration-category">
+                        <h3>Analytics</h3>
+                        <div class="category-integrations">
+                            <div class="available-integration">
+                                <div class="integration-icon">📈</div>
+                                <div class="integration-name">Mixpanel</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                            <div class="available-integration">
+                                <div class="integration-icon">📊</div>
+                                <div class="integration-name">Tableau</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                            <div class="available-integration">
+                                <div class="integration-icon">📋</div>
+                                <div class="integration-name">Power BI</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="integration-category">
+                        <h3>Development</h3>
+                        <div class="category-integrations">
+                            <div class="available-integration">
+                                <div class="integration-icon">🐙</div>
+                                <div class="integration-name">GitHub</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                            <div class="available-integration">
+                                <div class="integration-icon">🦊</div>
+                                <div class="integration-name">GitLab</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                            <div class="available-integration">
+                                <div class="integration-icon">⚡</div>
+                                <div class="integration-name">Jenkins</div>
+                                <button class="btn btn-outline btn-sm">Hinzufügen</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Status & Logs -->
+    <div class="content-grid">
+        <!-- API Status -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">API Status</h2>
+                <div class="status-indicator connected"></div>
+            </div>
+            <div class="card-content">
+                <div class="api-endpoints">
+                    <div class="endpoint-item">
+                        <div class="endpoint-info">
+                            <h3>/api/calendar/sync</h3>
+                            <p>Google Calendar Synchronisation</p>
+                        </div>
+                        <div class="endpoint-stats">
+                            <span class="stat-label">Uptime:</span>
+                            <span class="stat-value">99.8%</span>
+                        </div>
+                        <div class="endpoint-status">
+                            <span class="status-indicator connected"></span>
+                            <span class="status-text">Online</span>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-item">
+                        <div class="endpoint-info">
+                            <h3>/api/email/send</h3>
+                            <p>E-Mail Versand Service</p>
+                        </div>
+                        <div class="endpoint-stats">
+                            <span class="stat-label">Uptime:</span>
+                            <span class="stat-value">99.9%</span>
+                        </div>
+                        <div class="endpoint-status">
+                            <span class="status-indicator connected"></span>
+                            <span class="status-text">Online</span>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-item">
+                        <div class="endpoint-info">
+                            <h3>/api/slack/notify</h3>
+                            <p>Slack Benachrichtigungen</p>
+                        </div>
+                        <div class="endpoint-stats">
+                            <span class="stat-label">Uptime:</span>
+                            <span class="stat-value">98.7%</span>
+                        </div>
+                        <div class="endpoint-status">
+                            <span class="status-indicator warning"></span>
+                            <span class="status-text">Langsam</span>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-item">
+                        <div class="endpoint-info">
+                            <h3>/api/trello/sync</h3>
+                            <p>Trello Board Synchronisation</p>
+                        </div>
+                        <div class="endpoint-stats">
+                            <span class="stat-label">Uptime:</span>
+                            <span class="stat-value">95.2%</span>
+                        </div>
+                        <div class="endpoint-status">
+                            <span class="status-indicator error"></span>
+                            <span class="status-text">Fehler</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Kürzliche Aktivitäten</h2>
+            </div>
+            <div class="card-content">
+                <div class="activity-timeline">
+                    <div class="activity-item">
+                        <div class="activity-icon">🔗</div>
+                        <div class="activity-content">
+                            <div class="activity-title">Google Calendar synchronisiert</div>
+                            <div class="activity-meta">vor 5 Minuten • 247 Events</div>
+                        </div>
+                    </div>
+
+                    <div class="activity-item">
+                        <div class="activity-icon">📧</div>
+                        <div class="activity-content">
+                            <div class="activity-title">89 E-Mails über Outlook versendet</div>
+                            <div class="activity-meta">vor 15 Minuten • Automatisch</div>
+                        </div>
+                    </div>
+
+                    <div class="activity-item">
+                        <div class="activity-icon">⚠️</div>
+                        <div class="activity-content">
+                            <div class="activity-title">Trello Integration Fehler behoben</div>
+                            <div class="activity-meta">vor 2 Stunden • von Admin</div>
+                        </div>
+                    </div>
+
+                    <div class="activity-item">
+                        <div class="activity-icon">💬</div>
+                        <div class="activity-content">
+                            <div class="activity-title">Slack Benachrichtigungen konfiguriert</div>
+                            <div class="activity-meta">vor 4 Stunden • von Admin</div>
+                        </div>
+                    </div>
+
+                    <div class="activity-item">
+                        <div class="activity-icon">📊</div>
+                        <div class="activity-content">
+                            <div class="activity-title">Google Analytics getrennt</div>
+                            <div class="activity-meta">vor 3 Tagen • von Admin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -4,9 +4,318 @@
 {% block header_title %}E-Mail Templates{% endblock %}
 
 {% block content %}
-<div class="placeholder">
-    <div class="placeholder-icon">📧</div>
-    <div class="placeholder-title">E-Mail Templates</div>
-    <div class="placeholder-text">E-Mail Template-Management wird implementiert.</div>
+<div class="email-templates-overview animate-fade-in">
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Template Kategorien</span>
+                <div class="metric-icon">📂</div>
+            </div>
+            <div class="metric-value">{{ template_categories|default(5) }}</div>
+            <div class="metric-change positive">+2 neue</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Aktive Templates</span>
+                <div class="metric-icon">📧</div>
+            </div>
+            <div class="metric-value">{{ active_templates|default(23) }}</div>
+            <div class="metric-change positive">+3 heute</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Versendete E-Mails</span>
+                <div class="metric-icon">📤</div>
+            </div>
+            <div class="metric-value">{{ sent_emails|default(1847) }}</div>
+            <div class="metric-change positive">+127 heute</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Öffnungsrate</span>
+                <div class="metric-icon">👁️</div>
+            </div>
+            <div class="metric-value">{{ open_rate|default('68.3%') }}</div>
+            <div class="metric-change positive">+2.1%</div>
+        </div>
+    </div>
+
+    <!-- Template Management -->
+    <div class="content-grid">
+        <!-- Template Categories -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Template Kategorien</h2>
+                <button class="btn btn-primary">
+                    <span class="icon">➕</span>
+                    Neue Kategorie
+                </button>
+            </div>
+            <div class="card-content">
+                <div class="template-categories">
+                    <div class="category-item">
+                        <div class="category-icon">🔔</div>
+                        <div class="category-info">
+                            <h3>Benachrichtigungen</h3>
+                            <p>8 Templates</p>
+                        </div>
+                        <div class="category-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-danger btn-sm">Löschen</button>
+                        </div>
+                    </div>
+
+                    <div class="category-item">
+                        <div class="category-icon">📅</div>
+                        <div class="category-info">
+                            <h3>Termine</h3>
+                            <p>6 Templates</p>
+                        </div>
+                        <div class="category-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-danger btn-sm">Löschen</button>
+                        </div>
+                    </div>
+
+                    <div class="category-item">
+                        <div class="category-icon">📊</div>
+                        <div class="category-info">
+                            <h3>Reports</h3>
+                            <p>4 Templates</p>
+                        </div>
+                        <div class="category-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-danger btn-sm">Löschen</button>
+                        </div>
+                    </div>
+
+                    <div class="category-item">
+                        <div class="category-icon">👋</div>
+                        <div class="category-info">
+                            <h3>Begrüßung</h3>
+                            <p>3 Templates</p>
+                        </div>
+                        <div class="category-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-danger btn-sm">Löschen</button>
+                        </div>
+                    </div>
+
+                    <div class="category-item">
+                        <div class="category-icon">⚠️</div>
+                        <div class="category-info">
+                            <h3>Warnungen</h3>
+                            <p>2 Templates</p>
+                        </div>
+                        <div class="category-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-danger btn-sm">Löschen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template List -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">E-Mail Templates</h2>
+                <div class="card-actions">
+                    <div class="search-box">
+                        <input type="text" placeholder="Templates durchsuchen..." class="search-input">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <button class="btn btn-primary">
+                        <span class="icon">➕</span>
+                        Neues Template
+                    </button>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="email-templates-list">
+                    <div class="template-item active">
+                        <div class="template-icon">🔔</div>
+                        <div class="template-info">
+                            <h3>Termin-Erinnerung</h3>
+                            <p>Automatische Erinnerung vor Terminen</p>
+                            <div class="template-meta">
+                                <span class="template-category">Benachrichtigungen</span>
+                                <span class="template-usage">247 mal verwendet</span>
+                            </div>
+                        </div>
+                        <div class="template-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Öffnungsrate</span>
+                                <span class="stat-value">72%</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Klickrate</span>
+                                <span class="stat-value">15%</span>
+                            </div>
+                        </div>
+                        <div class="template-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-primary btn-sm">Vorschau</button>
+                            <button class="btn btn-success btn-sm">Aktivieren</button>
+                        </div>
+                    </div>
+
+                    <div class="template-item">
+                        <div class="template-icon">📅</div>
+                        <div class="template-info">
+                            <h3>Neuer Termin</h3>
+                            <p>Bestätigung für neue Termine</p>
+                            <div class="template-meta">
+                                <span class="template-category">Termine</span>
+                                <span class="template-usage">189 mal verwendet</span>
+                            </div>
+                        </div>
+                        <div class="template-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Öffnungsrate</span>
+                                <span class="stat-value">68%</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Klickrate</span>
+                                <span class="stat-value">22%</span>
+                            </div>
+                        </div>
+                        <div class="template-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-primary btn-sm">Vorschau</button>
+                            <button class="btn btn-outline btn-sm">Deaktiviert</button>
+                        </div>
+                    </div>
+
+                    <div class="template-item">
+                        <div class="template-icon">📊</div>
+                        <div class="template-info">
+                            <h3>Wöchentlicher Report</h3>
+                            <p>Zusammenfassung der Wochenaktivitäten</p>
+                            <div class="template-meta">
+                                <span class="template-category">Reports</span>
+                                <span class="template-usage">52 mal verwendet</span>
+                            </div>
+                        </div>
+                        <div class="template-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Öffnungsrate</span>
+                                <span class="stat-value">81%</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Klickrate</span>
+                                <span class="stat-value">31%</span>
+                            </div>
+                        </div>
+                        <div class="template-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-primary btn-sm">Vorschau</button>
+                            <button class="btn btn-success btn-sm">Aktivieren</button>
+                        </div>
+                    </div>
+
+                    <div class="template-item">
+                        <div class="template-icon">👋</div>
+                        <div class="template-info">
+                            <h3>Willkommen</h3>
+                            <p>Begrüßung für neue Benutzer</p>
+                            <div class="template-meta">
+                                <span class="template-category">Begrüßung</span>
+                                <span class="template-usage">34 mal verwendet</span>
+                            </div>
+                        </div>
+                        <div class="template-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Öffnungsrate</span>
+                                <span class="stat-value">94%</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Klickrate</span>
+                                <span class="stat-value">45%</span>
+                            </div>
+                        </div>
+                        <div class="template-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-primary btn-sm">Vorschau</button>
+                            <button class="btn btn-success btn-sm">Aktivieren</button>
+                        </div>
+                    </div>
+
+                    <div class="template-item">
+                        <div class="template-icon">⚠️</div>
+                        <div class="template-info">
+                            <h3>System-Warnung</h3>
+                            <p>Wichtige Systembenachrichtigungen</p>
+                            <div class="template-meta">
+                                <span class="template-category">Warnungen</span>
+                                <span class="template-usage">12 mal verwendet</span>
+                            </div>
+                        </div>
+                        <div class="template-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Öffnungsrate</span>
+                                <span class="stat-value">98%</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Klickrate</span>
+                                <span class="stat-value">67%</span>
+                            </div>
+                        </div>
+                        <div class="template-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-primary btn-sm">Vorschau</button>
+                            <button class="btn btn-success btn-sm">Aktivieren</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Kürzliche Aktivitäten</h2>
+        </div>
+        <div class="card-content">
+            <div class="activity-timeline">
+                <div class="activity-item">
+                    <div class="activity-icon">📧</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Template "Termin-Erinnerung" wurde bearbeitet</div>
+                        <div class="activity-meta">vor 2 Stunden • von Admin</div>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-icon">📤</div>
+                    <div class="activity-content">
+                        <div class="activity-title">127 E-Mails verschickt</div>
+                        <div class="activity-meta">vor 3 Stunden • Automatisch</div>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-icon">➕</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Neues Template "Projekt-Update" erstellt</div>
+                        <div class="activity-meta">vor 1 Tag • von Admin</div>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-icon">📊</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Wöchentlicher Report versendet</div>
+                        <div class="activity-meta">vor 2 Tagen • Automatisch</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

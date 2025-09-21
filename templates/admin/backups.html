@@ -4,9 +4,409 @@
 {% block header_title %}Backup Management{% endblock %}
 
 {% block content %}
-<div class="placeholder">
-    <div class="placeholder-icon">💾</div>
-    <div class="placeholder-title">Backup Management</div>
-    <div class="placeholder-text">Backup-Management wird implementiert.</div>
+<div class="backups-overview animate-fade-in">
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Letzte Sicherung</span>
+                <div class="metric-icon">💾</div>
+            </div>
+            <div class="metric-value">{{ last_backup|default('vor 2h') }}</div>
+            <div class="metric-change positive">Erfolgreich</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Backup Größe</span>
+                <div class="metric-icon">📊</div>
+            </div>
+            <div class="metric-value">{{ backup_size|default('2.4 GB') }}</div>
+            <div class="metric-change positive">+125 MB</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Verfügbarer Speicher</span>
+                <div class="metric-icon">🗄️</div>
+            </div>
+            <div class="metric-value">{{ available_storage|default('47.6 GB') }}</div>
+            <div class="metric-change">94% frei</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Backup Erfolgsrate</span>
+                <div class="metric-icon">✅</div>
+            </div>
+            <div class="metric-value">{{ success_rate|default('99.8%') }}</div>
+            <div class="metric-change positive">+0.2%</div>
+        </div>
+    </div>
+
+    <!-- Backup Actions -->
+    <div class="content-grid">
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Backup Aktionen</h2>
+            </div>
+            <div class="card-content">
+                <div class="backup-actions">
+                    <button class="btn btn-primary backup-action-btn">
+                        <div class="action-icon">⚡</div>
+                        <div class="action-content">
+                            <h3>Sofortiges Backup</h3>
+                            <p>Erstellt ein vollständiges Backup aller Daten</p>
+                        </div>
+                    </button>
+
+                    <button class="btn btn-secondary backup-action-btn">
+                        <div class="action-icon">🔄</div>
+                        <div class="action-content">
+                            <h3>Inkrementelles Backup</h3>
+                            <p>Sichert nur geänderte Dateien seit dem letzten Backup</p>
+                        </div>
+                    </button>
+
+                    <button class="btn btn-success backup-action-btn">
+                        <div class="action-icon">📤</div>
+                        <div class="action-content">
+                            <h3>Backup hochladen</h3>
+                            <p>Lädt Backup in die Cloud (Google Drive, Dropbox)</p>
+                        </div>
+                    </button>
+
+                    <button class="btn btn-warning backup-action-btn">
+                        <div class="action-icon">🔧</div>
+                        <div class="action-content">
+                            <h3>Backup prüfen</h3>
+                            <p>Überprüft die Integrität vorhandener Backups</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup Schedule -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Backup Zeitplan</h2>
+                <button class="btn btn-primary">
+                    <span class="icon">⚙️</span>
+                    Bearbeiten
+                </button>
+            </div>
+            <div class="card-content">
+                <div class="schedule-settings">
+                    <div class="schedule-item">
+                        <div class="schedule-info">
+                            <h3>Tägliches Backup</h3>
+                            <p>Vollständige Datensicherung jeden Tag um 02:00 Uhr</p>
+                        </div>
+                        <div class="schedule-status">
+                            <span class="status-indicator connected"></span>
+                            <span class="status-text">Aktiv</span>
+                        </div>
+                        <div class="schedule-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-danger btn-sm">Deaktivieren</button>
+                        </div>
+                    </div>
+
+                    <div class="schedule-item">
+                        <div class="schedule-info">
+                            <h3>Wöchentliches Cloud-Backup</h3>
+                            <p>Upload zur Cloud jeden Sonntag um 03:00 Uhr</p>
+                        </div>
+                        <div class="schedule-status">
+                            <span class="status-indicator connected"></span>
+                            <span class="status-text">Aktiv</span>
+                        </div>
+                        <div class="schedule-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-danger btn-sm">Deaktivieren</button>
+                        </div>
+                    </div>
+
+                    <div class="schedule-item">
+                        <div class="schedule-info">
+                            <h3>Monatliches Archiv</h3>
+                            <p>Langzeit-Archivierung am ersten Tag des Monats</p>
+                        </div>
+                        <div class="schedule-status">
+                            <span class="status-indicator warning"></span>
+                            <span class="status-text">Wartung</span>
+                        </div>
+                        <div class="schedule-actions">
+                            <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            <button class="btn btn-success btn-sm">Aktivieren</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup History -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Backup Verlauf</h2>
+            <div class="card-actions">
+                <div class="search-box">
+                    <input type="text" placeholder="Backups durchsuchen..." class="search-input">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <button class="btn btn-outline">
+                    <span class="icon">📊</span>
+                    Report
+                </button>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="backup-history">
+                <div class="backup-item successful">
+                    <div class="backup-icon">✅</div>
+                    <div class="backup-info">
+                        <h3>Vollständiges Backup</h3>
+                        <p>Chronos_Full_Backup_2025-01-21_02-00.zip</p>
+                        <div class="backup-meta">
+                            <span class="backup-date">21. Januar 2025, 02:00</span>
+                            <span class="backup-size">2.4 GB</span>
+                            <span class="backup-type">Vollständig</span>
+                        </div>
+                    </div>
+                    <div class="backup-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Dauer</span>
+                            <span class="stat-value">12 Min</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Dateien</span>
+                            <span class="stat-value">15,847</span>
+                        </div>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="btn btn-primary btn-sm">Herunterladen</button>
+                        <button class="btn btn-secondary btn-sm">Wiederherstellen</button>
+                        <button class="btn btn-danger btn-sm">Löschen</button>
+                    </div>
+                </div>
+
+                <div class="backup-item successful">
+                    <div class="backup-icon">✅</div>
+                    <div class="backup-info">
+                        <h3>Inkrementelles Backup</h3>
+                        <p>Chronos_Inc_Backup_2025-01-20_23-30.zip</p>
+                        <div class="backup-meta">
+                            <span class="backup-date">20. Januar 2025, 23:30</span>
+                            <span class="backup-size">125 MB</span>
+                            <span class="backup-type">Inkrementell</span>
+                        </div>
+                    </div>
+                    <div class="backup-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Dauer</span>
+                            <span class="stat-value">3 Min</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Dateien</span>
+                            <span class="stat-value">342</span>
+                        </div>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="btn btn-primary btn-sm">Herunterladen</button>
+                        <button class="btn btn-secondary btn-sm">Wiederherstellen</button>
+                        <button class="btn btn-danger btn-sm">Löschen</button>
+                    </div>
+                </div>
+
+                <div class="backup-item successful">
+                    <div class="backup-icon">✅</div>
+                    <div class="backup-info">
+                        <h3>Vollständiges Backup</h3>
+                        <p>Chronos_Full_Backup_2025-01-20_02-00.zip</p>
+                        <div class="backup-meta">
+                            <span class="backup-date">20. Januar 2025, 02:00</span>
+                            <span class="backup-size">2.3 GB</span>
+                            <span class="backup-type">Vollständig</span>
+                        </div>
+                    </div>
+                    <div class="backup-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Dauer</span>
+                            <span class="stat-value">11 Min</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Dateien</span>
+                            <span class="stat-value">15,623</span>
+                        </div>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="btn btn-primary btn-sm">Herunterladen</button>
+                        <button class="btn btn-secondary btn-sm">Wiederherstellen</button>
+                        <button class="btn btn-danger btn-sm">Löschen</button>
+                    </div>
+                </div>
+
+                <div class="backup-item failed">
+                    <div class="backup-icon">❌</div>
+                    <div class="backup-info">
+                        <h3>Backup fehlgeschlagen</h3>
+                        <p>Fehler: Nicht genügend Speicherplatz</p>
+                        <div class="backup-meta">
+                            <span class="backup-date">19. Januar 2025, 02:00</span>
+                            <span class="backup-size">-</span>
+                            <span class="backup-type">Vollständig</span>
+                        </div>
+                    </div>
+                    <div class="backup-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Dauer</span>
+                            <span class="stat-value">2 Min</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Fehlercode</span>
+                            <span class="stat-value">E_NO_SPACE</span>
+                        </div>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="btn btn-warning btn-sm">Wiederholen</button>
+                        <button class="btn btn-secondary btn-sm">Details</button>
+                        <button class="btn btn-danger btn-sm">Löschen</button>
+                    </div>
+                </div>
+
+                <div class="backup-item successful cloud">
+                    <div class="backup-icon">☁️</div>
+                    <div class="backup-info">
+                        <h3>Cloud-Backup</h3>
+                        <p>Hochgeladen zu Google Drive</p>
+                        <div class="backup-meta">
+                            <span class="backup-date">19. Januar 2025, 03:00</span>
+                            <span class="backup-size">2.2 GB</span>
+                            <span class="backup-type">Cloud</span>
+                        </div>
+                    </div>
+                    <div class="backup-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Upload</span>
+                            <span class="stat-value">45 Min</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Provider</span>
+                            <span class="stat-value">Google Drive</span>
+                        </div>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="btn btn-primary btn-sm">Cloud öffnen</button>
+                        <button class="btn btn-secondary btn-sm">Herunterladen</button>
+                        <button class="btn btn-danger btn-sm">Löschen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Storage Information -->
+    <div class="content-grid">
+        <!-- Storage Usage -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Speicher Verwendung</h2>
+            </div>
+            <div class="card-content">
+                <div class="storage-overview">
+                    <div class="storage-chart">
+                        <div class="storage-usage">
+                            <div class="usage-bar">
+                                <div class="usage-fill" style="width: 32%"></div>
+                            </div>
+                            <div class="usage-info">
+                                <span class="usage-used">16.2 GB verwendet</span>
+                                <span class="usage-total">von 50 GB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="storage-breakdown">
+                        <div class="storage-item">
+                            <div class="storage-color" style="background: #3b82f6"></div>
+                            <span class="storage-label">Vollständige Backups</span>
+                            <span class="storage-value">12.8 GB</span>
+                        </div>
+                        <div class="storage-item">
+                            <div class="storage-color" style="background: #10b981"></div>
+                            <span class="storage-label">Inkrementelle Backups</span>
+                            <span class="storage-value">2.7 GB</span>
+                        </div>
+                        <div class="storage-item">
+                            <div class="storage-color" style="background: #f59e0b"></div>
+                            <span class="storage-label">Archive</span>
+                            <span class="storage-value">0.7 GB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Backup Einstellungen</h2>
+                <button class="btn btn-secondary">
+                    <span class="icon">⚙️</span>
+                    Erweitert
+                </button>
+            </div>
+            <div class="card-content">
+                <div class="backup-settings">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Automatische Bereinigung</h3>
+                            <p>Backups älter als 30 Tage automatisch löschen</p>
+                        </div>
+                        <div class="setting-toggle">
+                            <input type="checkbox" id="auto-cleanup" checked>
+                            <label for="auto-cleanup" class="toggle-switch"></label>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Komprimierung</h3>
+                            <p>Backups komprimieren um Speicherplatz zu sparen</p>
+                        </div>
+                        <div class="setting-toggle">
+                            <input type="checkbox" id="compression" checked>
+                            <label for="compression" class="toggle-switch"></label>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Verschlüsselung</h3>
+                            <p>Backups mit AES-256 verschlüsseln</p>
+                        </div>
+                        <div class="setting-toggle">
+                            <input type="checkbox" id="encryption" checked>
+                            <label for="encryption" class="toggle-switch"></label>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>E-Mail Benachrichtigungen</h3>
+                            <p>Berichte über Backup-Status per E-Mail</p>
+                        </div>
+                        <div class="setting-toggle">
+                            <input type="checkbox" id="email-notifications" checked>
+                            <label for="email-notifications" class="toggle-switch"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

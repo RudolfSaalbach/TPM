@@ -4,10 +4,546 @@
 {% block header_title %}Action Workflows{% endblock %}
 {% block header_subtitle %}Automatisierte Abläufe und Kommandoketten verwalten{% endblock %}
 
+{% block header_actions %}
+<button class="btn btn-primary" onclick="createWorkflow()">
+    <span aria-hidden="true">➕</span>
+    Neuer Workflow
+</button>
+{% endblock %}
+
 {% block content %}
-<div class="placeholder">
-    <div class="placeholder-icon">⚡</div>
-    <div class="placeholder-title">Workflows</div>
-    <div class="placeholder-text">Workflow-Management wird implementiert.</div>
+<div class="workflows-overview animate-fade-in">
+    <!-- Quick Stats -->
+    <div class="stats-grid">
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Aktive Workflows</span>
+                <div class="metric-icon">⚡</div>
+            </div>
+            <div class="metric-value">{{ active_workflows|default(12) }}</div>
+            <div class="metric-change positive">+2 diese Woche</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Ausführungen heute</span>
+                <div class="metric-icon">🔄</div>
+            </div>
+            <div class="metric-value">{{ executions_today|default(847) }}</div>
+            <div class="metric-change positive">+15%</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Erfolgsrate</span>
+                <div class="metric-icon">✅</div>
+            </div>
+            <div class="metric-value">{{ success_rate|default('98.2') }}%</div>
+            <div class="metric-change positive">+0.3%</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Durchschn. Laufzeit</span>
+                <div class="metric-icon">⏱️</div>
+            </div>
+            <div class="metric-value">{{ avg_runtime|default('1.2') }}s</div>
+            <div class="metric-change negative">-0.1s</div>
+        </div>
+    </div>
+
+    <!-- Workflows List -->
+    <div class="workflows-section">
+        <div class="section-header">
+            <h3>Workflow-Übersicht</h3>
+            <div class="section-actions">
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Workflows durchsuchen..." id="workflowSearch">
+                </div>
+                <select class="form-select" id="statusFilter">
+                    <option value="">Alle Status</option>
+                    <option value="active">Aktiv</option>
+                    <option value="paused">Pausiert</option>
+                    <option value="error">Fehler</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="workflows-grid" id="workflowsGrid">
+            <!-- Workflow Card Template -->
+            <div class="workflow-card">
+                <div class="workflow-header">
+                    <div class="workflow-info">
+                        <h4 class="workflow-name">Event → Email Notification</h4>
+                        <p class="workflow-description">Sendet automatisch E-Mails bei neuen Events</p>
+                    </div>
+                    <div class="workflow-status">
+                        <span class="status-indicator active"></span>
+                        <span class="status-text">Aktiv</span>
+                    </div>
+                </div>
+
+                <div class="workflow-metrics">
+                    <div class="metric-item">
+                        <span class="metric-label">Ausführungen:</span>
+                        <span class="metric-value">1,247</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Letzte Ausführung:</span>
+                        <span class="metric-value">vor 5 Min</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Erfolgsrate:</span>
+                        <span class="metric-value">99.1%</span>
+                    </div>
+                </div>
+
+                <div class="workflow-triggers">
+                    <span class="trigger-badge">Event Created</span>
+                    <span class="trigger-badge">Priority High</span>
+                </div>
+
+                <div class="workflow-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="editWorkflow('1')">
+                        <span aria-hidden="true">✏️</span>
+                        Bearbeiten
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="pauseWorkflow('1')">
+                        <span aria-hidden="true">⏸️</span>
+                        Pausieren
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="viewLogs('1')">
+                        <span aria-hidden="true">📊</span>
+                        Logs
+                    </button>
+                </div>
+            </div>
+
+            <div class="workflow-card">
+                <div class="workflow-header">
+                    <div class="workflow-info">
+                        <h4 class="workflow-name">Calendar Sync</h4>
+                        <p class="workflow-description">Synchronisiert Events mit Google Calendar</p>
+                    </div>
+                    <div class="workflow-status">
+                        <span class="status-indicator active"></span>
+                        <span class="status-text">Aktiv</span>
+                    </div>
+                </div>
+
+                <div class="workflow-metrics">
+                    <div class="metric-item">
+                        <span class="metric-label">Ausführungen:</span>
+                        <span class="metric-value">892</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Letzte Ausführung:</span>
+                        <span class="metric-value">vor 2 Min</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Erfolgsrate:</span>
+                        <span class="metric-value">97.8%</span>
+                    </div>
+                </div>
+
+                <div class="workflow-triggers">
+                    <span class="trigger-badge">Event Updated</span>
+                    <span class="trigger-badge">Scheduled</span>
+                </div>
+
+                <div class="workflow-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="editWorkflow('2')">
+                        <span aria-hidden="true">✏️</span>
+                        Bearbeiten
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="pauseWorkflow('2')">
+                        <span aria-hidden="true">⏸️</span>
+                        Pausieren
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="viewLogs('2')">
+                        <span aria-hidden="true">📊</span>
+                        Logs
+                    </button>
+                </div>
+            </div>
+
+            <div class="workflow-card">
+                <div class="workflow-header">
+                    <div class="workflow-info">
+                        <h4 class="workflow-name">Backup Automation</h4>
+                        <p class="workflow-description">Erstellt täglich automatische Datensicherungen</p>
+                    </div>
+                    <div class="workflow-status">
+                        <span class="status-indicator paused"></span>
+                        <span class="status-text">Pausiert</span>
+                    </div>
+                </div>
+
+                <div class="workflow-metrics">
+                    <div class="metric-item">
+                        <span class="metric-label">Ausführungen:</span>
+                        <span class="metric-value">30</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Letzte Ausführung:</span>
+                        <span class="metric-value">vor 2 Tagen</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Erfolgsrate:</span>
+                        <span class="metric-value">100%</span>
+                    </div>
+                </div>
+
+                <div class="workflow-triggers">
+                    <span class="trigger-badge">Daily Schedule</span>
+                </div>
+
+                <div class="workflow-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="editWorkflow('3')">
+                        <span aria-hidden="true">✏️</span>
+                        Bearbeiten
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="resumeWorkflow('3')">
+                        <span aria-hidden="true">▶️</span>
+                        Fortsetzen
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="viewLogs('3')">
+                        <span aria-hidden="true">📊</span>
+                        Logs
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="activity-section">
+        <h3>Aktuelle Aktivität</h3>
+        <div class="activity-list">
+            <div class="activity-item">
+                <div class="activity-icon success">✅</div>
+                <div class="activity-content">
+                    <div class="activity-title">Email Notification erfolgreich</div>
+                    <div class="activity-details">Workflow "Event → Email" • vor 2 Minuten</div>
+                </div>
+                <div class="activity-time">14:23</div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon success">✅</div>
+                <div class="activity-content">
+                    <div class="activity-title">Calendar Sync abgeschlossen</div>
+                    <div class="activity-details">Workflow "Calendar Sync" • vor 5 Minuten</div>
+                </div>
+                <div class="activity-time">14:20</div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon warning">⚠️</div>
+                <div class="activity-content">
+                    <div class="activity-title">Workflow pausiert</div>
+                    <div class="activity-details">Workflow "Backup Automation" von Administrator pausiert</div>
+                </div>
+                <div class="activity-time">12:15</div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+.workflows-overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+.workflows-section {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.section-actions {
+    display: flex;
+    gap: var(--space-4);
+    align-items: center;
+}
+
+.search-container {
+    position: relative;
+}
+
+.search-input {
+    width: 250px;
+    padding: var(--space-3);
+    border: 1px solid var(--border-base);
+    border-radius: var(--radius-md);
+    background: var(--surface-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.workflows-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: var(--space-6);
+}
+
+.workflow-card {
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    transition: all var(--duration-base) var(--ease-out);
+}
+
+.workflow-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.workflow-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-4);
+}
+
+.workflow-name {
+    margin: 0 0 var(--space-2) 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.workflow-description {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.workflow-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+}
+
+.status-indicator.active {
+    background: var(--success-500);
+}
+
+.status-indicator.paused {
+    background: var(--warning-500);
+}
+
+.status-indicator.error {
+    background: var(--danger-500);
+}
+
+.workflow-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
+    font-size: var(--font-size-sm);
+}
+
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.metric-label {
+    color: var(--text-muted);
+}
+
+.metric-value {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+.workflow-triggers {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin: var(--space-4) 0;
+}
+
+.trigger-badge {
+    background: var(--primary-100);
+    color: var(--primary-700);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+}
+
+.workflow-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.activity-section {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+}
+
+.activity-section h3 {
+    margin: 0 0 var(--space-6) 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--surface-secondary);
+    border-radius: var(--radius-md);
+}
+
+.activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-sm);
+    flex-shrink: 0;
+}
+
+.activity-icon.success {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.activity-icon.warning {
+    background: var(--warning-100);
+    color: var(--warning-700);
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-title {
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+}
+
+.activity-details {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.activity-time {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+</style>
+
+<script>
+function createWorkflow() {
+    showToast('Workflow', 'Neuer Workflow-Editor wird geöffnet...', 'info');
+    // Implementation für Workflow-Erstellung
+}
+
+function editWorkflow(id) {
+    showToast('Workflow', `Workflow ${id} wird bearbeitet...`, 'info');
+    // Implementation für Workflow-Bearbeitung
+}
+
+function pauseWorkflow(id) {
+    showToast('Workflow', `Workflow ${id} pausiert`, 'warning');
+    // Implementation für Workflow pausieren
+}
+
+function resumeWorkflow(id) {
+    showToast('Workflow', `Workflow ${id} fortgesetzt`, 'success');
+    // Implementation für Workflow fortsetzen
+}
+
+function viewLogs(id) {
+    showToast('Logs', `Logs für Workflow ${id} werden geladen...`, 'info');
+    // Implementation für Log-Anzeige
+}
+
+function showToast(title, message, type) {
+    console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+}
+
+// Search functionality
+document.getElementById('workflowSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const workflowCards = document.querySelectorAll('.workflow-card');
+
+    workflowCards.forEach(card => {
+        const name = card.querySelector('.workflow-name').textContent.toLowerCase();
+        const description = card.querySelector('.workflow-description').textContent.toLowerCase();
+
+        if (name.includes(searchTerm) || description.includes(searchTerm)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
+
+// Status filter
+document.getElementById('statusFilter').addEventListener('change', function(e) {
+    const selectedStatus = e.target.value;
+    const workflowCards = document.querySelectorAll('.workflow-card');
+
+    workflowCards.forEach(card => {
+        if (!selectedStatus) {
+            card.style.display = 'block';
+            return;
+        }
+
+        const statusIndicator = card.querySelector('.status-indicator');
+        const hasStatus = statusIndicator.classList.contains(selectedStatus);
+
+        card.style.display = hasStatus ? 'block' : 'none';
+    });
+});
+</script>
 {% endblock %}
