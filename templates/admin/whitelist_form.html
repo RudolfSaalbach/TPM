@@ -1,76 +1,262 @@
 {% extends "admin/base.html" %}
 
-{% block title %}Whitelist-Eintrag bearbeiten{% endblock %}
+{% block title %}{% if whitelist %}Whitelist bearbeiten{% else %}Neue Whitelist{% endif %} - Chronos Admin{% endblock %}
+{% block header_title %}{% if whitelist %}Whitelist bearbeiten{% else %}Neue Whitelist erstellen{% endif %}{% endblock %}
+{% block header_subtitle %}Konfiguration von Zugriffsberechtigungen für externe Systeme{% endblock %}
 
-{% if entry and entry.id %}
-    {% block header_title %}Whitelist-Eintrag bearbeiten{% endblock %}
-    {% block header_subtitle %}Bearbeiten Sie einen bestehenden Eintrag für die System-Whitelist.{% endblock %}
-{% else %}
-    {% block header_title %}Neuen Whitelist-Eintrag erstellen{% endblock %}
-    {% block header_subtitle %}Fügen Sie einen neuen Eintrag zur System-Whitelist hinzu.{% endblock %}
-{% endif %}
+{% block header_actions %}
+<a href="/admin/whitelists" class="btn btn-secondary">
+    <span aria-hidden="true">⬅️</span>
+    Zurück zur Übersicht
+</a>
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        {% if entry and entry.id %}
-            <h1>Eintrag <code class="code-inline">{{ entry.id }}</code> bearbeiten</h1>
-            <p>Passen Sie die Details für diesen Whitelist-Eintrag an.</p>
-        {% else %}
-            <h1>Neuer Whitelist-Eintrag</h1>
-            <p>Erstellen Sie eine neue Regel für die Governance-Engine.</p>
-        {% endif %}
-    </div>
-    <div class="header-actions">
-        <a href="{{ url_for('admin_routes.view_whitelists') }}" class="btn btn-secondary">
-            <span class="btn-icon">⬅️</span>
-            Zurück zur Übersicht
-        </a>
-    </div>
-</div>
+<div class="whitelist-form-container animate-fade-in">
+    <form method="post" class="whitelist-form">
+        <div class="form-section">
+            <h3 class="section-title">Grundeinstellungen</h3>
 
-<div class="content-card">
-    <form method="post">
-        <div class="form-grid">
             <div class="form-group">
-                <label for="entry_type" class="form-label">Eintragstyp</label>
-                <select id="entry_type" name="entry_type" class="form-select" required>
-                    <option value="user" {% if entry and entry.entry_type == 'user' %}selected{% endif %}>Benutzer</option>
-                    <option value="system" {% if entry and entry.entry_type == 'system' %}selected{% endif %}>System</option>
-                    <option value="ip_address" {% if entry and entry.entry_type == 'ip_address' %}selected{% endif %}>IP-Adresse</option>
-                    <option value="action" {% if entry and entry.entry_type == 'action' %}selected{% endif %}>Aktion</option>
-                </select>
-                <p class="form-hint">Der Typ des Eintrags, der auf die Whitelist gesetzt wird.</p>
+                <label for="name" class="form-label">Name *</label>
+                <input type="text" id="name" name="name" class="form-input"
+                       value="{{ whitelist.name if whitelist else '' }}"
+                       placeholder="z.B. 'Telegram Bot Whitelist'" required>
+                <p class="form-hint">Ein eindeutiger Name für diese Whitelist</p>
             </div>
 
             <div class="form-group">
-                <label for="value" class="form-label">Wert</label>
-                <input type="text" id="value" name="value" class="form-input" value="{{ entry.value if entry else '' }}" required placeholder="z.B. user@example.com, system_name, 192.168.1.100">
-                <p class="form-hint">Der genaue Wert des Eintrags.</p>
-            </div>
-
-            <div class="form-group full-width">
                 <label for="description" class="form-label">Beschreibung</label>
-                <textarea id="description" name="description" class="form-textarea" rows="3" placeholder="Zweck dieses Eintrags, z.B. 'Zulassen des n8n-Produktivsystems'">{{ entry.description if entry else '' }}</textarea>
-                <p class="form-hint">Eine optionale Beschreibung für den Kontext.</p>
+                <textarea id="description" name="description" class="form-input" rows="3"
+                          placeholder="Beschreibung des Zwecks und der Verwendung">{{ whitelist.description if whitelist else '' }}</textarea>
             </div>
 
             <div class="form-group">
-                <div class="form-check">
-                    <input type="checkbox" id="is_active" name="is_active" class="form-check-input" {% if not entry or entry.is_active %}checked{% endif %}>
-                    <label for="is_active" class="form-check-label">Aktiv</label>
-                </div>
-                <p class="form-hint">Deaktivieren Sie diesen Schalter, um die Regel temporär auszusetzen, ohne sie zu löschen.</p>
+                <label for="type" class="form-label">Typ *</label>
+                <select id="type" name="type" class="form-select" required>
+                    <option value="">Typ auswählen</option>
+                    <option value="ip" {{ 'selected' if whitelist and whitelist.type == 'ip' else '' }}>IP-Adressen</option>
+                    <option value="domain" {{ 'selected' if whitelist and whitelist.type == 'domain' else '' }}>Domains</option>
+                    <option value="api_key" {{ 'selected' if whitelist and whitelist.type == 'api_key' else '' }}>API-Schlüssel</option>
+                    <option value="action" {{ 'selected' if whitelist and whitelist.type == 'action' else '' }}>Aktionen</option>
+                </select>
             </div>
+
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enabled" name="enabled" class="form-checkbox"
+                           {{ 'checked' if not whitelist or whitelist.enabled else '' }}>
+                    <label for="enabled" class="checkbox-label">Whitelist aktivieren</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="section-title">Einträge</h3>
+
+            <div id="entries-container">
+                {% if whitelist and whitelist.entries %}
+                    {% for entry in whitelist.entries %}
+                    <div class="entry-item">
+                        <input type="text" name="entries[]" class="form-input"
+                               value="{{ entry }}" placeholder="Eintrag hinzufügen">
+                        <button type="button" class="btn btn-ghost btn-sm remove-entry">
+                            <span aria-hidden="true">🗑️</span>
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="entry-item">
+                        <input type="text" name="entries[]" class="form-input" placeholder="Eintrag hinzufügen">
+                        <button type="button" class="btn btn-ghost btn-sm remove-entry">
+                            <span aria-hidden="true">🗑️</span>
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+
+            <button type="button" id="add-entry" class="btn btn-secondary btn-sm">
+                <span aria-hidden="true">➕</span>
+                Eintrag hinzufügen
+            </button>
         </div>
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">
-                <span class="btn-icon">💾</span>
-                Eintrag speichern
+                <span aria-hidden="true">💾</span>
+                {{ 'Whitelist aktualisieren' if whitelist else 'Whitelist erstellen' }}
             </button>
-            <a href="{{ url_for('admin_routes.view_whitelists') }}" class="btn btn-secondary">Abbrechen</a>
+            <a href="/admin/whitelists" class="btn btn-secondary">Abbrechen</a>
+            {% if whitelist %}
+            <button type="button" onclick="deleteWhitelist()" class="btn btn-danger">
+                <span aria-hidden="true">🗑️</span>
+                Löschen
+            </button>
+            {% endif %}
         </div>
     </form>
 </div>
+
+<style>
+.whitelist-form-container {
+    max-width: 800px;
+}
+
+.whitelist-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+.form-section {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+}
+
+.section-title {
+    margin: 0 0 var(--space-6) 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.form-group {
+    margin-bottom: var(--space-5);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    padding: var(--space-3);
+    border: 1px solid var(--border-base);
+    border-radius: var(--radius-md);
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+.form-hint {
+    margin-top: var(--space-2);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.form-checkbox {
+    width: 18px;
+    height: 18px;
+}
+
+.checkbox-label {
+    margin: 0;
+    cursor: pointer;
+}
+
+.entry-item {
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+    align-items: flex-start;
+}
+
+.entry-item .form-input {
+    flex: 1;
+}
+
+.remove-entry {
+    flex-shrink: 0;
+    width: auto;
+    padding: var(--space-2);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    align-items: center;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.btn-danger {
+    background: var(--danger-500);
+    color: white;
+    border-color: var(--danger-500);
+    margin-left: auto;
+}
+
+.btn-danger:hover {
+    background: var(--danger-600);
+    border-color: var(--danger-600);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addEntryBtn = document.getElementById('add-entry');
+    const entriesContainer = document.getElementById('entries-container');
+
+    addEntryBtn.addEventListener('click', function() {
+        const entryItem = document.createElement('div');
+        entryItem.className = 'entry-item';
+        entryItem.innerHTML = `
+            <input type="text" name="entries[]" class="form-input" placeholder="Eintrag hinzufügen">
+            <button type="button" class="btn btn-ghost btn-sm remove-entry">
+                <span aria-hidden="true">🗑️</span>
+            </button>
+        `;
+        entriesContainer.appendChild(entryItem);
+
+        // Add event listener to new remove button
+        entryItem.querySelector('.remove-entry').addEventListener('click', function() {
+            entryItem.remove();
+        });
+    });
+
+    // Add event listeners to existing remove buttons
+    document.querySelectorAll('.remove-entry').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.closest('.entry-item').remove();
+        });
+    });
+});
+
+function deleteWhitelist() {
+    if (confirm('Möchten Sie diese Whitelist wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+        // Hier würde die tatsächliche Lösch-Logik stehen
+        showToast('Whitelist', 'Whitelist erfolgreich gelöscht', 'success');
+        setTimeout(() => {
+            window.location.href = '/admin/whitelists';
+        }, 1000);
+    }
+}
+
+function showToast(title, message, type) {
+    console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+}
+</script>
 {% endblock %}

@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Chronos – Event Manager v2.2 (Premium)</title>
-
+    <title>Chronos – Event Manager v2.2 (Refactored)</title>
+    
     <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
 
     <!-- Premium CSS -->
     <link rel="stylesheet" href="/static/css/chronos-premium.css">
-
+    
     <style>
         .client-container {
             display: grid;
@@ -20,10 +20,10 @@
             height: 100vh;
         }
         .client-main {
-            padding: var(--space-6);
+            padding: var(--spacing-lg);
             display: flex;
             flex-direction: column;
-            gap: var(--space-6);
+            gap: var(--spacing-lg);
             height: 100%;
             overflow: hidden;
         }
@@ -32,21 +32,17 @@
             overflow-y: auto;
             display: grid;
             grid-auto-rows: min-content;
-            gap: var(--space-4);
+            gap: var(--spacing-md);
         }
         .template-list-item {
             cursor: pointer;
-            padding: var(--space-4);
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-subtle);
-            background: var(--surface-primary);
-            transition: all var(--duration-fast) var(--ease-out);
+            padding: var(--spacing-sm);
+            border-radius: var(--border-radius-md);
+            border: 1px solid transparent;
         }
         .template-list-item:hover {
-            background: var(--state-hover);
-            border-color: var(--border-base);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-sm);
+            background-color: var(--surface-hover);
+            border-color: var(--border);
         }
     </style>
 </head>
@@ -91,23 +87,20 @@
     </aside>
 
     <main class="client-main">
-        <header class="header">
-            <div class="header-content">
-                <div class="header-title">
-                    <h1>Events</h1>
-                    <p class="header-subtitle" id="status" role="status" aria-live="polite">Bereit</p>
-                </div>
-                <div class="header-actions">
-                    <div class="metric-card" style="padding: var(--space-3); min-width: auto;">
-                        <span class="metric-label">Events:</span>
-                        <span class="metric-value" id="kpi-count">—</span>
-                    </div>
+        <header class="navbar">
+            <div class="navbar-brand">
+                <h1 class="navbar-title">Events</h1>
+                <p class="navbar-subtitle" id="status" role="status" aria-live="polite">Bereit</p>
+            </div>
+            <div class="navbar-actions">
+                <div class="status-badge">
+                    <span>Events:</span>
+                    <span class="badge" id="kpi-count">—</span>
                 </div>
             </div>
         </header>
         <section id="list" class="events-list-container" aria-busy="false" aria-label="Eventliste">
-            <!-- Events werden hier eingefügt -->
-        </section>
+            </section>
     </main>
 </div>
 
@@ -118,9 +111,9 @@
             <h2 class="modal-title" id="tplTitle">Vorlagen</h2>
             <button id="tplClose" class="btn btn-icon modal-close" aria-label="Schließen">✕</button>
         </header>
-        <div class="modal-body" style="display: grid; grid-template-columns: 320px 1fr; gap: var(--space-6);">
+        <div class="modal-body" style="display: grid; grid-template-columns: 320px 1fr; gap: var(--spacing-lg);">
             <div class="template-sidebar">
-                <input id="tplSearch" type="text" class="form-input" placeholder="Vorlagen suchen..." style="margin-bottom: var(--space-4);">
+                <input id="tplSearch" type="text" class="form-input" placeholder="Vorlagen suchen..." style="margin-bottom: var(--spacing-md);">
                 <div class="templates-list" id="tplList" style="max-height: 60vh; overflow-y: auto;"></div>
             </div>
             <div class="template-details" id="tplDetails">
@@ -136,7 +129,7 @@
 
 <script>
 (function(){
-  // CONFIG & HELPERS
+  // CONFIG & HELPERS (bleiben größtenteils unverändert)
   const API_BASE = localStorage.getItem('chronos_api') || '/api/v1';
   const API_KEY  = localStorage.getItem('chronos_api_key') || '';
   const DEFAULT_CAL = localStorage.getItem('chronos_calendar') || 'primary';
@@ -161,7 +154,7 @@
     events: [], templates: [], selectedTemplate: null
   };
 
-  // API
+  // API (unverändert)
   async function api(path, {method='GET', params=null, body=null}={}){
     const url = new URL(API_BASE + path, window.location.origin);
     if (params) Object.entries(params).forEach(([k,v])=> (v!==undefined && v!==null && v!=='') && url.searchParams.append(k, v));
@@ -208,7 +201,7 @@
       listEl.innerHTML = `<div class="placeholder-text">${escapeHtml(String(err.message||err))}</div>`;
     }finally{ listEl.setAttribute('aria-busy','false'); }
   }
-
+  
   async function useTemplate(id){
     try{ await api(`/templates/${id}/use`, { method:'POST' }); }
     catch(e){ console.warn('useTemplate fehlgeschlagen:', e); }
@@ -225,24 +218,24 @@
     const frag = document.createDocumentFragment();
     for (const ev of state.events){
       const item = document.createElement('div');
-      item.className = 'event-card';
+      item.className = 'list-item';
       const isAllDay = !!ev.all_day;
       const when = isAllDay ? ev.all_day_date : `${fmtDateTime(ev.start_utc)} - ${fmtDateTime(ev.end_utc)}`;
       item.innerHTML = `
-        <div class="event-details">
-            <h4 class="event-title">${escapeHtml(ev.title || '(ohne Titel)')}</h4>
-            <p class="event-meta">${escapeHtml(ev.description||'')}</p>
-            <p class="event-meta" style="color: var(--text-muted);">${when}</p>
+        <div class="list-item-info">
+            <h4 class="list-item-title">${escapeHtml(ev.title || '(ohne Titel)')}</h4>
+            <p class="list-item-meta">${escapeHtml(ev.description||'')}</p>
+            <p class="list-item-meta muted">${when}</p>
         </div>
-        <div class="event-actions">
-            <span class="priority-label ${isAllDay ? 'high' : 'medium'}">${isAllDay ? 'Ganztägig' : 'Zeitgebunden'}</span>
+        <div class="list-item-actions">
+            <span class="badge">${isAllDay ? 'Ganztägig' : 'Zeitgebunden'}</span>
         </div>
       `;
       frag.appendChild(item);
     }
     listEl.appendChild(frag);
   }
-
+  
   function renderTemplates(q=''){
     const listEl = $('#tplList'); listEl.innerHTML='';
     if (!state.templates.length){ listEl.innerHTML = `<div class="placeholder-text">Keine Vorlagen gefunden.</div>`; return; }
@@ -309,11 +302,11 @@
   // INIT
   function init(){
     const debouncedFetch = debounce(fetchEvents, 300);
-
+    
     $('#range-select').addEventListener('change', (e)=>{ state.range = e.target.value; debouncedFetch(); });
     $$('input[name="direction"]').forEach(r => r.addEventListener('change', (e)=>{ state.direction = e.target.value; debouncedFetch(); }));
     $('#search-input').addEventListener('input', debounce((e)=>{ state.q = e.target.value; fetchEvents(); }, 300));
-
+    
     $('#btn-templates').addEventListener('click', openTemplates);
     $('#tplClose').addEventListener('click', closeTemplates);
     dlg.querySelector('.modal-backdrop').addEventListener('click', closeTemplates);

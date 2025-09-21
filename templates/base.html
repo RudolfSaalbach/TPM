@@ -3,162 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Chronos Engine - Dashboard{% endblock %}</title>
+    <title>{% block title %}Chronos Engine{% endblock %}</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', path='css/chronos.css') }}">
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Premium CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/chronos-premium.css') }}">
 
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
 
     {% block extra_head %}{% endblock %}
 </head>
 <body>
+    <!-- Skip Link für Barrierefreiheit -->
+    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+
     <div class="app-container">
-        <div class="sidebar" id="sidebar">
+        <!-- Sidebar Overlay für Mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar" role="navigation" aria-label="Hauptnavigation">
             <div class="sidebar-header">
                 <a href="/" class="logo">
-                    <div class="logo-icon">C</div>
-                    <span class="logo-text">chronos</span>
+                    <div class="logo-icon" aria-hidden="true">⏰</div>
+                    <span class="logo-text">Chronos</span>
                 </a>
             </div>
 
-            <nav class="sidebar-nav">
-                <a href="/dashboard" class="nav-item {% if request.url.path == '/dashboard' or request.url.path == '/' %}active{% endif %}">
-                    <span class="nav-item-icon">📊</span>
-                    <span class="nav-item-text">Übersicht</span>
+            <div class="sidebar-nav">
+                <a href="/dashboard" class="nav-item {% if request.url.path == '/dashboard' or request.url.path == '/' %}active{% endif %}" {% if request.url.path == '/dashboard' or request.url.path == '/' %}aria-current="page"{% endif %}>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Dashboard">📊</span>
+                    <span>Dashboard</span>
                 </a>
-                <a href="/calendar" class="nav-item {% if request.url.path == '/calendar' %}active{% endif %}">
-                    <span class="nav-item-icon">📅</span>
-                    <span class="nav-item-text">Kalender</span>
+                <a href="/calendar" class="nav-item {% if request.url.path == '/calendar' %}active{% endif %}" {% if request.url.path == '/calendar' %}aria-current="page"{% endif %}>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Kalender">📅</span>
+                    <span>Kalender</span>
                 </a>
-                <a href="/events" class="nav-item {% if request.url.path == '/events' %}active{% endif %}">
-                    <span class="nav-item-icon">📋</span>
-                    <span class="nav-item-text">Events</span>
+                <a href="/events" class="nav-item {% if request.url.path == '/events' %}active{% endif %}" {% if request.url.path == '/events' %}aria-current="page"{% endif %}>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Events">📋</span>
+                    <span>Events</span>
                 </a>
-                <a href="/analytics" class="nav-item {% if request.url.path == '/analytics' %}active{% endif %}">
-                    <span class="nav-item-icon">📈</span>
-                    <span class="nav-item-text">Analytics</span>
+                <a href="/analytics" class="nav-item {% if request.url.path == '/analytics' %}active{% endif %}" {% if request.url.path == '/analytics' %}aria-current="page"{% endif %}>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Analytics">📈</span>
+                    <span>Analytics</span>
                 </a>
-                <a href="/sync" class="nav-item {% if request.url.path == '/sync' %}active{% endif %}">
-                    <span class="nav-item-icon">🔄</span>
-                    <span class="nav-item-text">Sync</span>
+                <a href="/sync" class="nav-item {% if request.url.path == '/sync' %}active{% endif %}" {% if request.url.path == '/sync' %}aria-current="page"{% endif %}>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Sync">🔄</span>
+                    <span>Sync</span>
                 </a>
-                <a href="/settings" class="nav-item {% if request.url.path == '/settings' %}active{% endif %}">
-                    <span class="nav-item-icon">⚙️</span>
-                    <span class="nav-item-text">Einstellungen</span>
+                <a href="/settings" class="nav-item {% if request.url.path == '/settings' %}active{% endif %}" {% if request.url.path == '/settings' %}aria-current="page"{% endif %}>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Einstellungen">⚙️</span>
+                    <span>Einstellungen</span>
                 </a>
-                <a href="/admin" class="nav-item {% if request.url.path.startswith('/admin') %}active{% endif %}">
-                    <span class="nav-item-icon">🔧</span>
-                    <span class="nav-item-text">Admin</span>
+                <a href="/admin" class="nav-item {% if request.url.path.startswith('/admin') %}active{% endif %}" {% if request.url.path.startswith('/admin') %}aria-current="page"{% endif %}>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Admin">🔧</span>
+                    <span>Admin</span>
                 </a>
-            </nav>
-        </div>
+            </div>
+        </nav>
 
-        <div class="main-content">
-            <nav class="navbar">
-                <div class="navbar-brand">
-                    <h1 class="navbar-title">{% block page_title %}Dashboard{% endblock %}</h1>
-                    <p class="navbar-subtitle">{% block page_subtitle %}Chronos Engine - Kalender Management System{% endblock %}</p>
-                </div>
-
-                <div class="navbar-actions">
-                    <button class="btn btn-secondary" onclick="toggleSidebar()">
-                        <span>☰</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="refreshDashboard()">
-                        <span>🔄</span>
-                        Aktualisieren
-                    </button>
-                    <button class="btn btn-primary" onclick="syncCalendar()">
-                        <span>⚡</span>
-                        Sync starten
-                    </button>
-                    <div class="status-badge" id="connectionStatus">
-                        <span class="status-indicator active"></span>
-                        Online
+        <!-- Main Content Area -->
+        <main class="main-content" id="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    <div class="header-title">
+                        <h1>{% block page_title %}{% endblock %}</h1>
+                        <p class="header-subtitle">{% block page_subtitle %}{% endblock %}</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="toggleSidebar()" aria-label="Seitenleiste umschalten">
+                            <span aria-hidden="true">☰</span>
+                        </button>
+                        {% block header_actions %}{% endblock %}
                     </div>
                 </div>
-            </nav>
+            </header>
 
+            <!-- Page Content -->
             <div class="dashboard-content">
                 {% block content %}{% endblock %}
             </div>
-        </div>
+        </main>
     </div>
 
-    <div class="toast-container" id="toastContainer"></div>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer" role="region" aria-live="polite" aria-label="Benachrichtigungen"></div>
 
-    <div class="modal-overlay" id="loadingOverlay" style="display: none;">
+    <!-- Loading Overlay -->
+    <div class="modal-overlay" id="loadingOverlay" style="display: none;" aria-hidden="true">
         <div class="spinner"></div>
     </div>
 
-    <script src="{{ url_for('static', path='js/main.js') }}"></script>
-    <script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
-    {% block extra_scripts %}{% endblock %}
-
+    <!-- JavaScript -->
     <script>
-        // Global functions for the modern interface
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('collapsed');
-            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-        }
+        // Globale Variablen
+        let sidebarOpen = false;
 
-        function loadSidebarState() {
-            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-            if (isCollapsed) {
-                document.getElementById('sidebar').classList.add('collapsed');
+        // DOM Content Loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+        });
+
+        // App Initialization
+        function initializeApp() {
+            loadSidebarState();
+
+            // ARIA-Unterstützung für Toast-Container
+            const toastContainer = document.getElementById('toastContainer');
+            if (toastContainer) {
+                toastContainer.setAttribute('aria-live', 'polite');
+                toastContainer.setAttribute('aria-atomic', 'true');
             }
         }
 
-        function refreshDashboard() {
-            showLoading();
-            window.location.reload();
-        }
+        // Event Listeners Setup
+        function setupEventListeners() {
+            // Keyboard Navigation
+            document.addEventListener('keydown', handleKeyboardNavigation);
 
-        function syncCalendar() {
-            showToast('Synchronisation gestartet', 'Kalender wird synchronisiert...', 'info');
-            fetch('/api/v1/sync/incremental', {
-                method: 'POST',
-                headers: {
-                    'X-API-Key': 'super-secret-change-me',
-                    'Content-Type': 'application/json'
+            // Escape key für Modals
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeSidebar();
                 }
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    showToast('Sync erfolgreich', data.message || 'Kalender wurde erfolgreich synchronisiert', 'success');
-                })
-                .catch(error => {
-                    console.error('Sync error:', error);
-                    showToast('Sync Fehler', 'Synchronisation fehlgeschlagen: ' + error.message, 'error');
-                });
+            });
+
+            // Responsive Sidebar
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768 && sidebarOpen) {
+                    closeSidebar();
+                }
+            });
         }
 
+        // Keyboard Navigation
+        function handleKeyboardNavigation(e) {
+            // Alt + M: Toggle Sidebar
+            if (e.altKey && e.key === 'm') {
+                e.preventDefault();
+                toggleSidebar();
+            }
+        }
+
+        // Sidebar Functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (window.innerWidth <= 768) {
+                sidebarOpen = !sidebarOpen;
+                sidebar.classList.toggle('open', sidebarOpen);
+                overlay.classList.toggle('open', sidebarOpen);
+
+                // ARIA
+                sidebar.setAttribute('aria-hidden', !sidebarOpen);
+
+                // Focus Management
+                if (sidebarOpen) {
+                    sidebar.querySelector('.nav-item').focus();
+                }
+            }
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            sidebarOpen = false;
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            sidebar.setAttribute('aria-hidden', 'true');
+        }
+
+        function loadSidebarState() {
+            // Load nur für Desktop relevant
+            if (window.innerWidth > 768) {
+                const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                if (isCollapsed) {
+                    document.querySelector('.app-container').classList.add('sidebar-collapsed');
+                }
+            }
+        }
+
+        // Utility Functions
         function showLoading() {
-            document.getElementById('loadingOverlay').style.display = 'flex';
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                overlay.setAttribute('aria-hidden', 'false');
+            }
         }
 
         function hideLoading() {
-            document.getElementById('loadingOverlay').style.display = 'none';
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+                overlay.setAttribute('aria-hidden', 'true');
+            }
         }
 
+        // Toast System
         function showToast(title, message, type = 'info') {
             const toastContainer = document.getElementById('toastContainer') || createToastContainer();
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
-
-            const toastId = 'toast_' + Date.now();
-            toast.id = toastId;
+            toast.setAttribute('role', 'alert');
 
             toast.innerHTML = `
                 <div class="toast-header">
                     <h4 class="toast-title">${title}</h4>
-                    <button class="toast-close" onclick="removeToast(document.getElementById('${toastId}'))">×</button>
+                    <button class="toast-close" onclick="removeToast(this.parentElement.parentElement)" aria-label="Benachrichtigung schließen">
+                        <span aria-hidden="true">×</span>
+                    </button>
                 </div>
                 <div class="toast-body">${message}</div>
             `;
@@ -180,6 +249,9 @@
             const container = document.createElement('div');
             container.id = 'toastContainer';
             container.className = 'toast-container';
+            container.setAttribute('role', 'region');
+            container.setAttribute('aria-live', 'polite');
+            container.setAttribute('aria-label', 'Benachrichtigungen');
             document.body.appendChild(container);
             return container;
         }
@@ -194,11 +266,8 @@
                 }, 400);
             }
         }
-
-        // Load sidebar state on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadSidebarState();
-        });
     </script>
+
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,2073 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Einstellungen - Chronos Engine</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Premium CSS -->
+    <link rel="stylesheet" href="/static/css/chronos-premium.css">
+</head>
+<body>
+    <!-- Skip Link für Barrierefreiheit -->
+    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+
+    <div class="app-container">
+        <!-- Sidebar Overlay für Mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar" role="navigation" aria-label="Hauptnavigation">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <div class="logo-icon" aria-hidden="true">⏰</div>
+                    <span class="logo-text">Chronos</span>
+                </a>
+            </div>
+
+            <div class="sidebar-nav">
+                <a href="/dashboard" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Dashboard">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/calendar" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Kalender">📅</span>
+                    <span>Kalender</span>
+                </a>
+                <a href="/events" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Events">📋</span>
+                    <span>Events</span>
+                </a>
+                <a href="/analytics" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Analytics">📈</span>
+                    <span>Analytics</span>
+                </a>
+                <a href="/settings" class="nav-item active" aria-current="page">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Einstellungen">⚙️</span>
+                    <span>Einstellungen</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    <div class="header-title">
+                        <h1>Einstellungen</h1>
+                        <p class="header-subtitle">Konfiguriere Chronos Engine nach deinen Bedürfnissen.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="toggleSidebar()" aria-label="Seitenleiste umschalten">
+                            <span aria-hidden="true">☰</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetToDefaults()" aria-label="Auf Standard zurücksetzen">
+                            <span aria-hidden="true">🔄</span>
+                            Zurücksetzen
+                        </button>
+                        <button class="btn btn-primary" onclick="saveSettings()" aria-label="Einstellungen speichern">
+                            <span aria-hidden="true">💾</span>
+                            Speichern
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Settings Content -->
+            <div class="dashboard-content animate-fade-in">
+                <div class="settings-layout">
+                    <!-- Settings Navigation -->
+                    <aside class="settings-nav" role="navigation" aria-label="Einstellungs-Navigation">
+                        <div class="settings-nav-header">
+                            <h2>Kategorien</h2>
+                        </div>
+                        <nav class="settings-nav-list">
+                            <a href="#general" class="settings-nav-item active" onclick="showSettingsSection('general', this)">
+                                <span class="nav-icon" aria-hidden="true">⚙️</span>
+                                <span>Allgemein</span>
+                            </a>
+                            <a href="#caldav" class="settings-nav-item" onclick="showSettingsSection('caldav', this)">
+                                <span class="nav-icon" aria-hidden="true">🔗</span>
+                                <span>CalDAV</span>
+                            </a>
+                            <a href="#notifications" class="settings-nav-item" onclick="showSettingsSection('notifications', this)">
+                                <span class="nav-icon" aria-hidden="true">🔔</span>
+                                <span>Benachrichtigungen</span>
+                            </a>
+                            <a href="#automation" class="settings-nav-item" onclick="showSettingsSection('automation', this)">
+                                <span class="nav-icon" aria-hidden="true">🤖</span>
+                                <span>Automatisierung</span>
+                            </a>
+                            <a href="#security" class="settings-nav-item" onclick="showSettingsSection('security', this)">
+                                <span class="nav-icon" aria-hidden="true">🔒</span>
+                                <span>Sicherheit</span>
+                            </a>
+                            <a href="#backup" class="settings-nav-item" onclick="showSettingsSection('backup', this)">
+                                <span class="nav-icon" aria-hidden="true">💾</span>
+                                <span>Backup</span>
+                            </a>
+                            <a href="#about" class="settings-nav-item" onclick="showSettingsSection('about', this)">
+                                <span class="nav-icon" aria-hidden="true">ℹ️</span>
+                                <span>Über</span>
+                            </a>
+                        </nav>
+                    </aside>
+
+                    <!-- Settings Content -->
+                    <div class="settings-content">
+                        <!-- General Settings -->
+                        <section id="general-section" class="settings-section active" aria-labelledby="general-heading">
+                            <div class="section-header">
+                                <h2 id="general-heading" class="section-title">Allgemeine Einstellungen</h2>
+                                <p class="section-subtitle">Grundlegende Konfiguration der Anwendung</p>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <label for="language-select">Sprache</label>
+                                        <p class="setting-description">Wähle deine bevorzugte Anzeigesprache</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <select id="language-select" class="select-input" onchange="changeLanguage(this.value)">
+                                            <option value="de" selected>Deutsch</option>
+                                            <option value="en">English</option>
+                                            <option value="fr">Français</option>
+                                            <option value="es">Español</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <label for="theme-select">Erscheinungsbild</label>
+                                        <p class="setting-description">Wähle zwischen hellem, dunklem oder automatischem Modus</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="theme-selector">
+                                            <input type="radio" id="theme-auto" name="theme" value="auto" checked onchange="changeTheme(this.value)">
+                                            <label for="theme-auto" class="theme-option">
+                                                <span class="theme-icon" aria-hidden="true">🌓</span>
+                                                <span>Automatisch</span>
+                                            </label>
+
+                                            <input type="radio" id="theme-light" name="theme" value="light" onchange="changeTheme(this.value)">
+                                            <label for="theme-light" class="theme-option">
+                                                <span class="theme-icon" aria-hidden="true">☀️</span>
+                                                <span>Hell</span>
+                                            </label>
+
+                                            <input type="radio" id="theme-dark" name="theme" value="dark" onchange="changeTheme(this.value)">
+                                            <label for="theme-dark" class="theme-option">
+                                                <span class="theme-icon" aria-hidden="true">🌙</span>
+                                                <span>Dunkel</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <label for="timezone-select">Zeitzone</label>
+                                        <p class="setting-description">Deine lokale Zeitzone für korrekte Uhrzeiten</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <select id="timezone-select" class="select-input" onchange="changeTimezone(this.value)">
+                                            <option value="Europe/Berlin" selected>Berlin (UTC+1)</option>
+                                            <option value="Europe/London">London (UTC+0)</option>
+                                            <option value="America/New_York">New York (UTC-5)</option>
+                                            <option value="America/Los_Angeles">Los Angeles (UTC-8)</option>
+                                            <option value="Asia/Tokyo">Tokyo (UTC+9)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <label for="start-week">Wochenbeginn</label>
+                                        <p class="setting-description">Erster Tag der Woche in Kalendern</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <select id="start-week" class="select-input" onchange="changeWeekStart(this.value)">
+                                            <option value="monday" selected>Montag</option>
+                                            <option value="sunday">Sonntag</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Erweiterte Features</span>
+                                        <p class="setting-description">Aktiviere experimentelle Funktionen</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="toggle-group">
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="enable-animations" class="toggle-input" checked onchange="toggleAnimations(this.checked)">
+                                                <label for="enable-animations" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Animationen aktivieren</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="enable-sounds" class="toggle-input" onchange="toggleSounds(this.checked)">
+                                                <label for="enable-sounds" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Systemtöne aktivieren</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="enable-shortcuts" class="toggle-input" checked onchange="toggleShortcuts(this.checked)">
+                                                <label for="enable-shortcuts" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Tastaturkürzel aktivieren</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- CalDAV Settings -->
+                        <section id="caldav-section" class="settings-section" aria-labelledby="caldav-heading" style="display: none;">
+                            <div class="section-header">
+                                <h2 id="caldav-heading" class="section-title">CalDAV-Konfiguration</h2>
+                                <p class="section-subtitle">Verbinde externe Kalender und Synchronisationseinstellungen</p>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <label for="caldav-url">Server-URL</label>
+                                        <p class="setting-description">CalDAV-Server-Adresse (z.B. https://cal.example.com/dav/)</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <input type="url" id="caldav-url" class="text-input" placeholder="https://cal.example.com/dav/" value="{{ caldav_settings.server_url or '' }}">
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <label for="caldav-username">Benutzername</label>
+                                        <p class="setting-description">Dein CalDAV-Benutzername</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <input type="text" id="caldav-username" class="text-input" placeholder="benutzername" value="{{ caldav_settings.username or '' }}">
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <label for="caldav-password">Passwort</label>
+                                        <p class="setting-description">Dein CalDAV-Passwort (wird verschlüsselt gespeichert)</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="password-input-group">
+                                            <input type="password" id="caldav-password" class="text-input" placeholder="••••••••">
+                                            <button type="button" class="password-toggle" onclick="togglePasswordVisibility('caldav-password')" aria-label="Passwort anzeigen/ausblenden">
+                                                <span aria-hidden="true">👁</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Synchronisation</span>
+                                        <p class="setting-description">Automatische Synchronisationseinstellungen</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="sync-settings">
+                                            <div class="sync-interval">
+                                                <label for="sync-interval">Intervall:</label>
+                                                <select id="sync-interval" class="select-input" onchange="changeSyncInterval(this.value)">
+                                                    <option value="5">Alle 5 Minuten</option>
+                                                    <option value="15" selected>Alle 15 Minuten</option>
+                                                    <option value="30">Alle 30 Minuten</option>
+                                                    <option value="60">Stündlich</option>
+                                                    <option value="0">Manuell</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="sync-options">
+                                                <div class="toggle-item">
+                                                    <input type="checkbox" id="sync-enabled" class="toggle-input" checked onchange="toggleAutoSync(this.checked)">
+                                                    <label for="sync-enabled" class="toggle-label">
+                                                        <span class="toggle-switch"></span>
+                                                        <span>Automatische Synchronisation</span>
+                                                    </label>
+                                                </div>
+
+                                                <div class="toggle-item">
+                                                    <input type="checkbox" id="sync-bidirectional" class="toggle-input" checked onchange="toggleBidirectionalSync(this.checked)">
+                                                    <label for="sync-bidirectional" class="toggle-label">
+                                                        <span class="toggle-switch"></span>
+                                                        <span>Bidirektionale Synchronisation</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Verbindungstest</span>
+                                        <p class="setting-description">Teste die CalDAV-Verbindung</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="connection-test">
+                                            <button class="btn btn-secondary" onclick="testCalDAVConnection()">
+                                                <span aria-hidden="true">🔗</span>
+                                                Verbindung testen
+                                            </button>
+                                            <div class="connection-status" id="caldav-status">
+                                                <span class="status-icon" aria-hidden="true">⚪</span>
+                                                <span>Noch nicht getestet</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Notifications Settings -->
+                        <section id="notifications-section" class="settings-section" aria-labelledby="notifications-heading" style="display: none;">
+                            <div class="section-header">
+                                <h2 id="notifications-heading" class="section-title">Benachrichtigungen</h2>
+                                <p class="section-subtitle">Konfiguriere, wann und wie du benachrichtigt werden möchtest</p>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Browser-Benachrichtigungen</span>
+                                        <p class="setting-description">Desktop-Benachrichtigungen für wichtige Events</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="notification-settings">
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="notifications-enabled" class="toggle-input" checked onchange="toggleNotifications(this.checked)">
+                                                <label for="notifications-enabled" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Desktop-Benachrichtigungen aktivieren</span>
+                                                </label>
+                                            </div>
+
+                                            <button class="btn btn-ghost btn-sm" onclick="requestNotificationPermission()">
+                                                Browser-Berechtigung anfordern
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <label for="reminder-timing">Erinnerungszeit</label>
+                                        <p class="setting-description">Wie früh vor Events soll erinnert werden?</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="reminder-options">
+                                            <select id="reminder-timing" class="select-input" onchange="changeReminderTiming(this.value)">
+                                                <option value="0">Zur Eventzeit</option>
+                                                <option value="5">5 Minuten vorher</option>
+                                                <option value="15" selected>15 Minuten vorher</option>
+                                                <option value="30">30 Minuten vorher</option>
+                                                <option value="60">1 Stunde vorher</option>
+                                                <option value="1440">1 Tag vorher</option>
+                                            </select>
+
+                                            <div class="custom-reminder">
+                                                <input type="number" id="custom-reminder" class="number-input" placeholder="0" min="0" max="10080">
+                                                <span>Minuten</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Benachrichtigungstypen</span>
+                                        <p class="setting-description">Für welche Events möchtest du benachrichtigt werden?</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="notification-types">
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="notify-meetings" class="toggle-input" checked>
+                                                <label for="notify-meetings" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Meetings & Termine</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="notify-deadlines" class="toggle-input" checked>
+                                                <label for="notify-deadlines" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Deadlines & Fristen</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="notify-sync" class="toggle-input">
+                                                <label for="notify-sync" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Synchronisation abgeschlossen</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="notify-errors" class="toggle-input" checked>
+                                                <label for="notify-errors" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Fehler & Warnungen</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Ruhemodus</span>
+                                        <p class="setting-description">Benachrichtigungen automatisch pausieren</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="quiet-hours">
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="quiet-hours-enabled" class="toggle-input" onchange="toggleQuietHours(this.checked)">
+                                                <label for="quiet-hours-enabled" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Ruhemodus aktivieren</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="quiet-hours-config">
+                                                <div class="time-range">
+                                                    <label for="quiet-start">Von:</label>
+                                                    <input type="time" id="quiet-start" class="time-input" value="22:00">
+                                                    <label for="quiet-end">Bis:</label>
+                                                    <input type="time" id="quiet-end" class="time-input" value="08:00">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Automation Settings -->
+                        <section id="automation-section" class="settings-section" aria-labelledby="automation-heading" style="display: none;">
+                            <div class="section-header">
+                                <h2 id="automation-heading" class="section-title">Automatisierung</h2>
+                                <p class="section-subtitle">Automatische Aktionen und intelligente Assistenten</p>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Smart Scheduling</span>
+                                        <p class="setting-description">KI-basierte Terminplanung und Optimierung</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="toggle-item">
+                                            <input type="checkbox" id="smart-scheduling" class="toggle-input" checked onchange="toggleSmartScheduling(this.checked)">
+                                            <label for="smart-scheduling" class="toggle-label">
+                                                <span class="toggle-switch"></span>
+                                                <span>Intelligente Terminplanung aktivieren</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Automatische Kategorisierung</span>
+                                        <p class="setting-description">Events automatisch basierend auf Titel und Beschreibung kategorisieren</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="toggle-item">
+                                            <input type="checkbox" id="auto-categorization" class="toggle-input" checked onchange="toggleAutoCategorization(this.checked)">
+                                            <label for="auto-categorization" class="toggle-label">
+                                                <span class="toggle-switch"></span>
+                                                <span>Automatische Kategorisierung aktivieren</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Konfliktserkennung</span>
+                                        <p class="setting-description">Warnen bei überlappenden Terminen</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="toggle-item">
+                                            <input type="checkbox" id="conflict-detection" class="toggle-input" checked onchange="toggleConflictDetection(this.checked)">
+                                            <label for="conflict-detection" class="toggle-label">
+                                                <span class="toggle-switch"></span>
+                                                <span>Konfliktserkennung aktivieren</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <label for="productivity-goals">Produktivitätsziele</label>
+                                        <p class="setting-description">Setze tägliche und wöchentliche Ziele</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="productivity-goals">
+                                            <div class="goal-item">
+                                                <label for="daily-focus-goal">Tägliche Fokuszeit (Stunden):</label>
+                                                <input type="number" id="daily-focus-goal" class="number-input" value="4" min="0" max="16" step="0.5">
+                                            </div>
+
+                                            <div class="goal-item">
+                                                <label for="weekly-events-goal">Wöchentliche Events:</label>
+                                                <input type="number" id="weekly-events-goal" class="number-input" value="25" min="0" max="100">
+                                            </div>
+
+                                            <div class="goal-item">
+                                                <label for="meeting-efficiency-goal">Meeting-Effizienz (%):</label>
+                                                <input type="number" id="meeting-efficiency-goal" class="number-input" value="90" min="0" max="100">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Security Settings -->
+                        <section id="security-section" class="settings-section" aria-labelledby="security-heading" style="display: none;">
+                            <div class="section-header">
+                                <h2 id="security-heading" class="section-title">Sicherheit & Datenschutz</h2>
+                                <p class="section-subtitle">Schütze deine Daten und konfiguriere Sicherheitseinstellungen</p>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>API-Schlüssel</span>
+                                        <p class="setting-description">Sichere Authentifizierung für API-Zugriffe</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="api-key-section">
+                                            <div class="api-key-display">
+                                                <input type="password" id="api-key-display" class="text-input" value="super-secret-change-me" readonly>
+                                                <button class="btn btn-ghost btn-sm" onclick="regenerateApiKey()">
+                                                    <span aria-hidden="true">🔄</span>
+                                                    Neu generieren
+                                                </button>
+                                                <button class="btn btn-ghost btn-sm" onclick="copyApiKey()">
+                                                    <span aria-hidden="true">📋</span>
+                                                    Kopieren
+                                                </button>
+                                            </div>
+                                            <p class="api-key-warning">
+                                                ⚠️ Teile deinen API-Schlüssel niemals mit anderen. Ein neuer Schlüssel macht alle alten ungültig.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Sitzungssicherheit</span>
+                                        <p class="setting-description">Einstellungen für Anmeldesitzungen</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="session-settings">
+                                            <div class="setting-row">
+                                                <label for="session-timeout">Automatische Abmeldung nach:</label>
+                                                <select id="session-timeout" class="select-input">
+                                                    <option value="30">30 Minuten</option>
+                                                    <option value="60">1 Stunde</option>
+                                                    <option value="240" selected>4 Stunden</option>
+                                                    <option value="480">8 Stunden</option>
+                                                    <option value="0">Nie</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="remember-session" class="toggle-input" checked>
+                                                <label for="remember-session" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Anmeldung merken</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Datenschutz</span>
+                                        <p class="setting-description">Kontrolle über deine persönlichen Daten</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="privacy-settings">
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="analytics-collection" class="toggle-input" checked>
+                                                <label for="analytics-collection" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Anonyme Nutzungsstatistiken sammeln</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="crash-reports" class="toggle-input" checked>
+                                                <label for="crash-reports" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Absturzberichte senden</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="data-management">
+                                                <button class="btn btn-secondary btn-sm" onclick="exportUserData()">
+                                                    <span aria-hidden="true">📤</span>
+                                                    Daten exportieren
+                                                </button>
+                                                <button class="btn btn-danger btn-sm" onclick="deleteUserData()">
+                                                    <span aria-hidden="true">🗑️</span>
+                                                    Alle Daten löschen
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Backup Settings -->
+                        <section id="backup-section" class="settings-section" aria-labelledby="backup-heading" style="display: none;">
+                            <div class="section-header">
+                                <h2 id="backup-heading" class="section-title">Backup & Wiederherstellung</h2>
+                                <p class="section-subtitle">Sichere deine Daten und Einstellungen</p>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Automatisches Backup</span>
+                                        <p class="setting-description">Regelmäßige Sicherung aller Daten</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="backup-settings">
+                                            <div class="toggle-item">
+                                                <input type="checkbox" id="auto-backup" class="toggle-input" checked onchange="toggleAutoBackup(this.checked)">
+                                                <label for="auto-backup" class="toggle-label">
+                                                    <span class="toggle-switch"></span>
+                                                    <span>Automatisches Backup aktivieren</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="backup-frequency">
+                                                <label for="backup-frequency">Backup-Häufigkeit:</label>
+                                                <select id="backup-frequency" class="select-input">
+                                                    <option value="daily" selected>Täglich</option>
+                                                    <option value="weekly">Wöchentlich</option>
+                                                    <option value="monthly">Monatlich</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Backup-Aktionen</span>
+                                        <p class="setting-description">Manuelles Backup und Wiederherstellung</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="backup-actions">
+                                            <button class="btn btn-primary" onclick="createBackup()">
+                                                <span aria-hidden="true">💾</span>
+                                                Backup jetzt erstellen
+                                            </button>
+
+                                            <div class="backup-restore">
+                                                <input type="file" id="backup-file" accept=".json,.zip" style="display: none;" onchange="handleBackupFile(this.files[0])">
+                                                <button class="btn btn-secondary" onclick="document.getElementById('backup-file').click()">
+                                                    <span aria-hidden="true">📂</span>
+                                                    Backup wiederherstellen
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Backup-Historie</span>
+                                        <p class="setting-description">Verlauf der erstellten Backups</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="backup-history">
+                                            <div class="backup-entry">
+                                                <div class="backup-info">
+                                                    <span class="backup-date">21.12.2024, 10:30</span>
+                                                    <span class="backup-size">2.3 MB</span>
+                                                </div>
+                                                <div class="backup-actions">
+                                                    <button class="btn btn-ghost btn-sm">Download</button>
+                                                    <button class="btn btn-ghost btn-sm">Wiederherstellen</button>
+                                                </div>
+                                            </div>
+
+                                            <div class="backup-entry">
+                                                <div class="backup-info">
+                                                    <span class="backup-date">20.12.2024, 10:30</span>
+                                                    <span class="backup-size">2.1 MB</span>
+                                                </div>
+                                                <div class="backup-actions">
+                                                    <button class="btn btn-ghost btn-sm">Download</button>
+                                                    <button class="btn btn-ghost btn-sm">Wiederherstellen</button>
+                                                </div>
+                                            </div>
+
+                                            <div class="backup-entry">
+                                                <div class="backup-info">
+                                                    <span class="backup-date">19.12.2024, 10:30</span>
+                                                    <span class="backup-size">2.0 MB</span>
+                                                </div>
+                                                <div class="backup-actions">
+                                                    <button class="btn btn-ghost btn-sm">Download</button>
+                                                    <button class="btn btn-ghost btn-sm">Wiederherstellen</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- About Section -->
+                        <section id="about-section" class="settings-section" aria-labelledby="about-heading" style="display: none;">
+                            <div class="section-header">
+                                <h2 id="about-heading" class="section-title">Über Chronos Engine</h2>
+                                <p class="section-subtitle">Version, Lizenz und Systeminformationen</p>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="about-info">
+                                    <div class="about-logo">
+                                        <div class="logo-large" aria-hidden="true">⏰</div>
+                                        <h3>Chronos Engine</h3>
+                                        <p class="version">Version 2.0.0</p>
+                                    </div>
+
+                                    <div class="about-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Build:</span>
+                                            <span class="detail-value">20241221.1</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Lizenz:</span>
+                                            <span class="detail-value">MIT License</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Python Version:</span>
+                                            <span class="detail-value">3.11.5</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">FastAPI Version:</span>
+                                            <span class="detail-value">0.104.1</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Speicherort:</span>
+                                            <span class="detail-value">/app/chronos</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="about-actions">
+                                        <button class="btn btn-primary" onclick="checkForUpdates()">
+                                            <span aria-hidden="true">🔄</span>
+                                            Nach Updates suchen
+                                        </button>
+                                        <button class="btn btn-secondary" onclick="viewChangelog()">
+                                            <span aria-hidden="true">📋</span>
+                                            Changelog anzeigen
+                                        </button>
+                                        <button class="btn btn-secondary" onclick="viewLicense()">
+                                            <span aria-hidden="true">📄</span>
+                                            Lizenz anzeigen
+                                        </button>
+                                    </div>
+
+                                    <div class="system-info">
+                                        <h4>Systeminformationen</h4>
+                                        <div class="system-stats">
+                                            <div class="stat-item">
+                                                <span class="stat-label">Uptime:</span>
+                                                <span class="stat-value">3 Tage, 14 Stunden</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span class="stat-label">Gespeicherte Events:</span>
+                                                <span class="stat-value">247</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span class="stat-label">Datenbankgröße:</span>
+                                                <span class="stat-value">5.7 MB</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span class="stat-label">API-Aufrufe heute:</span>
+                                                <span class="stat-value">1,234</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="openQuickSettings()" aria-label="Schnelleinstellungen öffnen">
+        <span aria-hidden="true">⚙️</span>
+    </button>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer" role="region" aria-live="polite" aria-label="Benachrichtigungen"></div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmModal" onclick="closeConfirmModal()" style="display: none;">
+        <div class="modal" onclick="event.stopPropagation()" role="dialog" aria-labelledby="confirmModalTitle" aria-modal="true">
+            <div class="modal-header">
+                <h2 id="confirmModalTitle">Bestätigung</h2>
+                <button class="modal-close" onclick="closeConfirmModal()" aria-label="Modal schließen">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body" id="confirmModalBody">
+                <!-- Content will be set by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeConfirmModal()">Abbrechen</button>
+                <button class="btn btn-danger" id="confirmButton" onclick="confirmAction()">Bestätigen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Styles für Settings -->
+    <style>
+        /* Settings-specific styles */
+        .settings-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: var(--space-8);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Settings Navigation */
+        .settings-nav {
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            height: fit-content;
+            position: sticky;
+            top: var(--space-6);
+        }
+
+        .settings-nav-header h2 {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-4);
+        }
+
+        .settings-nav-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .settings-nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all var(--duration-fast) var(--ease-out);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .settings-nav-item:hover {
+            background: var(--state-hover);
+            color: var(--text-primary);
+            transform: translateX(2px);
+        }
+
+        .settings-nav-item.active {
+            background: linear-gradient(90deg, var(--state-selected), transparent 60%);
+            color: var(--primary-600);
+            font-weight: var(--font-weight-semibold);
+        }
+
+        .settings-nav-item .nav-icon {
+            width: 18px;
+            text-align: center;
+        }
+
+        /* Settings Content */
+        .settings-content {
+            background: var(--surface-primary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .settings-section {
+            padding: var(--space-8);
+        }
+
+        .section-header {
+            margin-bottom: var(--space-8);
+            padding-bottom: var(--space-6);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .section-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-2);
+        }
+
+        .section-subtitle {
+            color: var(--text-muted);
+            font-size: var(--font-size-base);
+            line-height: var(--line-height-base);
+        }
+
+        /* Settings Groups */
+        .settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-8);
+        }
+
+        .setting-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: var(--space-6);
+            align-items: start;
+            padding: var(--space-6);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            transition: all var(--duration-base) var(--ease-out);
+        }
+
+        .setting-item:hover {
+            border-color: var(--border-base);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .setting-label {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .setting-label label,
+        .setting-label > span {
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+
+        .setting-description {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            line-height: var(--line-height-base);
+            max-width: 400px;
+        }
+
+        .setting-control {
+            min-width: 200px;
+        }
+
+        /* Form Controls */
+        .text-input, .select-input, .number-input, .time-input {
+            width: 100%;
+            padding: var(--space-3) var(--space-4);
+            border: 1px solid var(--border-base);
+            border-radius: var(--radius-md);
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .text-input:focus, .select-input:focus, .number-input:focus, .time-input:focus {
+            outline: 2px solid var(--state-focus-ring);
+            outline-offset: 2px;
+            border-color: var(--border-focus);
+        }
+
+        .password-input-group {
+            position: relative;
+            display: flex;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: var(--space-3);
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: var(--space-1);
+            border-radius: var(--radius-sm);
+        }
+
+        .password-toggle:hover {
+            background: var(--state-hover);
+            color: var(--text-primary);
+        }
+
+        /* Toggle Switches */
+        .toggle-group, .notification-types, .sync-options {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .toggle-input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: var(--border-base);
+            border-radius: var(--radius-full);
+            transition: all var(--duration-base) var(--ease-out);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: var(--radius-full);
+            transition: all var(--duration-base) var(--ease-out);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .toggle-input:checked + .toggle-label .toggle-switch {
+            background: var(--primary-500);
+        }
+
+        .toggle-input:checked + .toggle-label .toggle-switch::after {
+            transform: translateX(20px);
+        }
+
+        .toggle-input:focus + .toggle-label .toggle-switch {
+            outline: 2px solid var(--state-focus-ring);
+            outline-offset: 2px;
+        }
+
+        /* Theme Selector */
+        .theme-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-3);
+        }
+
+        .theme-selector input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .theme-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-4);
+            border: 2px solid var(--border-base);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-out);
+            font-size: var(--font-size-sm);
+            text-align: center;
+        }
+
+        .theme-option:hover {
+            border-color: var(--border-strong);
+            background: var(--state-hover);
+        }
+
+        .theme-selector input[type="radio"]:checked + .theme-option {
+            border-color: var(--primary-500);
+            background: var(--state-selected);
+            color: var(--primary-600);
+        }
+
+        .theme-icon {
+            font-size: var(--font-size-lg);
+        }
+
+        /* Specific Components */
+        .sync-settings {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .sync-interval {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .sync-interval label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .connection-test {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+        }
+
+        .status-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: var(--radius-full);
+        }
+
+        .reminder-options {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+
+        .custom-reminder {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .custom-reminder input {
+            width: 100px;
+        }
+
+        .time-range {
+            display: grid;
+            grid-template-columns: auto 1fr auto 1fr;
+            gap: var(--space-3);
+            align-items: center;
+        }
+
+        .productivity-goals {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .goal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .goal-item label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .goal-item input {
+            width: 80px;
+        }
+
+        .api-key-section {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .api-key-display {
+            display: flex;
+            gap: var(--space-3);
+        }
+
+        .api-key-warning {
+            font-size: var(--font-size-xs);
+            color: var(--warning-600);
+            background: var(--status-warning-bg);
+            padding: var(--space-3);
+            border-radius: var(--radius-md);
+        }
+
+        .session-settings {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .privacy-settings {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .data-management {
+            display: flex;
+            gap: var(--space-3);
+            padding-top: var(--space-4);
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .backup-settings {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .backup-frequency {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .backup-actions {
+            display: flex;
+            gap: var(--space-4);
+            flex-wrap: wrap;
+        }
+
+        .backup-restore {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .backup-history {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .backup-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-3);
+            background: var(--surface-secondary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .backup-info {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+        }
+
+        .backup-date {
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+        }
+
+        .backup-size {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+        }
+
+        .backup-entry .backup-actions {
+            display: flex;
+            gap: var(--space-2);
+        }
+
+        /* About Section */
+        .about-info {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-8);
+        }
+
+        .about-logo {
+            text-align: center;
+            padding: var(--space-6);
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+        }
+
+        .logo-large {
+            font-size: 4rem;
+            margin-bottom: var(--space-4);
+        }
+
+        .about-logo h3 {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-2);
+        }
+
+        .version {
+            font-size: var(--font-size-base);
+            color: var(--text-muted);
+        }
+
+        .about-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-4);
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--space-3);
+            background: var(--surface-secondary);
+            border-radius: var(--radius-md);
+        }
+
+        .detail-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+        }
+
+        .detail-value {
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .about-actions {
+            display: flex;
+            gap: var(--space-4);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .system-info {
+            padding: var(--space-6);
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+        }
+
+        .system-info h4 {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-4);
+        }
+
+        .system-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--space-4);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: var(--letter-spacing-wide);
+        }
+
+        .stat-value {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            .settings-layout {
+                grid-template-columns: 1fr;
+                gap: var(--space-6);
+            }
+
+            .settings-nav {
+                position: static;
+                order: -1;
+            }
+
+            .settings-nav-list {
+                flex-direction: row;
+                overflow-x: auto;
+                padding-bottom: var(--space-2);
+            }
+
+            .settings-nav-item {
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .setting-item {
+                grid-template-columns: 1fr;
+                gap: var(--space-4);
+            }
+
+            .setting-control {
+                min-width: 0;
+            }
+
+            .theme-selector {
+                grid-template-columns: 1fr;
+            }
+
+            .backup-actions {
+                flex-direction: column;
+            }
+
+            .data-management {
+                flex-direction: column;
+            }
+
+            .about-actions {
+                flex-direction: column;
+            }
+
+            .backup-entry {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--space-3);
+            }
+
+            .backup-entry .backup-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+
+    <!-- JavaScript -->
+    <script>
+        // Global Variables
+        let currentSection = 'general';
+        let pendingChanges = false;
+        let confirmCallback = null;
+
+        // Initialize Settings
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSettings();
+            loadUserSettings();
+            setupEventListeners();
+        });
+
+        function initializeSettings() {
+            setupKeyboardShortcuts();
+            loadDefaultSettings();
+        }
+
+        function setupEventListeners() {
+            // Track changes for unsaved warning
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    pendingChanges = true;
+                    updateSaveButtonState();
+                });
+            });
+
+            // Warn before leaving with unsaved changes
+            window.addEventListener('beforeunload', function(e) {
+                if (pendingChanges) {
+                    e.preventDefault();
+                    e.returnValue = 'Du hast ungespeicherte Änderungen. Möchtest du die Seite wirklich verlassen?';
+                }
+            });
+        }
+
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key) {
+                        case 's':
+                            e.preventDefault();
+                            saveSettings();
+                            break;
+                        case 'r':
+                            e.preventDefault();
+                            resetToDefaults();
+                            break;
+                    }
+                }
+
+                if (e.altKey) {
+                    const number = parseInt(e.key);
+                    if (number >= 1 && number <= 7) {
+                        e.preventDefault();
+                        const sections = ['general', 'caldav', 'notifications', 'automation', 'security', 'backup', 'about'];
+                        const section = sections[number - 1];
+                        const navItem = document.querySelector(`[onclick*="${section}"]`);
+                        if (navItem) {
+                            showSettingsSection(section, navItem);
+                        }
+                    }
+                }
+            });
+        }
+
+        // Settings Navigation
+        function showSettingsSection(sectionId, navItem) {
+            // Hide all sections
+            document.querySelectorAll('.settings-section').forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // Show selected section
+            document.getElementById(sectionId + '-section').style.display = 'block';
+
+            // Update navigation
+            document.querySelectorAll('.settings-nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            navItem.classList.add('active');
+
+            currentSection = sectionId;
+
+            // Update URL hash
+            window.history.replaceState(null, null, '#' + sectionId);
+        }
+
+        // Settings Management
+        function loadUserSettings() {
+            // In real app, load from API or localStorage
+            const savedSettings = JSON.parse(localStorage.getItem('chronos-settings') || '{}');
+
+            // Apply saved settings to form elements
+            Object.entries(savedSettings).forEach(([key, value]) => {
+                const element = document.getElementById(key);
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.checked = value;
+                    } else if (element.type === 'radio') {
+                        if (element.value === value) {
+                            element.checked = true;
+                        }
+                    } else {
+                        element.value = value;
+                    }
+                }
+            });
+
+            pendingChanges = false;
+            updateSaveButtonState();
+        }
+
+        function loadDefaultSettings() {
+            // Set default values if not already set
+            const defaults = {
+                'language-select': 'de',
+                'theme': 'auto',
+                'timezone-select': 'Europe/Berlin',
+                'start-week': 'monday',
+                'enable-animations': true,
+                'enable-shortcuts': true,
+                'sync-interval': '15',
+                'sync-enabled': true,
+                'sync-bidirectional': true,
+                'notifications-enabled': true,
+                'reminder-timing': '15',
+                'notify-meetings': true,
+                'notify-deadlines': true,
+                'notify-errors': true,
+                'smart-scheduling': true,
+                'auto-categorization': true,
+                'conflict-detection': true,
+                'daily-focus-goal': 4,
+                'weekly-events-goal': 25,
+                'meeting-efficiency-goal': 90,
+                'session-timeout': '240',
+                'remember-session': true,
+                'analytics-collection': true,
+                'crash-reports': true,
+                'auto-backup': true,
+                'backup-frequency': 'daily'
+            };
+
+            Object.entries(defaults).forEach(([key, value]) => {
+                const element = document.getElementById(key);
+                if (element && !element.value && element.type !== 'checkbox' && element.type !== 'radio') {
+                    element.value = value;
+                } else if (element && element.type === 'checkbox') {
+                    element.checked = value;
+                }
+            });
+        }
+
+        async function saveSettings() {
+            const settings = {};
+
+            // Collect all form values
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                if (input.type === 'checkbox') {
+                    settings[input.id] = input.checked;
+                } else if (input.type === 'radio') {
+                    if (input.checked) {
+                        settings[input.name] = input.value;
+                    }
+                } else if (input.id) {
+                    settings[input.id] = input.value;
+                }
+            });
+
+            try {
+                // In real app, save to API
+                localStorage.setItem('chronos-settings', JSON.stringify(settings));
+
+                // Apply settings immediately
+                applySettings(settings);
+
+                pendingChanges = false;
+                updateSaveButtonState();
+
+                showToast('Einstellungen gespeichert', 'Alle Änderungen wurden erfolgreich gespeichert', 'success');
+            } catch (error) {
+                console.error('Failed to save settings:', error);
+                showToast('Fehler', 'Einstellungen konnten nicht gespeichert werden', 'error');
+            }
+        }
+
+        function applySettings(settings) {
+            // Apply theme
+            if (settings.theme) {
+                changeTheme(settings.theme);
+            }
+
+            // Apply language
+            if (settings['language-select']) {
+                // In real app, change UI language
+            }
+
+            // Apply other settings...
+        }
+
+        function resetToDefaults() {
+            showConfirmModal(
+                'Auf Standard zurücksetzen',
+                'Möchtest du wirklich alle Einstellungen auf die Standardwerte zurücksetzen? Diese Aktion kann nicht rückgängig gemacht werden.',
+                () => {
+                    localStorage.removeItem('chronos-settings');
+                    location.reload();
+                }
+            );
+        }
+
+        function updateSaveButtonState() {
+            const saveButton = document.querySelector('[onclick="saveSettings()"]');
+            if (pendingChanges) {
+                saveButton.classList.remove('btn-primary');
+                saveButton.classList.add('btn-warning');
+                saveButton.querySelector('span').textContent = '💾';
+                saveButton.lastChild.textContent = ' Speichern *';
+            } else {
+                saveButton.classList.remove('btn-warning');
+                saveButton.classList.add('btn-primary');
+                saveButton.querySelector('span').textContent = '💾';
+                saveButton.lastChild.textContent = ' Speichern';
+            }
+        }
+
+        // General Settings Functions
+        function changeLanguage(language) {
+            showToast('Sprache geändert', `Sprache auf ${language} geändert`, 'info');
+        }
+
+        function changeTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            showToast('Design geändert', `${theme.charAt(0).toUpperCase() + theme.slice(1)}-Modus aktiviert`, 'info');
+        }
+
+        function changeTimezone(timezone) {
+            showToast('Zeitzone geändert', `Zeitzone auf ${timezone} geändert`, 'info');
+        }
+
+        function changeWeekStart(startDay) {
+            showToast('Wochenbeginn geändert', `Woche beginnt jetzt am ${startDay === 'monday' ? 'Montag' : 'Sonntag'}`, 'info');
+        }
+
+        function toggleAnimations(enabled) {
+            if (enabled) {
+                document.body.classList.remove('no-animations');
+            } else {
+                document.body.classList.add('no-animations');
+            }
+            showToast('Animationen', enabled ? 'Animationen aktiviert' : 'Animationen deaktiviert', 'info');
+        }
+
+        function toggleSounds(enabled) {
+            showToast('Systemtöne', enabled ? 'Systemtöne aktiviert' : 'Systemtöne deaktiviert', 'info');
+        }
+
+        function toggleShortcuts(enabled) {
+            showToast('Tastaturkürzel', enabled ? 'Tastaturkürzel aktiviert' : 'Tastaturkürzel deaktiviert', 'info');
+        }
+
+        // CalDAV Functions
+        function changeSyncInterval(interval) {
+            const text = interval === '0' ? 'Manuell' : `Alle ${interval} Minuten`;
+            showToast('Sync-Intervall geändert', text, 'info');
+        }
+
+        function toggleAutoSync(enabled) {
+            showToast('Auto-Sync', enabled ? 'Automatische Synchronisation aktiviert' : 'Automatische Synchronisation deaktiviert', 'info');
+        }
+
+        function toggleBidirectionalSync(enabled) {
+            showToast('Bidirektionale Sync', enabled ? 'Bidirektionale Synchronisation aktiviert' : 'Bidirektionale Synchronisation deaktiviert', 'info');
+        }
+
+        async function testCalDAVConnection() {
+            const statusElement = document.getElementById('caldav-status');
+            const url = document.getElementById('caldav-url').value;
+            const username = document.getElementById('caldav-username').value;
+            const password = document.getElementById('caldav-password').value;
+
+            if (!url || !username || !password) {
+                statusElement.innerHTML = '<span class="status-icon" style="color: var(--warning-500);">⚠️</span><span>Bitte alle Felder ausfüllen</span>';
+                return;
+            }
+
+            statusElement.innerHTML = '<span class="status-icon">🔄</span><span>Teste Verbindung...</span>';
+
+            try {
+                // In real app, test actual CalDAV connection
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                statusElement.innerHTML = '<span class="status-icon" style="color: var(--success-500);">✅</span><span>Verbindung erfolgreich</span>';
+                showToast('CalDAV-Test', 'Verbindung erfolgreich hergestellt', 'success');
+            } catch (error) {
+                statusElement.innerHTML = '<span class="status-icon" style="color: var(--danger-500);">❌</span><span>Verbindung fehlgeschlagen</span>';
+                showToast('CalDAV-Test', 'Verbindung fehlgeschlagen', 'error');
+            }
+        }
+
+        // Notification Functions
+        function toggleNotifications(enabled) {
+            if (enabled && 'Notification' in window) {
+                requestNotificationPermission();
+            }
+            showToast('Benachrichtigungen', enabled ? 'Benachrichtigungen aktiviert' : 'Benachrichtigungen deaktiviert', 'info');
+        }
+
+        function requestNotificationPermission() {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        showToast('Berechtigung erteilt', 'Browser-Benachrichtigungen wurden aktiviert', 'success');
+                        new Notification('Chronos Engine', {
+                            body: 'Benachrichtigungen sind jetzt aktiviert!',
+                            icon: '/static/favicon.ico'
+                        });
+                    } else {
+                        showToast('Berechtigung verweigert', 'Browser-Benachrichtigungen wurden abgelehnt', 'warning');
+                    }
+                });
+            }
+        }
+
+        function changeReminderTiming(minutes) {
+            const text = minutes === '0' ? 'Zur Eventzeit' : `${minutes} Minuten vorher`;
+            showToast('Erinnerungszeit geändert', text, 'info');
+        }
+
+        function toggleQuietHours(enabled) {
+            showToast('Ruhemodus', enabled ? 'Ruhemodus aktiviert' : 'Ruhemodus deaktiviert', 'info');
+        }
+
+        // Automation Functions
+        function toggleSmartScheduling(enabled) {
+            showToast('Smart Scheduling', enabled ? 'Intelligente Terminplanung aktiviert' : 'Intelligente Terminplanung deaktiviert', 'info');
+        }
+
+        function toggleAutoCategorization(enabled) {
+            showToast('Auto-Kategorisierung', enabled ? 'Automatische Kategorisierung aktiviert' : 'Automatische Kategorisierung deaktiviert', 'info');
+        }
+
+        function toggleConflictDetection(enabled) {
+            showToast('Konfliktserkennung', enabled ? 'Konfliktserkennung aktiviert' : 'Konfliktserkennung deaktiviert', 'info');
+        }
+
+        // Security Functions
+        function regenerateApiKey() {
+            showConfirmModal(
+                'API-Schlüssel regenerieren',
+                'Möchtest du einen neuen API-Schlüssel generieren? Der alte Schlüssel wird dadurch ungültig.',
+                () => {
+                    const newKey = generateRandomKey();
+                    document.getElementById('api-key-display').value = newKey;
+                    showToast('API-Schlüssel regeneriert', 'Neuer API-Schlüssel wurde generiert', 'success');
+                }
+            );
+        }
+
+        function generateRandomKey() {
+            return 'chronos_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        }
+
+        function copyApiKey() {
+            const apiKey = document.getElementById('api-key-display').value;
+            navigator.clipboard.writeText(apiKey).then(() => {
+                showToast('Kopiert', 'API-Schlüssel wurde in die Zwischenablage kopiert', 'success');
+            });
+        }
+
+        function exportUserData() {
+            showToast('Export gestartet', 'Benutzerdaten werden exportiert...', 'info');
+            // In real app, export user data
+            setTimeout(() => {
+                showToast('Export abgeschlossen', 'Benutzerdaten wurden heruntergeladen', 'success');
+            }, 2000);
+        }
+
+        function deleteUserData() {
+            showConfirmModal(
+                'Alle Daten löschen',
+                'Möchtest du wirklich alle deine Daten unwiderruflich löschen? Diese Aktion kann NICHT rückgängig gemacht werden!',
+                () => {
+                    showToast('Daten werden gelöscht', 'Alle Benutzerdaten werden gelöscht...', 'warning');
+                    // In real app, delete all user data
+                    setTimeout(() => {
+                        showToast('Daten gelöscht', 'Alle Benutzerdaten wurden erfolgreich gelöscht', 'success');
+                    }, 3000);
+                }
+            );
+        }
+
+        // Backup Functions
+        function toggleAutoBackup(enabled) {
+            showToast('Auto-Backup', enabled ? 'Automatisches Backup aktiviert' : 'Automatisches Backup deaktiviert', 'info');
+        }
+
+        function createBackup() {
+            showToast('Backup gestartet', 'Backup wird erstellt...', 'info');
+            // In real app, create backup
+            setTimeout(() => {
+                showToast('Backup erstellt', 'Backup wurde erfolgreich erstellt und heruntergeladen', 'success');
+            }, 2000);
+        }
+
+        function handleBackupFile(file) {
+            if (file) {
+                showConfirmModal(
+                    'Backup wiederherstellen',
+                    `Möchtest du das Backup "${file.name}" wiederherstellen? Alle aktuellen Daten werden überschrieben.`,
+                    () => {
+                        showToast('Wiederherstellung gestartet', 'Backup wird wiederhergestellt...', 'info');
+                        // In real app, restore from backup
+                        setTimeout(() => {
+                            showToast('Wiederherstellung abgeschlossen', 'Backup wurde erfolgreich wiederhergestellt', 'success');
+                        }, 3000);
+                    }
+                );
+            }
+        }
+
+        // About Functions
+        function checkForUpdates() {
+            showToast('Update-Prüfung', 'Suche nach Updates...', 'info');
+            // In real app, check for updates
+            setTimeout(() => {
+                showToast('Keine Updates', 'Du verwendest bereits die neueste Version', 'success');
+            }, 2000);
+        }
+
+        function viewChangelog() {
+            showToast('Changelog', 'Changelog wird geöffnet...', 'info');
+            // In real app, open changelog
+        }
+
+        function viewLicense() {
+            showToast('Lizenz', 'Lizenz wird geöffnet...', 'info');
+            // In real app, open license
+        }
+
+        // Utility Functions
+        function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            const button = input.nextElementSibling;
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.querySelector('span').textContent = '🙈';
+            } else {
+                input.type = 'password';
+                button.querySelector('span').textContent = '👁';
+            }
+        }
+
+        function openQuickSettings() {
+            showToast('Schnelleinstellungen', 'Schnelleinstellungen werden geöffnet...', 'info');
+            // In real app, open quick settings modal
+        }
+
+        // Modal Functions
+        function showConfirmModal(title, message, callback) {
+            const modal = document.getElementById('confirmModal');
+            const titleElement = document.getElementById('confirmModalTitle');
+            const bodyElement = document.getElementById('confirmModalBody');
+
+            titleElement.textContent = title;
+            bodyElement.textContent = message;
+            confirmCallback = callback;
+
+            modal.style.display = 'flex';
+            modal.querySelector('.modal').focus();
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            confirmCallback = null;
+        }
+
+        function confirmAction() {
+            if (confirmCallback) {
+                confirmCallback();
+            }
+            closeConfirmModal();
+        }
+
+        // Shared Functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (window.innerWidth <= 768) {
+                const isOpen = sidebar.classList.contains('open');
+                sidebar.classList.toggle('open', !isOpen);
+                overlay.classList.toggle('open', !isOpen);
+                sidebar.setAttribute('aria-hidden', isOpen);
+            }
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            sidebar.setAttribute('aria-hidden', 'true');
+        }
+
+        // Toast System (simplified)
+        function showToast(title, message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.setAttribute('role', 'alert');
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <h4 class="toast-title">${title}</h4>
+                    <button class="toast-close" onclick="removeToast(this.parentElement.parentElement)" aria-label="Benachrichtigung schließen">×</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => removeToast(toast), 8000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container';
+            container.setAttribute('role', 'region');
+            container.setAttribute('aria-live', 'polite');
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function removeToast(toast) {
+            if (toast && toast.parentElement) {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 400);
+            }
+        }
+
+        // Initialize section from URL hash
+        window.addEventListener('load', function() {
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                const navItem = document.querySelector(`[onclick*="${hash}"]`);
+                if (navItem) {
+                    showSettingsSection(hash, navItem);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

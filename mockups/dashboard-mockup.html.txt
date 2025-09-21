@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Chronos Engine Mockup</title>
+    <link rel="stylesheet" href="../static/css/chronos.css">
+    <link rel="stylesheet" href="../static/css/chronos-unified.css">
+    <style>
+        /* Mockup specific styles */
+        .mockup-header {
+            background: var(--color-bg-secondary);
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--color-border-primary);
+            text-align: center;
+        }
+
+        .mockup-badge {
+            background: var(--color-warning);
+            color: var(--color-bg-primary);
+            padding: var(--space-1) var(--space-3);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-bold);
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Mockup Header -->
+        <div class="mockup-header">
+            <span class="mockup-badge">MOCKUP - FAKE DATA</span>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="dashboard-mockup.html" class="logo">
+                    <div class="logo-icon">⏰</div>
+                    <span class="logo-text">Chronos</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard-mockup.html" class="nav-item active">
+                    <span class="nav-item-icon">📊</span>
+                    <span class="nav-item-text">Übersicht</span>
+                </a>
+                <a href="calendar-mockup.html" class="nav-item">
+                    <span class="nav-item-icon">📅</span>
+                    <span class="nav-item-text">Kalender</span>
+                </a>
+                <a href="events-mockup.html" class="nav-item">
+                    <span class="nav-item-icon">📋</span>
+                    <span class="nav-item-text">Events</span>
+                </a>
+                <a href="analytics-mockup.html" class="nav-item">
+                    <span class="nav-item-icon">📈</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">🔄</span>
+                    <span class="nav-item-text">Sync</span>
+                </a>
+                <a href="settings-mockup.html" class="nav-item">
+                    <span class="nav-item-icon">⚙️</span>
+                    <span class="nav-item-text">Einstellungen</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Navbar -->
+            <nav class="navbar">
+                <div class="navbar-brand">
+                    <h1 class="navbar-title">Dashboard</h1>
+                    <p class="navbar-subtitle">Chronos Engine - Kalender Management System</p>
+                </div>
+
+                <div class="navbar-actions">
+                    <button class="btn btn-secondary" onclick="triggerSync()">
+                        <span>🔄</span>
+                        Aktualisieren
+                    </button>
+                    <button class="btn btn-primary" onclick="triggerSync()">
+                        <span>⚡</span>
+                        Sync starten
+                    </button>
+                </div>
+            </nav>
+
+            <div class="dashboard-content">
+                <!-- Metrics Grid -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Gesamte Events</h3>
+                                <p class="metric-subtitle">Letzte 30 Tage</p>
+                            </div>
+                            <span class="metric-icon">📅</span>
+                        </div>
+                        <div class="metric-value">127</div>
+                        <span class="metric-change positive">
+                            ↗️ +18% vs. letzten Monat
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Produktivitätsrate</h3>
+                                <p class="metric-subtitle">Durchschnitt</p>
+                            </div>
+                            <span class="metric-icon">📊</span>
+                        </div>
+                        <div class="metric-value">87.3%</div>
+                        <span class="metric-change positive">
+                            ↗️ +5.2% diese Woche
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Gesparte Zeit</h3>
+                                <p class="metric-subtitle">Diese Woche</p>
+                            </div>
+                            <span class="metric-icon">⏰</span>
+                        </div>
+                        <div class="metric-value">24.7h</div>
+                        <span class="metric-change positive">
+                            ↗️ +3.2h vs. letzte Woche
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Abgeschlossene Tasks</h3>
+                                <p class="metric-subtitle">Heute</p>
+                            </div>
+                            <span class="metric-icon">✅</span>
+                        </div>
+                        <div class="metric-value">12</div>
+                        <span class="metric-change neutral">
+                            → Normal für Donnerstag
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Sync Status</h3>
+                                <p class="metric-subtitle">Letzte Aktualisierung</p>
+                            </div>
+                            <span class="metric-icon">🔄</span>
+                        </div>
+                        <div class="metric-value" style="font-size: 18px;">
+                            <span class="status-indicator active"></span>
+                            Verbunden
+                        </div>
+                        <span class="metric-change neutral">
+                            vor 3 Min
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">CalDAV Events</h3>
+                                <p class="metric-subtitle">Synchronisiert</p>
+                            </div>
+                            <span class="metric-icon">📊</span>
+                        </div>
+                        <div class="metric-value">98</div>
+                        <span class="metric-change positive">
+                            ↗️ +7 neue Events
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Controls Bar -->
+                <div class="controls-bar">
+                    <input type="text" class="search-box" placeholder="Events durchsuchen..." value="">
+                    <div class="filter-controls">
+                        <select class="filter-select">
+                            <option value="date">Nach Datum sortieren</option>
+                            <option value="priority">Nach Priorität</option>
+                            <option value="category">Nach Kategorie</option>
+                        </select>
+                        <select class="filter-select">
+                            <option value="all">Alle Events</option>
+                            <option value="today">Heute</option>
+                            <option value="week">Diese Woche</option>
+                            <option value="month">Dieser Monat</option>
+                        </select>
+                        <button class="btn btn-success" onclick="triggerFullSync()">
+                            <span>🔄</span>
+                            Full Sync
+                        </button>
+                        <button class="btn btn-primary" onclick="triggerIncrementalSync()">
+                            <span>⚡</span>
+                            Incremental Sync
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="content-section">
+                    <h2>Letzte Aktivitäten</h2>
+                    <div class="list-container">
+                        <div class="list-item">
+                            <div class="list-item-content">
+                                <h3>Team Meeting - Sprint Planning</h3>
+                                <p>📅 Heute, 14:00 - 15:30 • Priorität: Hoch</p>
+                                <span class="badge success">Abgeschlossen</span>
+                            </div>
+                        </div>
+
+                        <div class="list-item">
+                            <div class="list-item-content">
+                                <h3>Client Call - Projekt Review</h3>
+                                <p>📅 Heute, 16:00 - 17:00 • Priorität: Hoch</p>
+                                <span class="badge warning">Läuft</span>
+                            </div>
+                        </div>
+
+                        <div class="list-item">
+                            <div class="list-item-content">
+                                <h3>Code Review - Frontend Updates</h3>
+                                <p>📅 Morgen, 10:00 - 11:00 • Priorität: Mittel</p>
+                                <span class="badge info">Geplant</span>
+                            </div>
+                        </div>
+
+                        <div class="list-item">
+                            <div class="list-item-content">
+                                <h3>Lunch Break & Learning</h3>
+                                <p>📅 Täglich, 12:00 - 13:00 • Priorität: Niedrig</p>
+                                <span class="badge info">Wiederkehrend</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script>
+        // Mockup JavaScript for demo purposes
+        function triggerSync() {
+            showToast('Synchronisation gestartet', 'Kalender wird synchronisiert...', 'info');
+            setTimeout(() => {
+                showToast('Sync erfolgreich', 'Kalender wurde erfolgreich synchronisiert', 'success');
+            }, 2000);
+        }
+
+        function triggerFullSync() {
+            showToast('Full Sync gestartet', 'Vollständige Synchronisation läuft...', 'info');
+            setTimeout(() => {
+                showToast('Full Sync erfolgreich', 'Vollständige Synchronisation abgeschlossen - 127 Events verarbeitet', 'success');
+            }, 3000);
+        }
+
+        function triggerIncrementalSync() {
+            showToast('Incremental Sync gestartet', 'Inkrementelle Synchronisation läuft...', 'info');
+            setTimeout(() => {
+                showToast('Incremental Sync erfolgreich', 'Inkrementelle Synchronisation abgeschlossen - 7 neue Events', 'success');
+            }, 1500);
+        }
+
+        function showToast(title, message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <h4 class="toast-title">${title}</h4>
+                    <button class="toast-close" onclick="removeToast(this.parentElement.parentElement)">×</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            setTimeout(() => {
+                removeToast(toast);
+            }, 8000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function removeToast(toast) {
+            if (toast && toast.parentElement) {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 400);
+            }
+        }
+
+        // Demo: Auto-trigger sync on page load
+        setTimeout(() => {
+            showToast('Demo Modus', 'Dies ist eine Mockup-Demonstration mit Fake-Daten', 'info');
+        }, 1000);
+    </script>
+</body>
+</html>

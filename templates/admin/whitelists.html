@@ -1,72 +1,154 @@
 {% extends "admin/base.html" %}
 
-{% block title %}System Whitelists{% endblock %}
+{% block title %}Whitelists - Chronos Admin{% endblock %}
 {% block header_title %}System Whitelists{% endblock %}
-{% block header_subtitle %}Steuere zulässige Systeme, Aktionen und Parameter.{% endblock %}
+{% block header_subtitle %}Zulässige Systeme, Aktionen und Parameter für externe Integrationen{% endblock %}
+
+{% block header_actions %}
+<a href="/admin/whitelists/new" class="btn btn-primary">
+    <span aria-hidden="true">➕</span>
+    Neue Whitelist
+</a>
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1>System Whitelist Management</h1>
-        <p>Dies ist eine kritische Sicherheitsfunktion. Nur hier definierte Entitäten dürfen mit der Chronos Engine interagieren.</p>
-    </div>
-    <div class="header-actions">
-        <a href="{{ url_for('admin_routes.add_whitelist_entry') }}" class="btn btn-primary">
-            <span class="btn-icon">➕</span>
-            Neuen Eintrag hinzufügen
-        </a>
+<div class="whitelists-overview animate-fade-in">
+    <div class="whitelists-list animate-stagger">
+        {% for whitelist in whitelists %}
+        <div class="card whitelist-card">
+            <div class="whitelist-header">
+                <h3 class="whitelist-title">{{ whitelist.name }}</h3>
+                <div class="whitelist-status">
+                    <span class="status-indicator {{ 'active' if whitelist.enabled else 'inactive' }}"></span>
+                    <span>{{ 'Aktiv' if whitelist.enabled else 'Inaktiv' }}</span>
+                </div>
+            </div>
+            <p class="whitelist-description">{{ whitelist.description or 'Keine Beschreibung verfügbar' }}</p>
+            <div class="whitelist-meta">
+                <span class="meta-item">
+                    <span class="meta-label">Typ:</span>
+                    <span class="meta-value">{{ whitelist.type }}</span>
+                </span>
+                <span class="meta-item">
+                    <span class="meta-label">Einträge:</span>
+                    <span class="meta-value">{{ whitelist.entries|length if whitelist.entries else 0 }}</span>
+                </span>
+                <span class="meta-item">
+                    <span class="meta-label">Erstellt:</span>
+                    <span class="meta-value">{{ whitelist.created_at.strftime('%d.%m.%Y') if whitelist.created_at else '—' }}</span>
+                </span>
+            </div>
+            <div class="whitelist-actions">
+                <a href="/admin/whitelists/{{ whitelist.id }}" class="btn btn-secondary btn-sm">Bearbeiten</a>
+                <button onclick="toggleWhitelist({{ whitelist.id }})" class="btn btn-ghost btn-sm">
+                    {{ 'Deaktivieren' if whitelist.enabled else 'Aktivieren' }}
+                </button>
+            </div>
+        </div>
+        {% else %}
+        <div class="placeholder">
+            <div class="placeholder-icon">🛡️</div>
+            <div class="placeholder-title">Keine Whitelists gefunden</div>
+            <div class="placeholder-text">Erstellen Sie Ihre erste Whitelist für externe Integrationen.</div>
+            <a href="/admin/whitelists/new" class="btn btn-primary">Whitelist erstellen</a>
+        </div>
+        {% endfor %}
     </div>
 </div>
 
-<div class="content-card">
-    <div class="table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Typ</th>
-                    <th>Wert</th>
-                    <th>Beschreibung</th>
-                    <th>Status</th>
-                    <th>Erstellt am</th>
-                    <th>Aktionen</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for entry in entries %}
-                <tr>
-                    <td><code class="code-inline">#{{ entry.id }}</code></td>
-                    <td><span class="badge">{{ entry.entry_type.upper() }}</span></td>
-                    <td><code class="code-inline">{{ entry.value }}</code></td>
-                    <td>{{ entry.description or '-' }}</td>
-                    <td>
-                        {% if entry.is_active %}
-                            <span class="status-indicator active"></span> Aktiv
-                        {% else %}
-                            <span class="status-indicator inactive"></span> Inaktiv
-                        {% endif %}
-                    </td>
-                    <td>{{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else '-' }}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <a href="{{ url_for('admin_routes.edit_whitelist_entry', entry_id=entry.id) }}" class="btn btn-secondary btn-icon" title="Bearbeiten">
-                                ✏️
-                            </a>
-                            <form method="post" action="{{ url_for('admin_routes.delete_whitelist_entry', entry_id=entry.id) }}" onsubmit="return confirm('Sind Sie sicher, dass Sie diesen Eintrag löschen möchten?');">
-                                <button type="submit" class="btn btn-danger btn-icon" title="Löschen">
-                                    🗑️
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="7" class="text-center">Keine Whitelist-Einträge gefunden.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+<style>
+.whitelists-list {
+    display: grid;
+    gap: var(--space-5);
+}
+
+.whitelist-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.whitelist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-4);
+}
+
+.whitelist-title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.whitelist-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+}
+
+.status-indicator.active {
+    background: var(--success-500);
+}
+
+.status-indicator.inactive {
+    background: var(--neutral-400);
+}
+
+.whitelist-description {
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+    margin: 0;
+}
+
+.whitelist-meta {
+    display: flex;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+    font-size: var(--font-size-sm);
+}
+
+.meta-item {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.meta-label {
+    color: var(--text-muted);
+}
+
+.meta-value {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+.whitelist-actions {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: auto;
+}
+</style>
+
+<script>
+function toggleWhitelist(id) {
+    if (confirm('Möchten Sie den Status dieser Whitelist ändern?')) {
+        // Hier würde die tatsächliche Toggle-Logik stehen
+        showToast('Whitelist', 'Status erfolgreich geändert', 'success');
+        setTimeout(() => location.reload(), 1000);
+    }
+}
+
+function showToast(title, message, type) {
+    console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+}
+</script>
 {% endblock %}

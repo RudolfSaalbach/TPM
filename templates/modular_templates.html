@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Templates - Chronos Engine{% endblock %}
+{% block page_title %}Templates{% endblock %}
+{% block page_subtitle %}Event-Vorlagen verwalten und verwenden{% endblock %}
+
+{% block content %}
+<div class="templates-page animate-fade-in">
+    <div class="templates-header">
+        <div>
+            <h2>Event-Templates</h2>
+            <p>Erstelle und verwalte wiederverwendbare Event-Vorlagen für häufige Termine.</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="createNewTemplate()">
+                <span aria-hidden="true">➕</span>
+                Neue Vorlage
+            </button>
+        </div>
+    </div>
+
+    <div class="templates-grid animate-stagger">
+        {% for template in templates %}
+        <div class="card template-card">
+            <div class="template-header">
+                <h3 class="template-title">{{ template.title }}</h3>
+                <div class="template-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="useTemplate({{ template.id }})">
+                        <span aria-hidden="true">🚀</span>
+                        Verwenden
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="editTemplate({{ template.id }})">
+                        <span aria-hidden="true">✏️</span>
+                        Bearbeiten
+                    </button>
+                </div>
+            </div>
+
+            <p class="template-description">{{ template.description or 'Keine Beschreibung verfügbar' }}</p>
+
+            <div class="template-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Typ:</span>
+                    <span class="meta-value">{{ 'Ganztägig' if template.all_day else 'Zeitgebunden' }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Dauer:</span>
+                    <span class="meta-value">{{ template.duration_minutes or '—' }} Min</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Verwendet:</span>
+                    <span class="meta-value">{{ template.usage_count or 0 }}×</span>
+                </div>
+            </div>
+
+            {% if template.tags %}
+            <div class="template-tags">
+                {% for tag in template.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="placeholder">
+            <div class="placeholder-icon">📝</div>
+            <div class="placeholder-title">Keine Templates gefunden</div>
+            <div class="placeholder-text">Erstellen Sie Ihre erste Event-Vorlage für wiederkehrende Termine.</div>
+            <button class="btn btn-primary" onclick="createNewTemplate()">Template erstellen</button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.templates-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+.templates-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-6);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.templates-header h2 {
+    margin: 0 0 var(--space-2) 0;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+}
+
+.templates-header p {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-6);
+}
+
+.template-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.template-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-4);
+}
+
+.template-title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.template-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.template-description {
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+    margin: 0;
+}
+
+.template-meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+}
+
+.meta-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.meta-label {
+    color: var(--text-muted);
+}
+
+.meta-value {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+.template-tags {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.tag {
+    background: var(--primary-100);
+    color: var(--primary-700);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+}
+</style>
+
+<script>
+function createNewTemplate() {
+    showToast('Template', 'Template-Editor wird geöffnet...', 'info');
+    // Hier würde der Template-Editor geöffnet
+}
+
+function useTemplate(id) {
+    showToast('Template', 'Template wird angewendet...', 'info');
+    // Hier würde das Template verwendet
+}
+
+function editTemplate(id) {
+    showToast('Template', 'Template-Editor wird geöffnet...', 'info');
+    // Hier würde der Template-Editor geöffnet
+}
+
+function showToast(title, message, type) {
+    console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+}
+</script>
+{% endblock %}

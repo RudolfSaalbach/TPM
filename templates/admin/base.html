@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Chronos Admin{% endblock %}</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', path='css/chronos.css') }}">
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Premium CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/chronos-premium.css') }}">
 
     {% block extra_head %}{% endblock %}
 </head>
@@ -14,71 +20,108 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="/admin" class="logo">
-                    <div class="logo-icon">C</div>
-                    <span class="logo-text">chronos admin</span>
+                    <div class="logo-icon">🔧</div>
+                    <span class="logo-text">Admin</span>
                 </a>
             </div>
 
             <nav class="sidebar-nav">
                 <a href="/admin" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-                    <span class="nav-item-icon">&#128202;</span>
-                    <span class="nav-item-text">Dashboard</span>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
                 </a>
                 <a href="/admin/whitelists" class="nav-item {% if active_page == 'whitelists' %}active{% endif %}">
-                    <span class="nav-item-icon">&#128274;</span>
-                    <span class="nav-item-text">Whitelists</span>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon">🛡️</span>
+                    <span>Whitelists</span>
                 </a>
                 <a href="/admin/workflows" class="nav-item {% if active_page == 'workflows' %}active{% endif %}">
-                    <span class="nav-item-icon">&#128295;</span>
-                    <span class="nav-item-text">Workflows</span>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon">⚡</span>
+                    <span>Workflows</span>
                 </a>
                 <a href="/admin/email-templates" class="nav-item {% if active_page == 'email' %}active{% endif %}">
-                    <span class="nav-item-icon">&#128231;</span>
-                    <span class="nav-item-text">E-Mail Templates</span>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon">📧</span>
+                    <span>E-Mail Templates</span>
                 </a>
                 <a href="/admin/integrations" class="nav-item {% if active_page == 'integrations' %}active{% endif %}">
-                    <span class="nav-item-icon">&#128279;</span>
-                    <span class="nav-item-text">Integrationen</span>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon">🔗</span>
+                    <span>Integrationen</span>
                 </a>
                 <a href="/admin/backups" class="nav-item {% if active_page == 'backups' %}active{% endif %}">
-                    <span class="nav-item-icon">&#128190;</span>
-                    <span class="nav-item-text">Backups</span>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon">💾</span>
+                    <span>Backups</span>
                 </a>
                 <a href="/admin/system" class="nav-item {% if active_page == 'system' %}active{% endif %}">
-                    <span class="nav-item-icon">&#9881;</span>
-                    <span class="nav-item-text">System</span>
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon">⚙️</span>
+                    <span>System</span>
+                </a>
+                <a href="/dashboard" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon">🏠</span>
+                    <span>Zurück zur App</span>
                 </a>
             </nav>
         </aside>
 
         <div class="main-content">
-            <nav class="navbar">
-                <div class="navbar-brand">
-                    <h1 class="navbar-title">{% block header_title %}Chronos Admin{% endblock %}</h1>
-                    <p class="navbar-subtitle">{% block header_subtitle %}Operations &amp; Governance Center{% endblock %}</p>
+            <header class="header">
+                <div class="header-content">
+                    <div class="header-title">
+                        <h1>{% block header_title %}Chronos Admin{% endblock %}</h1>
+                        <p class="header-subtitle">{% block header_subtitle %}Operations &amp; Governance Center{% endblock %}</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" type="button" onclick="toggleSidebar()" aria-label="Seitenleiste umschalten">
+                            <span aria-hidden="true">☰</span>
+                        </button>
+                        {% block header_actions %}{% endblock %}
+                    </div>
                 </div>
+            </header>
 
-                <div class="navbar-actions">
-                    <button class="btn btn-secondary" type="button" onclick="toggleSidebar()">Menu</button>
-                    {% block header_actions %}{% endblock %}
-                </div>
-            </nav>
-
-            <div class="page-content">
+            <div class="dashboard-content">
                 {% block content %}{% endblock %}
             </div>
         </div>
     </div>
 
-    <div id="toastContainer" class="toast-container"></div>
+    <div class="toast-container" id="toastContainer" role="region" aria-live="polite" aria-label="Benachrichtigungen"></div>
 
     <script>
     (function() {
         const sidebar = document.getElementById('sidebar');
+        let sidebarOpen = false;
+
         window.toggleSidebar = function toggleSidebar() {
             if (!sidebar) { return; }
-            sidebar.classList.toggle('collapsed');
+
+            if (window.innerWidth <= 768) {
+                sidebarOpen = !sidebarOpen;
+                sidebar.classList.toggle('open', sidebarOpen);
+                sidebar.setAttribute('aria-hidden', !sidebarOpen);
+            } else {
+                sidebar.classList.toggle('collapsed');
+                localStorage.setItem('adminSidebarCollapsed', sidebar.classList.contains('collapsed'));
+            }
         };
+
+        // Load saved sidebar state
+        function loadSidebarState() {
+            if (window.innerWidth > 768) {
+                const isCollapsed = localStorage.getItem('adminSidebarCollapsed') === 'true';
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadSidebarState);
     })();
     </script>
 

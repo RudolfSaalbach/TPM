@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronos Engine - Dashboard</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Premium CSS -->
+    <link rel="stylesheet" href="/static/css/chronos-premium.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <div class="logo-icon">C</div>
+                    <span class="logo-text">chronos</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item active">
+                    <span class="nav-item-icon">📊</span>
+                    <span class="nav-item-text">Übersicht</span>
+                </a>
+                <a href="/calendar" class="nav-item">
+                    <span class="nav-item-icon">📅</span>
+                    <span class="nav-item-text">Kalender</span>
+                </a>
+                <a href="/events" class="nav-item">
+                    <span class="nav-item-icon">📋</span>
+                    <span class="nav-item-text">Events</span>
+                </a>
+                <a href="/analytics" class="nav-item">
+                    <span class="nav-item-icon">📈</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <a href="/sync" class="nav-item">
+                    <span class="nav-item-icon">🔄</span>
+                    <span class="nav-item-text">Sync</span>
+                </a>
+                <a href="/settings" class="nav-item">
+                    <span class="nav-item-icon">⚙️</span>
+                    <span class="nav-item-text">Einstellungen</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="main-content">
+            <nav class="navbar">
+                <div class="navbar-brand">
+                    <h1 class="navbar-title">Dashboard</h1>
+                    <p class="navbar-subtitle">Chronos Engine - Kalender Management System</p>
+                </div>
+
+                <div class="navbar-actions">
+                    <button class="btn btn-secondary" onclick="toggleSidebar()">
+                        <span>☰</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshDashboard()">
+                        <span>🔄</span>
+                        Aktualisieren
+                    </button>
+                    <button class="btn btn-primary" onclick="syncCalendar()">
+                        <span>⚡</span>
+                        Sync starten
+                    </button>
+                </div>
+            </nav>
+
+            <div class="dashboard-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Gesamte Events</h3>
+                                <p class="metric-subtitle">Letzte 7 Tage</p>
+                            </div>
+                            <span class="metric-icon">📅</span>
+                        </div>
+                        <div class="metric-value" id="totalEvents">{{ productivity_metrics.total_events or 0 }}</div>
+                        <span class="metric-change positive" id="eventsChange">
+                            ↗️ +12%
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Produktivitätsrate</h3>
+                                <p class="metric-subtitle">Durchschnitt</p>
+                            </div>
+                            <span class="metric-icon">📊</span>
+                        </div>
+                        <div class="metric-value" id="productivityRate">{{ "%.1f" | format((productivity_metrics.completion_rate or 0) * 100) }}%</div>
+                        <span class="metric-change positive" id="productivityChange">
+                            ↗️ +5.2%
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Gesparte Zeit</h3>
+                                <p class="metric-subtitle">Diese Woche</p>
+                            </div>
+                            <span class="metric-icon">⏰</span>
+                        </div>
+                        <div class="metric-value" id="timeSaved">{{ "%.1f" | format(productivity_metrics.total_hours or 0) }}h</div>
+                        <span class="metric-change positive" id="timeSavedChange">
+                            ↗️ +2.5h
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Abgeschlossene Aufgaben</h3>
+                                <p class="metric-subtitle">Heute</p>
+                            </div>
+                            <span class="metric-icon">✅</span>
+                        </div>
+                        <div class="metric-value" id="completedTasks">{{ productivity_metrics.completed_tasks or 0 }}</div>
+                        <span class="metric-change neutral" id="tasksChange">
+                            → Keine Änderung
+                        </span>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <h3 class="metric-title">Sync Status</h3>
+                                <p class="metric-subtitle">Letzte Aktualisierung</p>
+                            </div>
+                            <span class="metric-icon">🔄</span>
+                        </div>
+                        <div class="metric-value" style="font-size: 18px;" id="syncStatus">
+                            <span class="status-indicator active"></span>
+                            Verbunden
+                        </div>
+                        <span class="metric-change neutral" id="lastUpdate">
+                            vor 2 Min
+                        </span>
+                    </div>
+                </div>
+
+                <div class="controls-bar">
+                    <input type="text" class="search-box" placeholder="Events durchsuchen..." id="searchInput">
+                    <div class="filter-controls">
+                        <select class="filter-select" id="sortFilter">
+                            <option value="date">Nach Datum sortieren</option>
+                            <option value="priority">Nach Priorität sortieren</option>
+                            <option value="type">Nach Typ sortieren</option>
+                            <option value="status">Nach Status sortieren</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="toggleView()">
+                            📊 Ansicht wechseln
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportData()">
+                            📥 Exportieren
+                        </button>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Aktuelle Events</h2>
+                        <span class="section-meta">Gesamt: <span id="eventCount">0</span></span>
+                    </div>
+
+                    <div id="eventsList">
+                        <div class="list-item">
+                            <div class="list-item-info">
+                                <h4 class="list-item-title">
+                                    📅 Team Meeting
+                                    <span class="badge bg-info">MEETING</span>
+                                </h4>
+                                <p class="list-item-meta">Heute, 14:00 - 15:00 | Konferenzraum A | Hohe Priorität</p>
+                            </div>
+                            <div class="list-item-actions">
+                                <span class="status-indicator active"></span>
+                                <span class="status-text">Aktiv</span>
+                                <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            </div>
+                        </div>
+
+                        <div class="list-item">
+                            <div class="list-item-info">
+                                <h4 class="list-item-title">
+                                    📋 Projektplanung
+                                    <span class="badge bg-warning">TASK</span>
+                                </h4>
+                                <p class="list-item-meta">Morgen, 09:00 - 11:00 | Home Office | Mittlere Priorität</p>
+                            </div>
+                            <div class="list-item-actions">
+                                <span class="status-indicator inactive"></span>
+                                <span class="status-text">Geplant</span>
+                                <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            </div>
+                        </div>
+
+                        <div class="list-item">
+                            <div class="list-item-info">
+                                <h4 class="list-item-title">
+                                    🎯 Quarterly Review
+                                    <span class="badge bg-danger">DEADLINE</span>
+                                </h4>
+                                <p class="list-item-meta">Nächste Woche, 10:00 - 12:00 | Hauptgebäude | Sehr hohe Priorität</p>
+                            </div>
+                            <div class="list-item-actions">
+                                <span class="status-indicator warning"></span>
+                                <span class="status-text">Deadline</span>
+                                <button class="btn btn-secondary btn-sm">Bearbeiten</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Produktivitäts-Analytics</h2>
+                        <button class="btn btn-secondary btn-sm">Vollbericht anzeigen</button>
+                    </div>
+
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h4>Wöchentliche Trends</h4>
+                            <div class="chart-placeholder">
+                                <div class="chart-bar" style="height: 60%"></div>
+                                <div class="chart-bar" style="height: 80%"></div>
+                                <div class="chart-bar" style="height: 45%"></div>
+                                <div class="chart-bar" style="height: 90%"></div>
+                                <div class="chart-bar" style="height: 70%"></div>
+                                <div class="chart-bar" style="height: 85%"></div>
+                                <div class="chart-bar" style="height: 95%"></div>
+                            </div>
+                            <p class="chart-label">Mo - So</p>
+                        </div>
+
+                        <div class="analytics-card">
+                            <h4>Prioritäts-Verteilung</h4>
+                            <div class="priority-distribution">
+                                {% for priority, count in priority_distribution.items() %}
+                                <div class="priority-item">
+                                    <span class="priority-color {{ priority.lower() }}"></span>
+                                    <span>{{ priority }}: {{ count }} events</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="analytics-card">
+                            <h4>Recommendations</h4>
+                            <div class="recommendations-list">
+                                {% if recommendations %}
+                                    {% for recommendation in recommendations %}
+                                    <div class="recommendation-item">
+                                        <span class="recommendation-icon">💡</span>
+                                        <span>{{ recommendation.message }}</span>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                <div class="recommendation-item">
+                                    <span class="recommendation-icon">💡</span>
+                                    <span>Plane längere Pausen zwischen Meetings</span>
+                                </div>
+                                <div class="recommendation-item">
+                                    <span class="recommendation-icon">⚡</span>
+                                    <span>Beste Produktivitätszeit: 10:00-12:00</span>
+                                </div>
+                                <div class="recommendation-item">
+                                    <span class="recommendation-icon">📊</span>
+                                    <span>Reduziere Multitasking um 23%</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Synchronisation</h2>
+                        <div>
+                            <button class="btn btn-secondary btn-sm" onclick="triggerIncrementalSync()">
+                                🔄 Inkrementell
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="triggerFullSync()">
+                                ⚡ Vollständig
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="sync-info">
+                        <div class="sync-stat">
+                            <span class="sync-label">Letzte Synchronisation:</span>
+                            <span class="sync-value" id="lastSyncTime">vor 2 Minuten</span>
+                        </div>
+                        <div class="sync-stat">
+                            <span class="sync-label">Synchronisierte Events:</span>
+                            <span class="sync-value" id="syncedEvents">247</span>
+                        </div>
+                        <div class="sync-stat">
+                            <span class="sync-label">API Quota:</span>
+                            <span class="sync-value" id="apiQuota">89.432 / 100.000</span>
+                        </div>
+                        <div class="sync-stat">
+                            <span class="sync-label">Status:</span>
+                            <span class="sync-value status-connected">
+                                <span class="status-indicator active"></span>
+                                Verbunden
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="modal-overlay" id="loadingOverlay" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        // App Initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChronosApp();
+            loadDashboardData();
+        });
+
+        // Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+
+        // Load saved sidebar state
+        function loadSidebarState() {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                document.getElementById('sidebar').classList.add('collapsed');
+            }
+        }
+
+        // Dashboard Functions
+        function refreshDashboard() {
+            showLoading();
+            loadDashboardData().finally(() => hideLoading());
+        }
+
+        function syncCalendar() {
+            showToast('Synchronisation gestartet', 'Kalender wird synchronisiert...', 'info');
+            // Hier würde die tatsächliche Sync-Logic stehen
+            setTimeout(() => {
+                showToast('Sync erfolgreich', 'Kalender wurde erfolgreich synchronisiert', 'success');
+            }, 2000);
+        }
+
+        function triggerFullSync() {
+            showLoading();
+            // API Call für Full Sync
+            fetch('/api/v1/sync/full', {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': 'super-secret-change-me',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    showToast('Full Sync erfolgreich', data.message || 'Vollständige Synchronisation abgeschlossen', 'success');
+                    refreshDashboard();
+                })
+                .catch(error => {
+                    console.error('Full sync error:', error);
+                    showToast('Sync Fehler', 'Vollständige Synchronisation fehlgeschlagen: ' + error.message, 'error');
+                })
+                .finally(() => hideLoading());
+        }
+
+        function triggerIncrementalSync() {
+            // API Call für Incremental Sync
+            fetch('/api/v1/sync/incremental', {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': 'super-secret-change-me',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    showToast('Inkrementeller Sync erfolgreich', data.message || 'Synchronisation abgeschlossen', 'success');
+                    refreshDashboard();
+                })
+                .catch(error => {
+                    console.error('Sync error:', error);
+                    showToast('Sync Fehler', 'Inkrementelle Synchronisation fehlgeschlagen: ' + error.message, 'error');
+                });
+        }
+
+        function toggleView() {
+            // Toggle zwischen Karten- und Listenansicht
+            showToast('Ansicht gewechselt', 'Ansichtsmodus wurde geändert', 'info');
+        }
+
+        function exportData() {
+            // Export-Funktionalität
+            showToast('Export gestartet', 'Daten werden exportiert...', 'info');
+        }
+
+        // Utility Functions
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showToast(title, message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <h4 class="toast-title">${title}</h4>
+                    <button class="toast-close" onclick="removeToast(this.parentElement.parentElement)">×</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            // Auto-remove nach 8 Sekunden (länger für bessere Sichtbarkeit)
+            setTimeout(() => {
+                removeToast(toast);
+            }, 8000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function removeToast(toast) {
+            if (toast && toast.parentElement) {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 400);
+            }
+        }
+
+        // Dashboard Data Loading
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard-data');
+                const data = await response.json();
+
+                // Update Metrics
+                updateMetrics(data.metrics || {});
+
+                // Update Events List
+                updateEventsList(data.events || []);
+
+                // Update Sync Status
+                updateSyncStatus(data.sync_status || {});
+
+            } catch (error) {
+                console.error('Fehler beim Laden der Dashboard-Daten:', error);
+                showToast('Fehler', 'Dashboard-Daten konnten nicht geladen werden', 'error');
+            }
+        }
+
+        function updateMetrics(metrics) {
+            document.getElementById('totalEvents').textContent = metrics.total_events || 0;
+            document.getElementById('productivityRate').textContent = (metrics.completion_rate || 0) + '%';
+            document.getElementById('timeSaved').textContent = (metrics.total_hours || 0) + 'h';
+            document.getElementById('completedTasks').textContent = metrics.completed_tasks || 0;
+        }
+
+        function updateEventsList(events) {
+            const eventsList = document.getElementById('eventsList');
+            document.getElementById('eventCount').textContent = events.length;
+
+            // Hier würde die Liste dynamisch mit den echten Events gefüllt
+            // Das ist nur ein Platzhalter für die Demonstration
+        }
+
+        function updateSyncStatus(syncStatus) {
+            document.getElementById('lastSyncTime').textContent = syncStatus.last_update || 'Unbekannt';
+            document.getElementById('syncedEvents').textContent = syncStatus.total_events || 0;
+            document.getElementById('apiQuota').textContent =
+                `${syncStatus.quota_used || 0} / ${syncStatus.quota_limit || 100000}`;
+        }
+
+        // Load sidebar state on page load
+        loadSidebarState();
+    </script>
+</body>
+</html>

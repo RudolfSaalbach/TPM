@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chronos Engine - Dashboard{% endblock %}</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Premium CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/chronos-premium.css') }}">
+
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <div class="logo-icon">C</div>
+                    <span class="logo-text">chronos</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item {% if request.url.path == '/dashboard' or request.url.path == '/' %}active{% endif %}">
+                    <span class="nav-item-icon">📊</span>
+                    <span class="nav-item-text">Übersicht</span>
+                </a>
+                <a href="/calendar" class="nav-item {% if request.url.path == '/calendar' %}active{% endif %}">
+                    <span class="nav-item-icon">📅</span>
+                    <span class="nav-item-text">Kalender</span>
+                </a>
+                <a href="/events" class="nav-item {% if request.url.path == '/events' %}active{% endif %}">
+                    <span class="nav-item-icon">📋</span>
+                    <span class="nav-item-text">Events</span>
+                </a>
+                <a href="/analytics" class="nav-item {% if request.url.path == '/analytics' %}active{% endif %}">
+                    <span class="nav-item-icon">📈</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <a href="/sync" class="nav-item {% if request.url.path == '/sync' %}active{% endif %}">
+                    <span class="nav-item-icon">🔄</span>
+                    <span class="nav-item-text">Sync</span>
+                </a>
+                <a href="/settings" class="nav-item {% if request.url.path == '/settings' %}active{% endif %}">
+                    <span class="nav-item-icon">⚙️</span>
+                    <span class="nav-item-text">Einstellungen</span>
+                </a>
+                <a href="/admin" class="nav-item {% if request.url.path.startswith('/admin') %}active{% endif %}">
+                    <span class="nav-item-icon">🔧</span>
+                    <span class="nav-item-text">Admin</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="main-content">
+            <nav class="navbar">
+                <div class="navbar-brand">
+                    <h1 class="navbar-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                    <p class="navbar-subtitle">{% block page_subtitle %}Chronos Engine - Kalender Management System{% endblock %}</p>
+                </div>
+
+                <div class="navbar-actions">
+                    <button class="btn btn-secondary" onclick="toggleSidebar()">
+                        <span>☰</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshDashboard()">
+                        <span>🔄</span>
+                        Aktualisieren
+                    </button>
+                    <button class="btn btn-primary" onclick="syncCalendar()">
+                        <span>⚡</span>
+                        Sync starten
+                    </button>
+                    <div class="status-badge" id="connectionStatus">
+                        <span class="status-indicator active"></span>
+                        Online
+                    </div>
+                </div>
+            </nav>
+
+            <div class="dashboard-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="modal-overlay" id="loadingOverlay" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="{{ url_for('static', path='js/main.js') }}"></script>
+    <script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+
+    <script>
+        // Global functions for the modern interface
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+
+        function loadSidebarState() {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                document.getElementById('sidebar').classList.add('collapsed');
+            }
+        }
+
+        function refreshDashboard() {
+            showLoading();
+            window.location.reload();
+        }
+
+        function syncCalendar() {
+            showToast('Synchronisation gestartet', 'Kalender wird synchronisiert...', 'info');
+            fetch('/api/v1/sync/incremental', {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': 'super-secret-change-me',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    showToast('Sync erfolgreich', data.message || 'Kalender wurde erfolgreich synchronisiert', 'success');
+                })
+                .catch(error => {
+                    console.error('Sync error:', error);
+                    showToast('Sync Fehler', 'Synchronisation fehlgeschlagen: ' + error.message, 'error');
+                });
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showToast(title, message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const toastId = 'toast_' + Date.now();
+            toast.id = toastId;
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <h4 class="toast-title">${title}</h4>
+                    <button class="toast-close" onclick="removeToast(document.getElementById('${toastId}'))">×</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            // Auto-remove nach 8 Sekunden
+            setTimeout(() => {
+                removeToast(toast);
+            }, 8000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function removeToast(toast) {
+            if (toast && toast.parentElement) {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 400);
+            }
+        }
+
+        // Load sidebar state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSidebarState();
+        });
+    </script>
+</body>
+</html>

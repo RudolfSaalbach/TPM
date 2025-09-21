@@ -1,0 +1,154 @@
+{% extends "modular_base.html" %}
+
+{% block title %}Events - Chronos Engine{% endblock %}
+
+{% block extra_css %}
+{# Der Link zur events.css wurde entfernt. #}
+{% endblock %}
+
+{% block page_title %}Events{% endblock %}
+{% block page_subtitle %}Modulare Event-Verwaltung{% endblock %}
+
+{% block content %}
+<div class="events-page">
+    <aside class="sidebar" id="filter-panel">
+        <div class="sidebar-header">
+            <h2 class="sidebar-title">Kalender-Filter</h2>
+        </div>
+        <div class="sidebar-content">
+            <div class="form-group">
+                <label for="range-select" class="form-label">Zeitbereich</label>
+                <select id="range-select" class="form-select" data-ref="range">
+                    <option value="7">7 Tage</option>
+                    <option value="14">14 Tage</option>
+                    <option value="30">30 Tage</option>
+                    <option value="60">60 Tage</option>
+                    <option value="360">360 Tage</option>
+                    <option value="-1">Alle Events</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Richtung</label>
+                 <div class="btn-group">
+                    <input type="radio" class="btn-check" name="direction" id="dir-past" value="past" data-ref="direction">
+                    <label class="btn btn-secondary" for="dir-past">Vergangenheit</label>
+                    <input type="radio" class="btn-check" name="direction" id="dir-future" value="future" checked data-ref="direction">
+                    <label class="btn btn-secondary" for="dir-future">Zukunft</label>
+                    <input type="radio" class="btn-check" name="direction" id="dir-all" value="all" data-ref="direction">
+                    <label class="btn btn-secondary" for="dir-all">Alle</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="search-input" class="form-label">Suche</label>
+                <input type="text"
+                       id="search-input"
+                       class="form-input"
+                       data-ref="search-input"
+                       placeholder="Suche in Titel/Beschreibung..."
+                       aria-label="Events durchsuchen">
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" data-ref="clearButton">
+                    Filter zurücksetzen
+                </button>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="btn btn-primary btn-block" data-ref="newEventButton">
+                ➕ Neues Event
+            </button>
+            <button type="button" class="btn btn-accent btn-block" data-ref="templatesButton">
+                📝 Vorlage nutzen
+            </button>
+        </div>
+    </aside>
+
+    <main class="events-main">
+        <header class="content-header">
+            <div class="header-info">
+                <div class="header-stats">
+                    <span class="stat-item">
+                        <span class="stat-label">Angezeigt:</span>
+                        <span class="stat-value" data-ref="count">...</span>
+                    </span>
+                     <span class="stat-item">
+                        <span class="stat-label">Gesamt:</span>
+                        <span class="stat-value" data-ref="total">...</span>
+                    </span>
+                    <span class="stat-item">
+                        <span class="stat-label">Status:</span>
+                        <span class="stat-value" data-ref="status">Initialisiere...</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button type="button" class="btn btn-secondary" id="export-button">
+                    📥 Exportieren
+                </button>
+                <button type="button" class="btn btn-icon" data-ref="refreshButton" title="Liste aktualisieren">
+                    🔄
+                </button>
+            </div>
+        </header>
+
+        <section class="events-list-container" id="events-list-container">
+            <div class="events-list" id="events-list" data-ref="list" role="list" aria-label="Events list">
+                </div>
+        </section>
+    </main>
+</div>
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+    // Event page specific logic
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize all components for the events page
+        const filterPanel = new FilterPanelComponent(
+            document.getElementById('filter-panel')
+        );
+
+        const eventsList = new EventListComponent(
+            document.getElementById('events-list-container')
+        );
+
+        const templateModal = new TemplateModalComponent(
+            document.getElementById('template-modal')
+        );
+
+        // Make components talk to each other via the Event Bus
+        const eventBus = window.ChronosEventBus;
+
+        // When filters are applied in the panel, tell the list to reload
+        eventBus.on('filters:apply', (filters) => {
+            eventsList.setFilters(filters);
+        });
+
+        // Open template modal when the button is clicked
+        eventBus.on('templates:open', () => {
+            templateModal.open();
+        });
+        
+        // When a template is used, refresh the event list
+        eventBus.on('templates:templateApplied', () => {
+            eventsList.refresh();
+        });
+
+        // Example of handling the export button
+        const exportButton = document.getElementById('export-button');
+        if (exportButton) {
+            exportButton.addEventListener('click', () => {
+                eventBus.emit('notify:info', {
+                    title: 'Export',
+                    message: 'Export-Funktionalität ist noch nicht implementiert.'
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Chronos Admin Dashboard{% endblock %}
+{% block header_title %}Chronos Admin{% endblock %}
+{% block header_subtitle %}Systemsteuerung &amp; Governance{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Chronos Admin Dashboard</h1>
+        <p>Verwalte Konfiguration, Governance und Betriebs&uuml;berwachung der Chronos Engine.</p>
+    </div>
+    <div class="header-actions">
+        <a class="btn btn-primary" href="/dashboard">Zur Benutzeroberfl&auml;che</a>
+    </div>
+</div>
+
+<div class="admin-card-grid">
+    <a href="/admin/whitelists" class="admin-card">
+        <div class="admin-card-icon">&#128274;</div>
+        <div class="admin-card-title">System Whitelists</div>
+        <p class="admin-card-description">Steuere zul&auml;ssige Systeme, Aktionen und Parameter f&uuml;r externe Integrationen.</p>
+    </a>
+    <a href="/admin/workflows" class="admin-card">
+        <div class="admin-card-icon">&#9889;</div>
+        <div class="admin-card-title">Action Workflows</div>
+        <p class="admin-card-description">Automatisiere if-this-then-that Abl&auml;ufe und orchestriere Kommandoketten.</p>
+    </a>
+    <a href="/admin/email-templates" class="admin-card">
+        <div class="admin-card-icon">&#128231;</div>
+        <div class="admin-card-title">E-Mail Templates</div>
+        <p class="admin-card-description">Pflege HTML/Text Templates inklusive Variablen und Vorschau.</p>
+    </a>
+    <a href="/admin/integrations" class="admin-card">
+        <div class="admin-card-icon">&#128279;</div>
+        <div class="admin-card-title">Integrationen</div>
+        <p class="admin-card-description">Verwalte Anbindungen wie Telegram, n8n oder weitere externe Systeme.</p>
+    </a>
+    <a href="/admin/backups" class="admin-card">
+        <div class="admin-card-icon">&#128190;</div>
+        <div class="admin-card-title">Backup Management</div>
+        <p class="admin-card-description">Plane automatische Sicherungen und behalte den Backup-Verlauf im Blick.</p>
+    </a>
+    <a href="/admin/system" class="admin-card">
+        <div class="admin-card-icon">&#9881;</div>
+        <div class="admin-card-title">Systeminformationen</div>
+        <p class="admin-card-description">Analysiere Datenbankgesundheit, Tabellenstatistiken und Systemmetriken.</p>
+    </a>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Gesamte Events</span>
+        <span class="stat-value">{{ stats.total_events | default('-') }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Aktive Workflows</span>
+        <span class="stat-value">{{ stats.active_workflows | default('-') }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">E-Mail Templates</span>
+        <span class="stat-value">{{ stats.email_templates | default('-') }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Integrationen</span>
+        <span class="stat-value">{{ stats.integrations | default('-') }}</span>
+    </div>
+</div>
+{% endblock %}

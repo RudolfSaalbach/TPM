@@ -1,0 +1,72 @@
+{% extends "admin/base.html" %}
+
+{% block title %}System Whitelists{% endblock %}
+{% block header_title %}System Whitelists{% endblock %}
+{% block header_subtitle %}Steuere zulässige Systeme, Aktionen und Parameter.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>System Whitelist Management</h1>
+        <p>Dies ist eine kritische Sicherheitsfunktion. Nur hier definierte Entitäten dürfen mit der Chronos Engine interagieren.</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('admin_routes.add_whitelist_entry') }}" class="btn btn-primary">
+            <span class="btn-icon">➕</span>
+            Neuen Eintrag hinzufügen
+        </a>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Typ</th>
+                    <th>Wert</th>
+                    <th>Beschreibung</th>
+                    <th>Status</th>
+                    <th>Erstellt am</th>
+                    <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td><code class="code-inline">#{{ entry.id }}</code></td>
+                    <td><span class="badge">{{ entry.entry_type.upper() }}</span></td>
+                    <td><code class="code-inline">{{ entry.value }}</code></td>
+                    <td>{{ entry.description or '-' }}</td>
+                    <td>
+                        {% if entry.is_active %}
+                            <span class="status-indicator active"></span> Aktiv
+                        {% else %}
+                            <span class="status-indicator inactive"></span> Inaktiv
+                        {% endif %}
+                    </td>
+                    <td>{{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else '-' }}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('admin_routes.edit_whitelist_entry', entry_id=entry.id) }}" class="btn btn-secondary btn-icon" title="Bearbeiten">
+                                ✏️
+                            </a>
+                            <form method="post" action="{{ url_for('admin_routes.delete_whitelist_entry', entry_id=entry.id) }}" onsubmit="return confirm('Sind Sie sicher, dass Sie diesen Eintrag löschen möchten?');">
+                                <button type="submit" class="btn btn-danger btn-icon" title="Löschen">
+                                    🗑️
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center">Keine Whitelist-Einträge gefunden.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

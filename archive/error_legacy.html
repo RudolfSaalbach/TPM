@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -20,68 +20,51 @@
             align-items: center;
             min-height: 100vh;
             text-align: center;
-            padding: var(--space-8);
-            background: var(--bg-base);
+            padding: var(--spacing-lg);
         }
         .error-card {
             max-width: 600px;
-            background: var(--surface-primary);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-            padding: var(--space-12);
-            box-shadow: var(--shadow-lg);
         }
         .error-code {
             font-size: 6rem;
             font-weight: var(--font-weight-bold);
-            color: var(--primary-500);
+            color: var(--primary);
             margin: 0;
             line-height: 1;
-            background: linear-gradient(135deg, var(--primary-600), var(--primary-400));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
         .error-title {
-            font-size: var(--font-size-2xl);
+            font-size: var(--font-size-xxl);
             color: var(--text-primary);
-            margin-top: var(--space-4);
-            margin-bottom: var(--space-6);
-            font-weight: var(--font-weight-semibold);
+            margin-top: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
         }
         .error-message {
             color: var(--text-secondary);
-            margin-bottom: var(--space-10);
-            line-height: var(--line-height-relaxed);
-            font-size: var(--font-size-md);
-        }
-        .error-actions {
-            display: flex;
-            gap: var(--space-4);
-            justify-content: center;
-            flex-wrap: wrap;
+            margin-bottom: var(--spacing-xl);
         }
     </style>
 </head>
-<body>
+<body class="chronos-app">
+
     <div class="error-container">
-        <div class="error-card animate-fade-in">
+        <div class="error-card">
             <h1 class="error-code">{{ error_code|default('500') }}</h1>
             <h2 class="error-title">{{ error_title|default('Unerwarteter Fehler') }}</h2>
             <p class="error-message">
                 {{ error_message|default('Es ist ein interner Serverfehler aufgetreten. Unser Team wurde benachrichtigt.') }}
             </p>
-            <div class="error-actions">
-                <a href="{{ url_for('dashboard') if url_for else '/' }}" class="btn btn-primary">
-                    <span class="btn-icon" aria-hidden="true">🏠</span>
+            <div class="form-actions">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                    <span class="btn-icon">🏠</span>
                     Zurück zum Dashboard
                 </a>
-                <button onclick="history.back()" class="btn btn-secondary">
-                    <span class="btn-icon" aria-hidden="true">⬅️</span>
+                <a href="javascript:history.back()" class="btn btn-secondary">
+                    <span class="btn-icon">⬅️</span>
                     Zurück zur letzten Seite
-                </button>
+                </a>
             </div>
         </div>
     </div>
+
 </body>
 </html>

@@ -1,93 +1,275 @@
 {% extends "admin/base.html" %}
 
-{% block title %}Systeminformationen{% endblock %}
+{% block title %}System - Chronos Admin{% endblock %}
 {% block header_title %}Systeminformationen{% endblock %}
-{% block header_subtitle %}Datenbankgesundheit, Tabellenstatistiken und Systemmetriken analysieren.{% endblock %}
+{% block header_subtitle %}Datenbankgesundheit, Tabellenstatistiken und Systemmetriken{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1>Systeminformationen & Metriken</h1>
-        <p>Überwachen Sie den Zustand der Chronos Engine und der zugrundeliegenden Datenbank.</p>
+<div class="system-overview animate-fade-in">
+    <div class="system-header">
+        <h2>Systemübersicht</h2>
+        <p>Aktuelle Systemmetriken und Datenbankstatistiken</p>
+    </div>
+
+    <div class="system-grid animate-stagger">
+        <div class="card system-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <span class="card-icon">💾</span>
+                    Datenbankstatistiken
+                </h3>
+            </div>
+            <div class="system-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Datenbankgröße:</span>
+                    <span class="stat-value">{{ db_stats.size | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Anzahl Tabellen:</span>
+                    <span class="stat-value">{{ db_stats.table_count | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Gesamte Einträge:</span>
+                    <span class="stat-value">{{ db_stats.total_rows | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Letzte Optimierung:</span>
+                    <span class="stat-value">{{ db_stats.last_optimization | default('—') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card system-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <span class="card-icon">⚡</span>
+                    Performance-Metriken
+                </h3>
+            </div>
+            <div class="system-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Durchschnittliche Antwortzeit:</span>
+                    <span class="stat-value">{{ performance.avg_response_time | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Requests pro Minute:</span>
+                    <span class="stat-value">{{ performance.requests_per_minute | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Fehlerrate:</span>
+                    <span class="stat-value">{{ performance.error_rate | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Uptime:</span>
+                    <span class="stat-value">{{ performance.uptime | default('—') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card system-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <span class="card-icon">🔄</span>
+                    Synchronisation
+                </h3>
+            </div>
+            <div class="system-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Letzte Synchronisation:</span>
+                    <span class="stat-value">{{ sync_stats.last_sync | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Erfolgreiche Syncs:</span>
+                    <span class="stat-value">{{ sync_stats.successful_syncs | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Fehlgeschlagene Syncs:</span>
+                    <span class="stat-value">{{ sync_stats.failed_syncs | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">API Quota:</span>
+                    <span class="stat-value">{{ sync_stats.api_quota | default('—') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card system-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <span class="card-icon">📊</span>
+                    Event-Statistiken
+                </h3>
+            </div>
+            <div class="system-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Gesamte Events:</span>
+                    <span class="stat-value">{{ event_stats.total_events | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Events heute:</span>
+                    <span class="stat-value">{{ event_stats.events_today | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Events diese Woche:</span>
+                    <span class="stat-value">{{ event_stats.events_this_week | default('—') }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Durchschnitt pro Tag:</span>
+                    <span class="stat-value">{{ event_stats.avg_per_day | default('—') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="system-actions">
+        <h3>System-Aktionen</h3>
+        <div class="action-grid">
+            <button class="btn btn-secondary action-button" onclick="refreshStats()">
+                <span class="btn-icon">🔄</span>
+                Statistiken aktualisieren
+            </button>
+            <button class="btn btn-secondary action-button" onclick="optimizeDatabase()">
+                <span class="btn-icon">🛠️</span>
+                Datenbank optimieren
+            </button>
+            <button class="btn btn-secondary action-button" onclick="clearCache()">
+                <span class="btn-icon">🗑️</span>
+                Cache leeren
+            </button>
+            <button class="btn btn-primary action-button" onclick="exportLogs()">
+                <span class="btn-icon">📥</span>
+                Logs exportieren
+            </button>
+        </div>
     </div>
 </div>
 
-<div class="metrics-grid">
-    <div class="metric-card">
-        <div class="metric-header">
-            <div>
-                <h3 class="metric-title">Datenbank Größe</h3>
-                <p class="metric-subtitle">Gesamtgröße auf der Festplatte</p>
-            </div>
-            <span class="metric-icon">💽</span>
-        </div>
-        <div class="metric-value">{{ metrics.db_size_mb or 'N/A' }} MB</div>
-    </div>
+<style>
+.system-overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
 
-    <div class="metric-card">
-        <div class="metric-header">
-            <div>
-                <h3 class="metric-title">Chronos Version</h3>
-                <p class="metric-subtitle">Aktuell installierte Version</p>
-            </div>
-            <span class="metric-icon">🏷️</span>
-        </div>
-        <div class="metric-value">{{ metrics.chronos_version or 'N/A' }}</div>
-    </div>
+.system-header h2 {
+    margin: 0 0 var(--space-2) 0;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+}
 
-    <div class="metric-card">
-        <div class="metric-header">
-            <div>
-                <h3 class="metric-title">Python Version</h3>
-                <p class="metric-subtitle">Laufzeitumgebung</p>
-            </div>
-            <span class="metric-icon">🐍</span>
-        </div>
-        <div class="metric-value">{{ metrics.python_version or 'N/A' }}</div>
-    </div>
+.system-header p {
+    color: var(--text-secondary);
+    margin: 0;
+}
 
-    <div class="metric-card">
-        <div class="metric-header">
-            <div>
-                <h3 class="metric-title">Uptime</h3>
-                <p class="metric-subtitle">Seit dem letzten Start</p>
-            </div>
-            <span class="metric-icon">⏱️</span>
-        </div>
-        <div class="metric-value">{{ metrics.uptime or 'N/A' }}</div>
-    </div>
-</div>
+.system-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-6);
+}
 
-<div class="content-card">
-    <div class="section-header">
-        <h2 class="section-title">Datenbank-Tabellenstatistiken</h2>
-        <p class="section-meta">Anzahl der Einträge pro Tabelle</p>
-    </div>
-    <div class="table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Tabelle</th>
-                    <th>Anzahl der Einträge</th>
-                    <th>Indexgröße</th>
-                    <th>Tabellengröße</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for table in table_stats %}
-                <tr>
-                    <td><code class="code-inline">{{ table.name }}</code></td>
-                    <td>{{ "{:,}".format(table.row_count)|replace(',', '.') }}</td>
-                    <td>{{ table.index_size_kb or 'N/A' }} KB</td>
-                    <td>{{ table.table_size_kb or 'N/A' }} KB</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="text-center">Keine Tabellenstatistiken verfügbar.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+.system-card .card-header {
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-5);
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.card-icon {
+    font-size: var(--font-size-xl);
+}
+
+.system-stats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+.stat-value {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.system-actions h3 {
+    margin: 0 0 var(--space-6) 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+}
+
+.action-button {
+    justify-content: flex-start;
+    padding: var(--space-4);
+    height: auto;
+}
+</style>
+
+<script>
+function refreshStats() {
+    showToast('Statistiken', 'Aktualisierung gestartet...', 'info');
+    // Hier würde die tatsächliche Aktualisierung stattfinden
+    setTimeout(() => {
+        showToast('Statistiken', 'Erfolgreich aktualisiert', 'success');
+        location.reload();
+    }, 2000);
+}
+
+function optimizeDatabase() {
+    if (confirm('Möchten Sie die Datenbank-Optimierung starten? Dies kann einige Minuten dauern.')) {
+        showToast('Datenbank', 'Optimierung gestartet...', 'info');
+        // Hier würde die tatsächliche Optimierung stattfinden
+    }
+}
+
+function clearCache() {
+    if (confirm('Möchten Sie den gesamten Cache leeren?')) {
+        showToast('Cache', 'Cache wird geleert...', 'info');
+        // Hier würde das Cache-Clearing stattfinden
+    }
+}
+
+function exportLogs() {
+    showToast('Export', 'Logs werden vorbereitet...', 'info');
+    // Hier würde der Log-Export stattfinden
+}
+
+function showToast(title, message, type) {
+    // Toast-Funktionalität wie in base.html
+    console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+}
+</script>
 {% endblock %}

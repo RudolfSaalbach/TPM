@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Einstellungen - Chronos Engine Mockup</title>
+    <link rel="stylesheet" href="../static/css/chronos.css">
+    <link rel="stylesheet" href="../static/css/chronos-unified.css">
+    <style>
+        .mockup-header {
+            background: var(--color-bg-secondary);
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--color-border-primary);
+            text-align: center;
+        }
+
+        .mockup-badge {
+            background: var(--color-warning);
+            color: var(--color-bg-primary);
+            padding: var(--space-1) var(--space-3);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-bold);
+        }
+
+        .settings-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: var(--space-6);
+            height: calc(100vh - 160px);
+        }
+
+        .settings-nav {
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            height: fit-content;
+        }
+
+        .settings-content {
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-md);
+            padding: var(--space-6);
+            overflow-y: auto;
+        }
+
+        .settings-nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            color: var(--color-text-secondary);
+            transition: all 0.2s ease;
+            margin-bottom: var(--space-2);
+        }
+
+        .settings-nav-item:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        .settings-nav-item.active {
+            background: var(--color-bg-tertiary);
+            color: var(--color-text-primary);
+            border-left: 3px solid var(--color-primary);
+        }
+
+        .settings-section {
+            margin-bottom: var(--space-8);
+        }
+
+        .settings-section-title {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-text-primary);
+            margin-bottom: var(--space-4);
+            padding-bottom: var(--space-3);
+            border-bottom: 1px solid var(--color-border-primary);
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-4);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-4);
+            background: var(--color-bg-secondary);
+        }
+
+        .setting-info {
+            flex: 1;
+        }
+
+        .setting-label {
+            font-weight: var(--font-weight-medium);
+            color: var(--color-text-primary);
+            margin-bottom: var(--space-1);
+        }
+
+        .setting-description {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+            line-height: 1.4;
+        }
+
+        .setting-control {
+            flex-shrink: 0;
+            margin-left: var(--space-4);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: var(--color-bg-tertiary);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--color-primary);
+        }
+
+        .toggle-switch::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::before {
+            transform: translateX(26px);
+        }
+
+        .form-group {
+            margin-bottom: var(--space-5);
+        }
+
+        .form-label {
+            display: block;
+            font-weight: var(--font-weight-medium);
+            color: var(--color-text-primary);
+            margin-bottom: var(--space-2);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            max-width: 400px;
+            padding: var(--space-3) var(--space-4);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-md);
+            background: var(--color-bg-tertiary);
+            color: var(--color-text-primary);
+            font-size: var(--font-size-sm);
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--color-border-accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-textarea {
+            width: 100%;
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .button-group {
+            display: flex;
+            gap: var(--space-3);
+            margin-top: var(--space-6);
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-4);
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--color-success);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-4);
+        }
+
+        .sync-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--color-danger);
+        }
+
+        .sync-status.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: var(--color-warning);
+        }
+
+        .status-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-sm);
+        }
+
+        .status-icon.success {
+            background: var(--color-success);
+            color: white;
+        }
+
+        .status-icon.error {
+            background: var(--color-danger);
+            color: white;
+        }
+
+        .status-icon.warning {
+            background: var(--color-warning);
+            color: white;
+        }
+
+        .calendar-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-4);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-3);
+            background: var(--color-bg-secondary);
+        }
+
+        .calendar-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .calendar-color {
+            width: 16px;
+            height: 16px;
+            border-radius: var(--radius-sm);
+        }
+
+        .calendar-actions {
+            display: flex;
+            gap: var(--space-2);
+        }
+
+        .danger-zone {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: var(--radius-md);
+            padding: var(--space-5);
+        }
+
+        .danger-zone-title {
+            color: var(--color-danger);
+            font-weight: var(--font-weight-semibold);
+            margin-bottom: var(--space-3);
+        }
+
+        .backup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-3);
+            border-bottom: 1px solid var(--color-border-primary);
+        }
+
+        .backup-item:last-child {
+            border-bottom: none;
+        }
+
+        .tab-navigation {
+            display: flex;
+            border-bottom: 1px solid var(--color-border-primary);
+            margin-bottom: var(--space-6);
+        }
+
+        .tab-btn {
+            padding: var(--space-3) var(--space-5);
+            border: none;
+            background: transparent;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+        }
+
+        @media (max-width: 768px) {
+            .settings-container {
+                grid-template-columns: 1fr;
+                gap: var(--space-4);
+            }
+
+            .settings-nav {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Mockup Header -->
+        <div class="mockup-header">
+            <span class="mockup-badge">MOCKUP - FAKE DATA</span>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="dashboard-mockup.html" class="logo">
+                    <div class="logo-icon">⏰</div>
+                    <span class="logo-text">Chronos</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard-mockup.html" class="nav-item">
+                    <span class="nav-item-icon">📊</span>
+                    <span class="nav-item-text">Übersicht</span>
+                </a>
+                <a href="calendar-mockup.html" class="nav-item">
+                    <span class="nav-item-icon">📅</span>
+                    <span class="nav-item-text">Kalender</span>
+                </a>
+                <a href="events-mockup.html" class="nav-item">
+                    <span class="nav-item-icon">📋</span>
+                    <span class="nav-item-text">Events</span>
+                </a>
+                <a href="analytics-mockup.html" class="nav-item">
+                    <span class="nav-item-icon">📈</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">🔄</span>
+                    <span class="nav-item-text">Sync</span>
+                </a>
+                <a href="settings-mockup.html" class="nav-item active">
+                    <span class="nav-item-icon">⚙️</span>
+                    <span class="nav-item-text">Einstellungen</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Navbar -->
+            <nav class="navbar">
+                <div class="navbar-brand">
+                    <h1 class="navbar-title">Einstellungen</h1>
+                    <p class="navbar-subtitle">Systemkonfiguration & Präferenzen</p>
+                </div>
+
+                <div class="navbar-actions">
+                    <button class="btn btn-outline">
+                        <span>📤</span>
+                        Exportieren
+                    </button>
+                    <button class="btn btn-success">
+                        <span>💾</span>
+                        Speichern
+                    </button>
+                </div>
+            </nav>
+
+            <div class="dashboard-content">
+                <div class="settings-container">
+                    <!-- Settings Navigation -->
+                    <div class="settings-nav">
+                        <a href="#general" class="settings-nav-item active">
+                            <span>⚙️</span>
+                            <span>Allgemein</span>
+                        </a>
+                        <a href="#caldav" class="settings-nav-item">
+                            <span>🔗</span>
+                            <span>CalDAV</span>
+                        </a>
+                        <a href="#notifications" class="settings-nav-item">
+                            <span>🔔</span>
+                            <span>Benachrichtigungen</span>
+                        </a>
+                        <a href="#automation" class="settings-nav-item">
+                            <span>🤖</span>
+                            <span>Automatisierung</span>
+                        </a>
+                        <a href="#security" class="settings-nav-item">
+                            <span>🔒</span>
+                            <span>Sicherheit</span>
+                        </a>
+                        <a href="#backup" class="settings-nav-item">
+                            <span>💾</span>
+                            <span>Backup</span>
+                        </a>
+                        <a href="#about" class="settings-nav-item">
+                            <span>ℹ️</span>
+                            <span>Über</span>
+                        </a>
+                    </div>
+
+                    <!-- Settings Content -->
+                    <div class="settings-content">
+                        <!-- General Settings -->
+                        <div class="settings-section" id="general">
+                            <h2 class="settings-section-title">Allgemeine Einstellungen</h2>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Dark Mode</div>
+                                    <div class="setting-description">Verwende das dunkle Design für bessere Sichtbarkeit bei schwachem Licht</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Kompakte Ansicht</div>
+                                    <div class="setting-description">Zeige mehr Informationen auf kleinerem Raum an</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Standard-Zeitzone</label>
+                                <select class="form-select">
+                                    <option>Europe/Berlin (GMT+1)</option>
+                                    <option>Europe/London (GMT+0)</option>
+                                    <option>America/New_York (GMT-5)</option>
+                                    <option>Asia/Tokyo (GMT+9)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Sprache</label>
+                                <select class="form-select">
+                                    <option>Deutsch</option>
+                                    <option>English</option>
+                                    <option>Français</option>
+                                    <option>Español</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Datumsformat</label>
+                                <select class="form-select">
+                                    <option>DD.MM.YYYY (Deutsch)</option>
+                                    <option>MM/DD/YYYY (US)</option>
+                                    <option>YYYY-MM-DD (ISO)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- CalDAV Settings -->
+                        <div class="settings-section" id="caldav">
+                            <h2 class="settings-section-title">CalDAV Konfiguration</h2>
+
+                            <div class="sync-status">
+                                <div class="status-icon success">✓</div>
+                                <div>
+                                    <div style="font-weight: var(--font-weight-medium); color: var(--color-text-primary);">Verbindung aktiv</div>
+                                    <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Letzte Synchronisation: vor 3 Minuten</div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Server-URL</label>
+                                <input type="url" class="form-input" value="http://10.210.1.1:5232/radicaleuser/" readonly>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Benutzername</label>
+                                <input type="text" class="form-input" value="radicaleuser" readonly>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Passwort</label>
+                                <input type="password" class="form-input" value="••••••••••••••••" readonly>
+                            </div>
+
+                            <h3 style="margin: var(--space-6) 0 var(--space-4) 0; color: var(--color-text-primary);">Synchronisierte Kalender</h3>
+
+                            <div class="calendar-item">
+                                <div class="calendar-info">
+                                    <div class="calendar-color" style="background: var(--color-primary);"></div>
+                                    <div>
+                                        <div style="font-weight: var(--font-weight-medium); color: var(--color-text-primary);">Automation Calendar</div>
+                                        <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">127 Events</div>
+                                    </div>
+                                </div>
+                                <div class="calendar-actions">
+                                    <button class="btn btn-outline">Sync</button>
+                                    <button class="btn btn-outline">Bearbeiten</button>
+                                </div>
+                            </div>
+
+                            <div class="calendar-item">
+                                <div class="calendar-info">
+                                    <div class="calendar-color" style="background: var(--color-success);"></div>
+                                    <div>
+                                        <div style="font-weight: var(--font-weight-medium); color: var(--color-text-primary);">Dates Calendar</div>
+                                        <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">45 Events</div>
+                                    </div>
+                                </div>
+                                <div class="calendar-actions">
+                                    <button class="btn btn-outline">Sync</button>
+                                    <button class="btn btn-outline">Bearbeiten</button>
+                                </div>
+                            </div>
+
+                            <div class="calendar-item">
+                                <div class="calendar-info">
+                                    <div class="calendar-color" style="background: var(--color-warning);"></div>
+                                    <div>
+                                        <div style="font-weight: var(--font-weight-medium); color: var(--color-text-primary);">Special Calendar</div>
+                                        <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">23 Events</div>
+                                    </div>
+                                </div>
+                                <div class="calendar-actions">
+                                    <button class="btn btn-outline">Sync</button>
+                                    <button class="btn btn-outline">Bearbeiten</button>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Automatische Synchronisation</div>
+                                    <div class="setting-description">Synchronisiere Kalender automatisch alle 5 Minuten</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Sync-Intervall (Minuten)</label>
+                                <input type="number" class="form-input" value="5" min="1" max="60">
+                            </div>
+                        </div>
+
+                        <!-- Notification Settings -->
+                        <div class="settings-section" id="notifications">
+                            <h2 class="settings-section-title">Benachrichtigungen</h2>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Desktop-Benachrichtigungen</div>
+                                    <div class="setting-description">Zeige Popup-Benachrichtigungen für wichtige Events</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">E-Mail Benachrichtigungen</div>
+                                    <div class="setting-description">Sende E-Mails für kritische Ereignisse und Erinnerungen</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Erinnerungszeit vor Events (Minuten)</label>
+                                <select class="form-select">
+                                    <option>5 Minuten</option>
+                                    <option selected>15 Minuten</option>
+                                    <option>30 Minuten</option>
+                                    <option>1 Stunde</option>
+                                    <option>1 Tag</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">E-Mail Adresse</label>
+                                <input type="email" class="form-input" value="user@example.com">
+                            </div>
+                        </div>
+
+                        <!-- Automation Settings -->
+                        <div class="settings-section" id="automation">
+                            <h2 class="settings-section-title">Automatisierung & KI</h2>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">KI-Optimierung</div>
+                                    <div class="setting-description">Automatische Terminoptimierung basierend auf Produktivitätsmustern</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Smart Scheduling</div>
+                                    <div class="setting-description">Schlage optimale Zeiten für neue Termine vor</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Automatische Priorisierung</div>
+                                    <div class="setting-description">Setze Prioritäten basierend auf Schlüsselwörtern automatisch</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Arbeitszeiten</label>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+                                    <input type="time" class="form-input" value="09:00">
+                                    <input type="time" class="form-input" value="17:00">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Focus Time Blöcke</label>
+                                <select class="form-select">
+                                    <option>Deaktiviert</option>
+                                    <option>1 Stunde täglich</option>
+                                    <option selected>2 Stunden täglich</option>
+                                    <option>4 Stunden täglich</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Security Settings -->
+                        <div class="settings-section" id="security">
+                            <h2 class="settings-section-title">Sicherheit & Datenschutz</h2>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">API-Schlüssel Authentifizierung</div>
+                                    <div class="setting-description">Sichere API-Zugriffe mit Schlüssel-basierter Authentifizierung</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">API-Schlüssel</label>
+                                <div style="display: flex; gap: var(--space-3); align-items: center;">
+                                    <input type="password" class="form-input" value="super-secret-change-me" readonly style="flex: 1;">
+                                    <button class="btn btn-outline">Regenerieren</button>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Datenlogging</div>
+                                    <div class="setting-description">Speichere Systemlogs für Debugging und Monitoring</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Log-Level</label>
+                                <select class="form-select">
+                                    <option>ERROR</option>
+                                    <option>WARN</option>
+                                    <option selected>INFO</option>
+                                    <option>DEBUG</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Session Timeout</div>
+                                    <div class="setting-description">Automatische Abmeldung nach Inaktivität</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="form-select">
+                                        <option>15 Minuten</option>
+                                        <option>30 Minuten</option>
+                                        <option selected>1 Stunde</option>
+                                        <option>4 Stunden</option>
+                                        <option>Nie</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Backup Settings -->
+                        <div class="settings-section" id="backup">
+                            <h2 class="settings-section-title">Backup & Wiederherstellung</h2>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Automatisches Backup</div>
+                                    <div class="setting-description">Erstelle regelmäßige Backups der Konfiguration und Daten</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Backup-Intervall</label>
+                                <select class="form-select">
+                                    <option>Täglich</option>
+                                    <option selected>Wöchentlich</option>
+                                    <option>Monatlich</option>
+                                </select>
+                            </div>
+
+                            <h3 style="margin: var(--space-6) 0 var(--space-4) 0; color: var(--color-text-primary);">Verfügbare Backups</h3>
+
+                            <div style="background: var(--color-bg-secondary); border: 1px solid var(--color-border-primary); border-radius: var(--radius-md); padding: var(--space-4);">
+                                <div class="backup-item">
+                                    <div>
+                                        <div style="font-weight: var(--font-weight-medium); color: var(--color-text-primary);">Automatisches Backup</div>
+                                        <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">21.12.2024, 02:00 Uhr</div>
+                                    </div>
+                                    <div style="display: flex; gap: var(--space-2);">
+                                        <button class="btn btn-outline">Download</button>
+                                        <button class="btn btn-primary">Wiederherstellen</button>
+                                    </div>
+                                </div>
+
+                                <div class="backup-item">
+                                    <div>
+                                        <div style="font-weight: var(--font-weight-medium); color: var(--color-text-primary);">Manuelles Backup</div>
+                                        <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">18.12.2024, 15:30 Uhr</div>
+                                    </div>
+                                    <div style="display: flex; gap: var(--space-2);">
+                                        <button class="btn btn-outline">Download</button>
+                                        <button class="btn btn-primary">Wiederherstellen</button>
+                                    </div>
+                                </div>
+
+                                <div class="backup-item">
+                                    <div>
+                                        <div style="font-weight: var(--font-weight-medium); color: var(--color-text-primary);">Wöchentliches Backup</div>
+                                        <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">15.12.2024, 02:00 Uhr</div>
+                                    </div>
+                                    <div style="display: flex; gap: var(--space-2);">
+                                        <button class="btn btn-outline">Download</button>
+                                        <button class="btn btn-primary">Wiederherstellen</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="button-group">
+                                <button class="btn btn-primary">Backup jetzt erstellen</button>
+                                <button class="btn btn-outline">Backup importieren</button>
+                            </div>
+
+                            <div class="danger-zone">
+                                <div class="danger-zone-title">⚠️ Gefährlicher Bereich</div>
+                                <p style="color: var(--color-text-secondary); margin-bottom: var(--space-4);">
+                                    Diese Aktionen sind irreversibel. Stelle sicher, dass du ein aktuelles Backup hast.
+                                </p>
+                                <div class="button-group">
+                                    <button class="btn btn-danger">Alle Daten löschen</button>
+                                    <button class="btn btn-danger">Auf Werkseinstellungen zurücksetzen</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- About -->
+                        <div class="settings-section" id="about">
+                            <h2 class="settings-section-title">Über Chronos Engine</h2>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-6);">
+                                <div>
+                                    <h3 style="color: var(--color-text-primary); margin-bottom: var(--space-3);">System Information</h3>
+                                    <div style="background: var(--color-bg-secondary); border: 1px solid var(--color-border-primary); border-radius: var(--radius-md); padding: var(--space-4);">
+                                        <div style="margin-bottom: var(--space-3);">
+                                            <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Version</div>
+                                            <div style="color: var(--color-text-primary); font-weight: var(--font-weight-medium);">2.1.0</div>
+                                        </div>
+                                        <div style="margin-bottom: var(--space-3);">
+                                            <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Build</div>
+                                            <div style="color: var(--color-text-primary); font-weight: var(--font-weight-medium);">20241221-1530</div>
+                                        </div>
+                                        <div style="margin-bottom: var(--space-3);">
+                                            <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Python Version</div>
+                                            <div style="color: var(--color-text-primary); font-weight: var(--font-weight-medium);">3.11.6</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">FastAPI Version</div>
+                                            <div style="color: var(--color-text-primary); font-weight: var(--font-weight-medium);">0.104.1</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 style="color: var(--color-text-primary); margin-bottom: var(--space-3);">Statistiken</h3>
+                                    <div style="background: var(--color-bg-secondary); border: 1px solid var(--color-border-primary); border-radius: var(--radius-md); padding: var(--space-4);">
+                                        <div style="margin-bottom: var(--space-3);">
+                                            <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Uptime</div>
+                                            <div style="color: var(--color-text-primary); font-weight: var(--font-weight-medium);">3 Tage, 14h 23m</div>
+                                        </div>
+                                        <div style="margin-bottom: var(--space-3);">
+                                            <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">API Requests</div>
+                                            <div style="color: var(--color-text-primary); font-weight: var(--font-weight-medium);">12,847</div>
+                                        </div>
+                                        <div style="margin-bottom: var(--space-3);">
+                                            <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Sync Operations</div>
+                                            <div style="color: var(--color-text-primary); font-weight: var(--font-weight-medium);">1,234</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Database Size</div>
+                                            <div style="color: var(--color-text-primary); font-weight: var(--font-weight-medium);">47.2 MB</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: var(--space-6); text-align: center; color: var(--color-text-secondary);">
+                                <p>© 2024 Chronos Engine. Entwickelt mit ❤️ für besseres Zeitmanagement.</p>
+                                <div style="margin-top: var(--space-3);">
+                                    <a href="#" style="color: var(--color-primary); text-decoration: none; margin: 0 var(--space-3);">Dokumentation</a>
+                                    <a href="#" style="color: var(--color-primary); text-decoration: none; margin: 0 var(--space-3);">GitHub</a>
+                                    <a href="#" style="color: var(--color-primary); text-decoration: none; margin: 0 var(--space-3);">Support</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script>
+        // Demo Toast functions
+        function showToast(title, message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <h4 class="toast-title">${title}</h4>
+                    <button class="toast-close" onclick="removeToast(this.parentElement.parentElement)">×</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            setTimeout(() => {
+                removeToast(toast);
+            }, 8000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function removeToast(toast) {
+            if (toast && toast.parentElement) {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 400);
+            }
+        }
+
+        // Toggle switch functionality
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+            const isActive = element.classList.contains('active');
+            const label = element.parentElement.parentElement.querySelector('.setting-label').textContent;
+            showToast('Einstellung geändert', `${label}: ${isActive ? 'Aktiviert' : 'Deaktiviert'}`, 'info');
+        }
+
+        // Navigation functionality
+        document.querySelectorAll('.settings-nav-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // Update active state
+                document.querySelectorAll('.settings-nav-item').forEach(nav => nav.classList.remove('active'));
+                this.classList.add('active');
+
+                // Show toast
+                const sectionName = this.textContent.trim();
+                showToast('Navigation', `Zu Abschnitt gewechselt: ${sectionName}`, 'info');
+            });
+        });
+
+        // Demo notification on load
+        setTimeout(() => {
+            showToast('Settings Mockup', 'Umfassende Systemkonfiguration mit allen verfügbaren Optionen', 'info');
+        }, 1000);
+
+        // Form interactions
+        document.querySelectorAll('.form-select, .form-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const label = this.previousElementSibling?.textContent || 'Einstellung';
+                showToast('Änderung gespeichert', `${label} wurde aktualisiert`, 'success');
+            });
+        });
+    </script>
+</body>
+</html>

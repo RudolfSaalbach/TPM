@@ -1,0 +1,76 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Whitelist-Eintrag bearbeiten{% endblock %}
+
+{% if entry and entry.id %}
+    {% block header_title %}Whitelist-Eintrag bearbeiten{% endblock %}
+    {% block header_subtitle %}Bearbeiten Sie einen bestehenden Eintrag für die System-Whitelist.{% endblock %}
+{% else %}
+    {% block header_title %}Neuen Whitelist-Eintrag erstellen{% endblock %}
+    {% block header_subtitle %}Fügen Sie einen neuen Eintrag zur System-Whitelist hinzu.{% endblock %}
+{% endif %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        {% if entry and entry.id %}
+            <h1>Eintrag <code class="code-inline">{{ entry.id }}</code> bearbeiten</h1>
+            <p>Passen Sie die Details für diesen Whitelist-Eintrag an.</p>
+        {% else %}
+            <h1>Neuer Whitelist-Eintrag</h1>
+            <p>Erstellen Sie eine neue Regel für die Governance-Engine.</p>
+        {% endif %}
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('admin_routes.view_whitelists') }}" class="btn btn-secondary">
+            <span class="btn-icon">⬅️</span>
+            Zurück zur Übersicht
+        </a>
+    </div>
+</div>
+
+<div class="content-card">
+    <form method="post">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="entry_type" class="form-label">Eintragstyp</label>
+                <select id="entry_type" name="entry_type" class="form-select" required>
+                    <option value="user" {% if entry and entry.entry_type == 'user' %}selected{% endif %}>Benutzer</option>
+                    <option value="system" {% if entry and entry.entry_type == 'system' %}selected{% endif %}>System</option>
+                    <option value="ip_address" {% if entry and entry.entry_type == 'ip_address' %}selected{% endif %}>IP-Adresse</option>
+                    <option value="action" {% if entry and entry.entry_type == 'action' %}selected{% endif %}>Aktion</option>
+                </select>
+                <p class="form-hint">Der Typ des Eintrags, der auf die Whitelist gesetzt wird.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="value" class="form-label">Wert</label>
+                <input type="text" id="value" name="value" class="form-input" value="{{ entry.value if entry else '' }}" required placeholder="z.B. user@example.com, system_name, 192.168.1.100">
+                <p class="form-hint">Der genaue Wert des Eintrags.</p>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="description" class="form-label">Beschreibung</label>
+                <textarea id="description" name="description" class="form-textarea" rows="3" placeholder="Zweck dieses Eintrags, z.B. 'Zulassen des n8n-Produktivsystems'">{{ entry.description if entry else '' }}</textarea>
+                <p class="form-hint">Eine optionale Beschreibung für den Kontext.</p>
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" id="is_active" name="is_active" class="form-check-input" {% if not entry or entry.is_active %}checked{% endif %}>
+                    <label for="is_active" class="form-check-label">Aktiv</label>
+                </div>
+                <p class="form-hint">Deaktivieren Sie diesen Schalter, um die Regel temporär auszusetzen, ohne sie zu löschen.</p>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <span class="btn-icon">💾</span>
+                Eintrag speichern
+            </button>
+            <a href="{{ url_for('admin_routes.view_whitelists') }}" class="btn btn-secondary">Abbrechen</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

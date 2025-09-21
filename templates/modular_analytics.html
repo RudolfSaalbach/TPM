@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Chronos Engine</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Premium CSS -->
+    <link rel="stylesheet" href="/static/css/chronos-premium.css">
+</head>
+<body>
+    <!-- Skip Link für Barrierefreiheit -->
+    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+
+    <div class="app-container">
+        <!-- Sidebar Overlay für Mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar" role="navigation" aria-label="Hauptnavigation">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <div class="logo-icon" aria-hidden="true">⏰</div>
+                    <span class="logo-text">Chronos</span>
+                </a>
+            </div>
+
+            <div class="sidebar-nav">
+                <a href="/dashboard" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Dashboard">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/calendar" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Kalender">📅</span>
+                    <span>Kalender</span>
+                </a>
+                <a href="/events" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Events">📋</span>
+                    <span>Events</span>
+                </a>
+                <a href="/analytics" class="nav-item active" aria-current="page">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Analytics">📈</span>
+                    <span>Analytics</span>
+                </a>
+                <a href="/settings" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Einstellungen">⚙️</span>
+                    <span>Einstellungen</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    <div class="header-title">
+                        <h1>Analytics</h1>
+                        <p class="header-subtitle">Erkenne Muster und optimiere deine Produktivität mit detaillierten Analysen.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="toggleSidebar()" aria-label="Seitenleiste umschalten">
+                            <span aria-hidden="true">☰</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportAnalytics()" aria-label="Analytics exportieren">
+                            <span aria-hidden="true">📊</span>
+                            Report exportieren
+                        </button>
+                        <button class="btn btn-primary" onclick="refreshAnalytics()" aria-label="Analytics aktualisieren">
+                            <span aria-hidden="true">🔄</span>
+                            Aktualisieren
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Analytics Content -->
+            <div class="dashboard-content animate-fade-in">
+                <!-- Time Range Controls -->
+                <section class="analytics-controls" aria-label="Zeitraum-Auswahl">
+                    <div class="time-range-selector">
+                        <div class="range-buttons" role="tablist" aria-label="Zeitraum auswählen">
+                            <button class="range-btn active" role="tab" aria-selected="true" onclick="setTimeRange('week')" aria-controls="analytics-content">
+                                7 Tage
+                            </button>
+                            <button class="range-btn" role="tab" aria-selected="false" onclick="setTimeRange('month')" aria-controls="analytics-content">
+                                30 Tage
+                            </button>
+                            <button class="range-btn" role="tab" aria-selected="false" onclick="setTimeRange('quarter')" aria-controls="analytics-content">
+                                90 Tage
+                            </button>
+                            <button class="range-btn" role="tab" aria-selected="false" onclick="setTimeRange('year')" aria-controls="analytics-content">
+                                1 Jahr
+                            </button>
+                        </div>
+
+                        <div class="custom-range">
+                            <label for="startDate" class="sr-only">Startdatum</label>
+                            <input type="date" id="startDate" class="date-input" onchange="updateCustomRange()">
+                            <span class="range-separator">bis</span>
+                            <label for="endDate" class="sr-only">Enddatum</label>
+                            <input type="date" id="endDate" class="date-input" onchange="updateCustomRange()">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Key Metrics Overview -->
+                <section aria-labelledby="metrics-heading">
+                    <h2 id="metrics-heading" class="sr-only">Leistungsmetriken</h2>
+                    <div class="analytics-metrics animate-stagger">
+                        <article class="analytics-metric-card">
+                            <div class="metric-icon-large" aria-hidden="true">⏱️</div>
+                            <div class="metric-content">
+                                <span class="metric-label">Durchschnittliche Fokuszeit</span>
+                                <span class="metric-value" id="avgFocusTime">4.2h</span>
+                                <div class="metric-change positive">
+                                    <span aria-label="Anstieg">↗</span>
+                                    <span>+12% vs. letzter Periode</span>
+                                </div>
+                            </div>
+                            <div class="metric-chart-mini" aria-hidden="true">
+                                <div class="mini-bar" style="height: 60%"></div>
+                                <div class="mini-bar" style="height: 80%"></div>
+                                <div class="mini-bar" style="height: 70%"></div>
+                                <div class="mini-bar" style="height: 90%"></div>
+                                <div class="mini-bar" style="height: 85%"></div>
+                                <div class="mini-bar" style="height: 95%"></div>
+                                <div class="mini-bar" style="height: 75%"></div>
+                            </div>
+                        </article>
+
+                        <article class="analytics-metric-card">
+                            <div class="metric-icon-large" aria-hidden="true">🎯</div>
+                            <div class="metric-content">
+                                <span class="metric-label">Produktivitätsrate</span>
+                                <span class="metric-value" id="productivityRate">87.3%</span>
+                                <div class="metric-change positive">
+                                    <span aria-label="Anstieg">↗</span>
+                                    <span>+5.2% vs. letzter Periode</span>
+                                </div>
+                            </div>
+                            <div class="metric-progress" aria-hidden="true">
+                                <div class="progress-ring">
+                                    <svg width="60" height="60">
+                                        <circle cx="30" cy="30" r="25" stroke="var(--border-subtle)" stroke-width="4" fill="none"/>
+                                        <circle cx="30" cy="30" r="25" stroke="var(--success-500)" stroke-width="4" fill="none"
+                                                stroke-dasharray="157" stroke-dashoffset="20" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="analytics-metric-card">
+                            <div class="metric-icon-large" aria-hidden="true">📅</div>
+                            <div class="metric-content">
+                                <span class="metric-label">Events abgeschlossen</span>
+                                <span class="metric-value" id="completedEvents">127</span>
+                                <div class="metric-change positive">
+                                    <span aria-label="Anstieg">↗</span>
+                                    <span>+18 vs. letzter Periode</span>
+                                </div>
+                            </div>
+                            <div class="completion-indicator" aria-hidden="true">
+                                <div class="completion-bar">
+                                    <div class="completion-fill" style="width: 87%"></div>
+                                </div>
+                                <span class="completion-text">87% Erfolgsrate</span>
+                            </div>
+                        </article>
+
+                        <article class="analytics-metric-card">
+                            <div class="metric-icon-large" aria-hidden="true">⚡</div>
+                            <div class="metric-content">
+                                <span class="metric-label">Effizienz-Score</span>
+                                <span class="metric-value" id="efficiencyScore">92</span>
+                                <div class="metric-change positive">
+                                    <span aria-label="Anstieg">↗</span>
+                                    <span>+7 Punkte</span>
+                                </div>
+                            </div>
+                            <div class="score-indicator" aria-hidden="true">
+                                <div class="score-badge excellent">Exzellent</div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- Charts Section -->
+                <div class="analytics-grid">
+                    <!-- Productivity Trend Chart -->
+                    <section class="chart-section" aria-labelledby="productivity-chart-title">
+                        <div class="chart-header">
+                            <div>
+                                <h3 id="productivity-chart-title" class="chart-title">Produktivitätstrend</h3>
+                                <p class="chart-subtitle">Tägliche Produktivität über die Zeit</p>
+                            </div>
+                            <div class="chart-controls">
+                                <button class="chart-control-btn active" onclick="switchChartType('productivity', 'line')">
+                                    Linie
+                                </button>
+                                <button class="chart-control-btn" onclick="switchChartType('productivity', 'bar')">
+                                    Balken
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container" role="img" aria-labelledby="productivity-chart-title" aria-describedby="productivity-chart-desc">
+                            <div id="productivity-chart-desc" class="sr-only">
+                                Liniendiagramm zeigt Produktivitätstrend über die letzten 7 Tage mit einem Durchschnitt von 87.3%
+                            </div>
+                            <div class="chart-placeholder trend-chart">
+                                <div class="chart-y-axis">
+                                    <span>100%</span>
+                                    <span>75%</span>
+                                    <span>50%</span>
+                                    <span>25%</span>
+                                    <span>0%</span>
+                                </div>
+                                <div class="chart-area">
+                                    <svg viewBox="0 0 400 200" class="trend-line">
+                                        <polyline points="20,120 80,100 140,110 200,80 260,90 320,70 380,85"
+                                                  stroke="var(--primary-500)" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                        <defs>
+                                            <linearGradient id="trendGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                <stop offset="0%" style="stop-color:var(--primary-500);stop-opacity:0.3"/>
+                                                <stop offset="100%" style="stop-color:var(--primary-500);stop-opacity:0"/>
+                                            </linearGradient>
+                                        </defs>
+                                        <polygon points="20,120 80,100 140,110 200,80 260,90 320,70 380,85 380,200 20,200"
+                                                 fill="url(#trendGradient)"/>
+                                    </svg>
+                                </div>
+                                <div class="chart-x-axis">
+                                    <span>Mo</span>
+                                    <span>Di</span>
+                                    <span>Mi</span>
+                                    <span>Do</span>
+                                    <span>Fr</span>
+                                    <span>Sa</span>
+                                    <span>So</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Time Distribution -->
+                    <section class="chart-section" aria-labelledby="time-dist-title">
+                        <div class="chart-header">
+                            <div>
+                                <h3 id="time-dist-title" class="chart-title">Zeitverteilung</h3>
+                                <p class="chart-subtitle">Wie verbringst du deine Zeit?</p>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <div class="time-distribution">
+                                <div class="time-category">
+                                    <div class="category-bar meetings" style="width: 35%">
+                                        <span class="category-label">Meetings</span>
+                                        <span class="category-value">35%</span>
+                                    </div>
+                                </div>
+                                <div class="time-category">
+                                    <div class="category-bar focus" style="width: 45%">
+                                        <span class="category-label">Fokuszeit</span>
+                                        <span class="category-value">45%</span>
+                                    </div>
+                                </div>
+                                <div class="time-category">
+                                    <div class="category-bar admin" style="width: 15%">
+                                        <span class="category-label">Administration</span>
+                                        <span class="category-value">15%</span>
+                                    </div>
+                                </div>
+                                <div class="time-category">
+                                    <div class="category-bar break" style="width: 5%">
+                                        <span class="category-label">Pausen</span>
+                                        <span class="category-value">5%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Weekly Heatmap -->
+                    <section class="chart-section full-width" aria-labelledby="heatmap-title">
+                        <div class="chart-header">
+                            <div>
+                                <h3 id="heatmap-title" class="chart-title">Aktivitäts-Heatmap</h3>
+                                <p class="chart-subtitle">Deine aktivsten Zeiten in der Woche</p>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <div class="heatmap-grid">
+                                <div class="heatmap-y-labels">
+                                    <span>06:00</span>
+                                    <span>09:00</span>
+                                    <span>12:00</span>
+                                    <span>15:00</span>
+                                    <span>18:00</span>
+                                    <span>21:00</span>
+                                </div>
+                                <div class="heatmap-chart">
+                                    <div class="heatmap-day">
+                                        <div class="heatmap-cell low"></div>
+                                        <div class="heatmap-cell medium"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell medium"></div>
+                                        <div class="heatmap-cell low"></div>
+                                    </div>
+                                    <div class="heatmap-day">
+                                        <div class="heatmap-cell low"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell very-high"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell medium"></div>
+                                        <div class="heatmap-cell low"></div>
+                                    </div>
+                                    <div class="heatmap-day">
+                                        <div class="heatmap-cell medium"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell very-high"></div>
+                                        <div class="heatmap-cell very-high"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell medium"></div>
+                                    </div>
+                                    <div class="heatmap-day">
+                                        <div class="heatmap-cell low"></div>
+                                        <div class="heatmap-cell medium"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell very-high"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell medium"></div>
+                                    </div>
+                                    <div class="heatmap-day">
+                                        <div class="heatmap-cell medium"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell high"></div>
+                                        <div class="heatmap-cell medium"></div>
+                                        <div class="heatmap-cell low"></div>
+                                        <div class="heatmap-cell very-low"></div>
+                                    </div>
+                                    <div class="heatmap-day">
+                                        <div class="heatmap-cell very-low"></div>
+                                        <div class="heatmap-cell low"></div>
+                                        <div class="heatmap-cell medium"></div>
+                                        <div class="heatmap-cell low"></div>
+                                        <div class="heatmap-cell very-low"></div>
+                                        <div class="heatmap-cell very-low"></div>
+                                    </div>
+                                    <div class="heatmap-day">
+                                        <div class="heatmap-cell very-low"></div>
+                                        <div class="heatmap-cell very-low"></div>
+                                        <div class="heatmap-cell low"></div>
+                                        <div class="heatmap-cell low"></div>
+                                        <div class="heatmap-cell very-low"></div>
+                                        <div class="heatmap-cell very-low"></div>
+                                    </div>
+                                </div>
+                                <div class="heatmap-x-labels">
+                                    <span>Mo</span>
+                                    <span>Di</span>
+                                    <span>Mi</span>
+                                    <span>Do</span>
+                                    <span>Fr</span>
+                                    <span>Sa</span>
+                                    <span>So</span>
+                                </div>
+                            </div>
+                            <div class="heatmap-legend">
+                                <span class="legend-label">Weniger</span>
+                                <div class="legend-scale">
+                                    <div class="legend-cell very-low"></div>
+                                    <div class="legend-cell low"></div>
+                                    <div class="legend-cell medium"></div>
+                                    <div class="legend-cell high"></div>
+                                    <div class="legend-cell very-high"></div>
+                                </div>
+                                <span class="legend-label">Mehr</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Goal Progress -->
+                    <section class="chart-section" aria-labelledby="goals-title">
+                        <div class="chart-header">
+                            <div>
+                                <h3 id="goals-title" class="chart-title">Zielfortschritt</h3>
+                                <p class="chart-subtitle">Fortschritt zu deinen gesetzten Zielen</p>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <div class="goals-list">
+                                <div class="goal-item">
+                                    <div class="goal-info">
+                                        <span class="goal-name">Tägliche Fokuszeit: 4h</span>
+                                        <span class="goal-progress-text">87% erreicht</span>
+                                    </div>
+                                    <div class="goal-progress-bar">
+                                        <div class="progress-fill" style="width: 87%; background: var(--success-500);"></div>
+                                    </div>
+                                </div>
+
+                                <div class="goal-item">
+                                    <div class="goal-info">
+                                        <span class="goal-name">Wöchentliche Events: 25</span>
+                                        <span class="goal-progress-text">124% erreicht</span>
+                                    </div>
+                                    <div class="goal-progress-bar">
+                                        <div class="progress-fill" style="width: 100%; background: var(--success-500);"></div>
+                                        <div class="progress-overflow" style="width: 24%; background: var(--primary-500);"></div>
+                                    </div>
+                                </div>
+
+                                <div class="goal-item">
+                                    <div class="goal-info">
+                                        <span class="goal-name">Meeting-Effizienz: 90%</span>
+                                        <span class="goal-progress-text">67% erreicht</span>
+                                    </div>
+                                    <div class="goal-progress-bar">
+                                        <div class="progress-fill" style="width: 67%; background: var(--warning-500);"></div>
+                                    </div>
+                                </div>
+
+                                <div class="goal-item">
+                                    <div class="goal-info">
+                                        <span class="goal-name">Work-Life-Balance Score: 80</span>
+                                        <span class="goal-progress-text">45% erreicht</span>
+                                    </div>
+                                    <div class="goal-progress-bar">
+                                        <div class="progress-fill" style="width: 45%; background: var(--danger-500);"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Insights & Recommendations -->
+                <section class="insights-section" aria-labelledby="insights-title">
+                    <h2 id="insights-title" class="section-title">KI-basierte Insights</h2>
+                    <div class="insights-grid">
+                        <article class="insight-card high-impact">
+                            <div class="insight-icon" aria-hidden="true">🎯</div>
+                            <div class="insight-content">
+                                <h3 class="insight-title">Optimale Fokuszeit</h3>
+                                <p class="insight-description">
+                                    Deine produktivste Zeit ist zwischen 10:00-12:00 Uhr. Plane wichtige Aufgaben in diesem Zeitfenster.
+                                </p>
+                                <div class="insight-impact">
+                                    <span class="impact-label">Potenzielle Verbesserung:</span>
+                                    <span class="impact-value">+23% Produktivität</span>
+                                </div>
+                            </div>
+                            <div class="insight-actions">
+                                <button class="btn btn-primary btn-sm" onclick="applyInsight(1)">Umsetzen</button>
+                                <button class="btn btn-ghost btn-sm" onclick="dismissInsight(1)">Ignorieren</button>
+                            </div>
+                        </article>
+
+                        <article class="insight-card medium-impact">
+                            <div class="insight-icon" aria-hidden="true">📅</div>
+                            <div class="insight-content">
+                                <h3 class="insight-title">Meeting-Optimierung</h3>
+                                <p class="insight-description">
+                                    Du hast 35% deiner Zeit in Meetings verbracht. Versuche 2-3 Meetings pro Woche zu reduzieren.
+                                </p>
+                                <div class="insight-impact">
+                                    <span class="impact-label">Gesparte Zeit:</span>
+                                    <span class="impact-value">4.5h pro Woche</span>
+                                </div>
+                            </div>
+                            <div class="insight-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="applyInsight(2)">Umsetzen</button>
+                                <button class="btn btn-ghost btn-sm" onclick="dismissInsight(2)">Ignorieren</button>
+                            </div>
+                        </article>
+
+                        <article class="insight-card low-impact">
+                            <div class="insight-icon" aria-hidden="true">⚡</div>
+                            <div class="insight-content">
+                                <h3 class="insight-title">Pause-Rhythmus</h3>
+                                <p class="insight-description">
+                                    Plane alle 90 Minuten eine 15-minütige Pause ein, um deine Konzentration zu erhalten.
+                                </p>
+                                <div class="insight-impact">
+                                    <span class="impact-label">Fokus-Verbesserung:</span>
+                                    <span class="impact-value">+12% Konzentration</span>
+                                </div>
+                            </div>
+                            <div class="insight-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="applyInsight(3)">Umsetzen</button>
+                                <button class="btn btn-ghost btn-sm" onclick="dismissInsight(3)">Ignorieren</button>
+                            </div>
+                        </article>
+
+                        <article class="insight-card trend">
+                            <div class="insight-icon" aria-hidden="true">📈</div>
+                            <div class="insight-content">
+                                <h3 class="insight-title">Positive Entwicklung</h3>
+                                <p class="insight-description">
+                                    Deine Produktivität ist in den letzten 2 Wochen um 18% gestiegen. Weiter so!
+                                </p>
+                                <div class="insight-impact">
+                                    <span class="impact-label">Trend:</span>
+                                    <span class="impact-value">↗️ Sehr positiv</span>
+                                </div>
+                            </div>
+                            <div class="insight-actions">
+                                <button class="btn btn-ghost btn-sm" onclick="shareInsight(4)">Teilen</button>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="generateReport()" aria-label="Neuen Report generieren">
+        <span aria-hidden="true">📊</span>
+    </button>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer" role="region" aria-live="polite" aria-label="Benachrichtigungen"></div>
+
+    <!-- Custom Styles für Analytics -->
+    <style>
+        /* Analytics-specific styles */
+        .analytics-controls {
+            margin-bottom: var(--space-6);
+        }
+
+        .time-range-selector {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--space-4);
+        }
+
+        .range-buttons {
+            display: flex;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-md);
+            padding: var(--space-1);
+        }
+
+        .range-btn {
+            padding: var(--space-3) var(--space-5);
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-out);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            white-space: nowrap;
+        }
+
+        .range-btn.active {
+            background: var(--primary-500);
+            color: white;
+        }
+
+        .range-btn:hover:not(.active) {
+            background: var(--state-hover);
+            color: var(--text-primary);
+        }
+
+        .custom-range {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .date-input {
+            padding: var(--space-3);
+            border: 1px solid var(--border-base);
+            border-radius: var(--radius-md);
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+        }
+
+        .date-input:focus {
+            outline: 2px solid var(--state-focus-ring);
+            outline-offset: 2px;
+            border-color: var(--border-focus);
+        }
+
+        .range-separator {
+            color: var(--text-muted);
+            font-size: var(--font-size-sm);
+        }
+
+        /* Analytics Metrics */
+        .analytics-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-5);
+            margin-bottom: var(--space-8);
+        }
+
+        .analytics-metric-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: var(--space-4);
+            align-items: center;
+            transition: all var(--duration-base) var(--ease-out);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .analytics-metric-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 40%, rgb(255 255 255 / 0.02) 50%, transparent 60%);
+            transform: translateX(-100%);
+            transition: transform var(--duration-slower) var(--ease-out);
+        }
+
+        .analytics-metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .analytics-metric-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .metric-icon-large {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, rgb(59 130 246 / 0.1), rgb(37 99 235 / 0.05));
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-xl);
+        }
+
+        .metric-content {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .metric-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .metric-value {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-chart-mini {
+            display: flex;
+            align-items: end;
+            gap: 2px;
+            height: 40px;
+            min-width: 60px;
+        }
+
+        .mini-bar {
+            flex: 1;
+            background: var(--primary-500);
+            border-radius: 2px 2px 0 0;
+            opacity: 0.6;
+            transition: opacity var(--duration-fast) var(--ease-out);
+        }
+
+        .analytics-metric-card:hover .mini-bar {
+            opacity: 1;
+        }
+
+        .metric-progress {
+            position: relative;
+        }
+
+        .progress-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .completion-indicator {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .completion-bar {
+            width: 60px;
+            height: 8px;
+            background: var(--border-subtle);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+
+        .completion-fill {
+            height: 100%;
+            background: var(--success-500);
+            border-radius: var(--radius-full);
+            transition: width var(--duration-slow) var(--ease-out);
+        }
+
+        .completion-text {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .score-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .score-badge {
+            padding: var(--space-2) var(--space-3);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-semibold);
+            text-transform: uppercase;
+            letter-spacing: var(--letter-spacing-wide);
+        }
+
+        .score-badge.excellent {
+            background: var(--status-success-bg);
+            color: var(--success-600);
+        }
+
+        /* Analytics Grid */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: var(--space-6);
+            margin-bottom: var(--space-8);
+        }
+
+        .chart-section {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            transition: all var(--duration-base) var(--ease-out);
+        }
+
+        .chart-section:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .chart-section.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--space-5);
+        }
+
+        .chart-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-1);
+        }
+
+        .chart-subtitle {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: var(--space-2);
+        }
+
+        .chart-control-btn {
+            padding: var(--space-2) var(--space-3);
+            border: 1px solid var(--border-base);
+            background: var(--surface-secondary);
+            color: var(--text-secondary);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-out);
+            font-size: var(--font-size-xs);
+        }
+
+        .chart-control-btn.active {
+            background: var(--primary-500);
+            color: white;
+            border-color: var(--primary-500);
+        }
+
+        .chart-control-btn:hover:not(.active) {
+            background: var(--state-hover);
+            color: var(--text-primary);
+        }
+
+        .chart-container {
+            position: relative;
+            min-height: 200px;
+        }
+
+        /* Trend Chart */
+        .chart-placeholder {
+            display: flex;
+            height: 200px;
+        }
+
+        .chart-y-axis {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            margin-right: var(--space-3);
+            color: var(--text-muted);
+            font-size: var(--font-size-xs);
+            width: 40px;
+            text-align: right;
+        }
+
+        .chart-area {
+            flex: 1;
+            position: relative;
+        }
+
+        .trend-line {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-x-axis {
+            display: flex;
+            justify-content: space-between;
+            margin-top: var(--space-3);
+            color: var(--text-muted);
+            font-size: var(--font-size-xs);
+        }
+
+        /* Time Distribution */
+        .time-distribution {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .time-category {
+            display: flex;
+            align-items: center;
+        }
+
+        .category-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            color: white;
+            font-weight: var(--font-weight-medium);
+            font-size: var(--font-size-sm);
+            min-width: 120px;
+            transition: transform var(--duration-fast) var(--ease-out);
+        }
+
+        .category-bar:hover {
+            transform: translateX(4px);
+        }
+
+        .category-bar.meetings {
+            background: var(--primary-500);
+        }
+
+        .category-bar.focus {
+            background: var(--success-500);
+        }
+
+        .category-bar.admin {
+            background: var(--warning-500);
+        }
+
+        .category-bar.break {
+            background: var(--neutral-500);
+        }
+
+        /* Heatmap */
+        .heatmap-grid {
+            display: grid;
+            grid-template-areas:
+                "labels chart"
+                ". x-labels";
+            grid-template-columns: auto 1fr;
+            gap: var(--space-3);
+        }
+
+        .heatmap-y-labels {
+            grid-area: labels;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: var(--font-size-xs);
+            padding-top: 10px;
+        }
+
+        .heatmap-chart {
+            grid-area: chart;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+
+        .heatmap-day {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: var(--radius-sm);
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            z-index: 1;
+        }
+
+        .heatmap-cell.very-low {
+            background: var(--neutral-200);
+        }
+
+        .heatmap-cell.low {
+            background: var(--primary-200);
+        }
+
+        .heatmap-cell.medium {
+            background: var(--primary-400);
+        }
+
+        .heatmap-cell.high {
+            background: var(--primary-600);
+        }
+
+        .heatmap-cell.very-high {
+            background: var(--primary-800);
+        }
+
+        .heatmap-x-labels {
+            grid-area: x-labels;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            color: var(--text-muted);
+            font-size: var(--font-size-xs);
+            text-align: center;
+        }
+
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-3);
+            margin-top: var(--space-4);
+        }
+
+        .legend-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+        }
+
+        .legend-scale {
+            display: flex;
+            gap: 2px;
+        }
+
+        .legend-cell {
+            width: 12px;
+            height: 12px;
+            border-radius: var(--radius-sm);
+        }
+
+        /* Goals */
+        .goals-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-5);
+        }
+
+        .goal-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+
+        .goal-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .goal-name {
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+        }
+
+        .goal-progress-text {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .goal-progress-bar {
+            height: 8px;
+            background: var(--border-subtle);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: var(--radius-full);
+            transition: width var(--duration-slow) var(--ease-out);
+        }
+
+        .progress-overflow {
+            position: absolute;
+            top: 0;
+            left: 100%;
+            height: 100%;
+            border-radius: var(--radius-full);
+            transition: width var(--duration-slow) var(--ease-out);
+        }
+
+        /* Insights */
+        .insights-section {
+            margin-top: var(--space-8);
+        }
+
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-6);
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: var(--space-5);
+        }
+
+        .insight-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            transition: all var(--duration-base) var(--ease-out);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .insight-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            transition: background var(--duration-fast) var(--ease-out);
+        }
+
+        .insight-card.high-impact::after {
+            background: var(--success-500);
+        }
+
+        .insight-card.medium-impact::after {
+            background: var(--warning-500);
+        }
+
+        .insight-card.low-impact::after {
+            background: var(--neutral-400);
+        }
+
+        .insight-card.trend::after {
+            background: var(--primary-500);
+        }
+
+        .insight-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .insight-icon {
+            font-size: var(--font-size-xl);
+            margin-bottom: var(--space-4);
+        }
+
+        .insight-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-3);
+        }
+
+        .insight-description {
+            color: var(--text-secondary);
+            line-height: var(--line-height-base);
+            margin-bottom: var(--space-4);
+        }
+
+        .insight-impact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-5);
+            padding: var(--space-3);
+            background: var(--surface-secondary);
+            border-radius: var(--radius-md);
+        }
+
+        .impact-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+        }
+
+        .impact-value {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+
+        .insight-actions {
+            display: flex;
+            gap: var(--space-3);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .time-range-selector {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .range-buttons {
+                justify-content: center;
+            }
+
+            .analytics-metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .analytics-metric-card {
+                grid-template-columns: auto 1fr;
+                grid-template-rows: auto auto;
+            }
+
+            .analytics-metric-card > :last-child {
+                grid-column: 1 / -1;
+                justify-self: center;
+                margin-top: var(--space-3);
+            }
+
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--space-3);
+            }
+
+            .heatmap-grid {
+                font-size: var(--font-size-xs);
+            }
+
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .insight-actions {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .custom-range {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .range-separator {
+                text-align: center;
+            }
+        }
+    </style>
+
+    <!-- JavaScript -->
+    <script>
+        // Global Variables
+        let currentTimeRange = 'week';
+        let analyticsData = {};
+
+        // Initialize Analytics
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAnalytics();
+            loadAnalyticsData();
+            setupEventListeners();
+        });
+
+        function initializeAnalytics() {
+            setupTimeRangeDefaults();
+            setupKeyboardShortcuts();
+        }
+
+        function setupTimeRangeDefaults() {
+            const today = new Date();
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+            document.getElementById('startDate').value = weekAgo.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        }
+
+        function setupEventListeners() {
+            // Date inputs
+            document.getElementById('startDate').addEventListener('change', updateCustomRange);
+            document.getElementById('endDate').addEventListener('change', updateCustomRange);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+        }
+
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                if (e.altKey) {
+                    switch(e.key) {
+                        case '1':
+                            e.preventDefault();
+                            setTimeRange('week');
+                            break;
+                        case '2':
+                            e.preventDefault();
+                            setTimeRange('month');
+                            break;
+                        case '3':
+                            e.preventDefault();
+                            setTimeRange('quarter');
+                            break;
+                        case '4':
+                            e.preventDefault();
+                            setTimeRange('year');
+                            break;
+                        case 'r':
+                            e.preventDefault();
+                            refreshAnalytics();
+                            break;
+                        case 'e':
+                            e.preventDefault();
+                            exportAnalytics();
+                            break;
+                        case 'g':
+                            e.preventDefault();
+                            generateReport();
+                            break;
+                    }
+                }
+            });
+        }
+
+        function handleKeyboardShortcuts(e) {
+            // Handle insight card navigation
+            const focusedElement = document.activeElement;
+            if (focusedElement.classList.contains('insight-card')) {
+                switch(e.key) {
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        navigateToNextInsight(focusedElement);
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        navigateToPrevInsight(focusedElement);
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        const applyButton = focusedElement.querySelector('.btn-primary');
+                        if (applyButton) applyButton.click();
+                        break;
+                }
+            }
+        }
+
+        function navigateToNextInsight(currentCard) {
+            const nextCard = currentCard.nextElementSibling;
+            if (nextCard && nextCard.classList.contains('insight-card')) {
+                nextCard.focus();
+                nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function navigateToPrevInsight(currentCard) {
+            const prevCard = currentCard.previousElementSibling;
+            if (prevCard && prevCard.classList.contains('insight-card')) {
+                prevCard.focus();
+                prevCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // Time Range Management
+        function setTimeRange(range) {
+            currentTimeRange = range;
+
+            // Update active button
+            document.querySelectorAll('.range-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-selected', 'false');
+            });
+
+            event.target.classList.add('active');
+            event.target.setAttribute('aria-selected', 'true');
+
+            // Update date inputs
+            const today = new Date();
+            let startDate;
+
+            switch(range) {
+                case 'week':
+                    startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':
+                    startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'quarter':
+                    startDate = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'year':
+                    startDate = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+                    break;
+            }
+
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+
+            // Reload analytics data
+            loadAnalyticsData();
+
+            showToast('Zeitraum geändert', `Daten für ${range} geladen`, 'info');
+        }
+
+        function updateCustomRange() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (startDate && endDate) {
+                // Clear active range button
+                document.querySelectorAll('.range-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.setAttribute('aria-selected', 'false');
+                });
+
+                // Load custom range data
+                loadAnalyticsData();
+
+                showToast('Benutzerdefinierter Zeitraum', 'Daten für gewählten Zeitraum geladen', 'info');
+            }
+        }
+
+        // Data Loading
+        async function loadAnalyticsData() {
+            try {
+                // In real app, fetch from API
+                analyticsData = generateMockAnalyticsData();
+                updateAnalyticsUI();
+            } catch (error) {
+                console.error('Failed to load analytics data:', error);
+                showToast('Fehler', 'Analytics-Daten konnten nicht geladen werden', 'error');
+            }
+        }
+
+        function generateMockAnalyticsData() {
+            // Mock data - in real app, this comes from API
+            return {
+                focusTime: 4.2,
+                productivity: 87.3,
+                completedEvents: 127,
+                efficiency: 92,
+                timeDistribution: {
+                    meetings: 35,
+                    focus: 45,
+                    admin: 15,
+                    break: 5
+                },
+                goals: [
+                    { name: 'Tägliche Fokuszeit: 4h', progress: 87, status: 'good' },
+                    { name: 'Wöchentliche Events: 25', progress: 124, status: 'excellent' },
+                    { name: 'Meeting-Effizienz: 90%', progress: 67, status: 'warning' },
+                    { name: 'Work-Life-Balance Score: 80', progress: 45, status: 'danger' }
+                ]
+            };
+        }
+
+        function updateAnalyticsUI() {
+            // Update metric values
+            document.getElementById('avgFocusTime').textContent = analyticsData.focusTime + 'h';
+            document.getElementById('productivityRate').textContent = analyticsData.productivity + '%';
+            document.getElementById('completedEvents').textContent = analyticsData.completedEvents;
+            document.getElementById('efficiencyScore').textContent = analyticsData.efficiency;
+
+            // Animate progress rings and bars
+            animateMetrics();
+        }
+
+        function animateMetrics() {
+            // Animate progress ring
+            const progressRing = document.querySelector('.progress-ring circle:last-child');
+            if (progressRing) {
+                const percentage = analyticsData.productivity;
+                const circumference = 2 * Math.PI * 25;
+                const offset = circumference - (percentage / 100) * circumference;
+                progressRing.style.strokeDashoffset = offset;
+            }
+
+            // Animate completion bar
+            const completionFill = document.querySelector('.completion-fill');
+            if (completionFill) {
+                setTimeout(() => {
+                    completionFill.style.width = analyticsData.productivity + '%';
+                }, 500);
+            }
+
+            // Animate mini charts
+            animateMiniCharts();
+        }
+
+        function animateMiniCharts() {
+            const miniBars = document.querySelectorAll('.mini-bar');
+            miniBars.forEach((bar, index) => {
+                setTimeout(() => {
+                    bar.style.opacity = '1';
+                    bar.style.transform = 'scaleY(1)';
+                }, index * 100);
+            });
+        }
+
+        // Chart Controls
+        function switchChartType(chartId, type) {
+            // Update active button
+            const buttons = event.target.parentElement.querySelectorAll('.chart-control-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            showToast('Chart-Typ geändert', `${type.charAt(0).toUpperCase() + type.slice(1)}-Diagramm aktiviert`, 'info');
+
+            // In real app, switch chart visualization
+        }
+
+        // Insights Management
+        function applyInsight(insightId) {
+            const insights = {
+                1: 'Fokuszeit-Optimierung',
+                2: 'Meeting-Reduzierung',
+                3: 'Pause-Planung'
+            };
+
+            showToast('Insight angewendet', insights[insightId] + ' wurde zu deinem Kalender hinzugefügt', 'success');
+
+            // In real app, apply the insight (create calendar blocks, etc.)
+        }
+
+        function dismissInsight(insightId) {
+            const insightCard = event.target.closest('.insight-card');
+            insightCard.style.opacity = '0.5';
+            insightCard.style.pointerEvents = 'none';
+
+            showToast('Insight ignoriert', 'Insight wurde ausgeblendet', 'info');
+
+            // In real app, mark insight as dismissed
+        }
+
+        function shareInsight(insightId) {
+            showToast('Insight geteilt', 'Insight wurde erfolgreich geteilt', 'success');
+
+            // In real app, share insight via various channels
+        }
+
+        // Utility Functions
+        function refreshAnalytics() {
+            showToast('Analytics aktualisiert', 'Alle Daten wurden neu geladen', 'success');
+            loadAnalyticsData();
+        }
+
+        function exportAnalytics() {
+            showToast('Export gestartet', 'Analytics-Report wird erstellt...', 'info');
+
+            // In real app, generate and download report
+            setTimeout(() => {
+                showToast('Export abgeschlossen', 'Report wurde erfolgreich heruntergeladen', 'success');
+            }, 2000);
+        }
+
+        function generateReport() {
+            showToast('Report wird generiert', 'Detaillierter Analytics-Report wird erstellt...', 'info');
+
+            // In real app, generate comprehensive report
+            setTimeout(() => {
+                showToast('Report erstellt', 'Neuer Analytics-Report ist verfügbar', 'success');
+            }, 3000);
+        }
+
+        // Shared Functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (window.innerWidth <= 768) {
+                const isOpen = sidebar.classList.contains('open');
+                sidebar.classList.toggle('open', !isOpen);
+                overlay.classList.toggle('open', !isOpen);
+                sidebar.setAttribute('aria-hidden', isOpen);
+            }
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            sidebar.setAttribute('aria-hidden', 'true');
+        }
+
+        // Toast System (simplified)
+        function showToast(title, message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.setAttribute('role', 'alert');
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <h4 class="toast-title">${title}</h4>
+                    <button class="toast-close" onclick="removeToast(this.parentElement.parentElement)" aria-label="Benachrichtigung schließen">×</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => removeToast(toast), 8000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container';
+            container.setAttribute('role', 'region');
+            container.setAttribute('aria-live', 'polite');
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function removeToast(toast) {
+            if (toast && toast.parentElement) {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 400);
+            }
+        }
+
+        // Initialize animations on page load
+        window.addEventListener('load', function() {
+            setTimeout(animateMetrics, 500);
+        });
+    </script>
+</body>
+</html>

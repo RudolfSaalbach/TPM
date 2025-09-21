@@ -1,0 +1,93 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Systeminformationen{% endblock %}
+{% block header_title %}Systeminformationen{% endblock %}
+{% block header_subtitle %}Datenbankgesundheit, Tabellenstatistiken und Systemmetriken analysieren.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Systeminformationen & Metriken</h1>
+        <p>Überwachen Sie den Zustand der Chronos Engine und der zugrundeliegenden Datenbank.</p>
+    </div>
+</div>
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <h3 class="metric-title">Datenbank Größe</h3>
+                <p class="metric-subtitle">Gesamtgröße auf der Festplatte</p>
+            </div>
+            <span class="metric-icon">💽</span>
+        </div>
+        <div class="metric-value">{{ metrics.db_size_mb or 'N/A' }} MB</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <h3 class="metric-title">Chronos Version</h3>
+                <p class="metric-subtitle">Aktuell installierte Version</p>
+            </div>
+            <span class="metric-icon">🏷️</span>
+        </div>
+        <div class="metric-value">{{ metrics.chronos_version or 'N/A' }}</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <h3 class="metric-title">Python Version</h3>
+                <p class="metric-subtitle">Laufzeitumgebung</p>
+            </div>
+            <span class="metric-icon">🐍</span>
+        </div>
+        <div class="metric-value">{{ metrics.python_version or 'N/A' }}</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <div>
+                <h3 class="metric-title">Uptime</h3>
+                <p class="metric-subtitle">Seit dem letzten Start</p>
+            </div>
+            <span class="metric-icon">⏱️</span>
+        </div>
+        <div class="metric-value">{{ metrics.uptime or 'N/A' }}</div>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="section-header">
+        <h2 class="section-title">Datenbank-Tabellenstatistiken</h2>
+        <p class="section-meta">Anzahl der Einträge pro Tabelle</p>
+    </div>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tabelle</th>
+                    <th>Anzahl der Einträge</th>
+                    <th>Indexgröße</th>
+                    <th>Tabellengröße</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for table in table_stats %}
+                <tr>
+                    <td><code class="code-inline">{{ table.name }}</code></td>
+                    <td>{{ "{:,}".format(table.row_count)|replace(',', '.') }}</td>
+                    <td>{{ table.index_size_kb or 'N/A' }} KB</td>
+                    <td>{{ table.table_size_kb or 'N/A' }} KB</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">Keine Tabellenstatistiken verfügbar.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
