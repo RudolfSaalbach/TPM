@@ -1,7 +1,6 @@
 /* Chronos Dashboard - Additional Component Styles (n8n Style) */
 /* Extended styles for dashboard-specific components */
 
-/* Additional component styles that complement main.css */
 .analytics-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
