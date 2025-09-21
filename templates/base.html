@@ -117,13 +117,25 @@
 
         function syncCalendar() {
             showToast('Synchronisation gestartet', 'Kalender wird synchronisiert...', 'info');
-            fetch('/api/v1/sync/incremental', { method: 'POST' })
-                .then(response => response.json())
+            fetch('/api/v1/sync/incremental', {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': 'super-secret-change-me',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    showToast('Sync erfolgreich', 'Kalender wurde erfolgreich synchronisiert', 'success');
+                    showToast('Sync erfolgreich', data.message || 'Kalender wurde erfolgreich synchronisiert', 'success');
                 })
                 .catch(error => {
-                    showToast('Sync Fehler', 'Synchronisation fehlgeschlagen', 'error');
+                    console.error('Sync error:', error);
+                    showToast('Sync Fehler', 'Synchronisation fehlgeschlagen: ' + error.message, 'error');
                 });
         }
 

@@ -361,28 +361,52 @@
         function triggerFullSync() {
             showLoading();
             // API Call für Full Sync
-            fetch('/api/v1/sync/full', { method: 'POST' })
-                .then(response => response.json())
+            fetch('/api/v1/sync/full', {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': 'super-secret-change-me',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    showToast('Full Sync erfolgreich', data.message, 'success');
+                    showToast('Full Sync erfolgreich', data.message || 'Vollständige Synchronisation abgeschlossen', 'success');
                     refreshDashboard();
                 })
                 .catch(error => {
-                    showToast('Sync Fehler', 'Vollständige Synchronisation fehlgeschlagen', 'error');
+                    console.error('Full sync error:', error);
+                    showToast('Sync Fehler', 'Vollständige Synchronisation fehlgeschlagen: ' + error.message, 'error');
                 })
                 .finally(() => hideLoading());
         }
 
         function triggerIncrementalSync() {
             // API Call für Incremental Sync
-            fetch('/api/v1/sync/incremental', { method: 'POST' })
-                .then(response => response.json())
+            fetch('/api/v1/sync/incremental', {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': 'super-secret-change-me',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    showToast('Inkrementeller Sync erfolgreich', data.message, 'success');
+                    showToast('Inkrementeller Sync erfolgreich', data.message || 'Synchronisation abgeschlossen', 'success');
                     refreshDashboard();
                 })
                 .catch(error => {
-                    showToast('Sync Fehler', 'Inkrementelle Synchronisation fehlgeschlagen', 'error');
+                    console.error('Sync error:', error);
+                    showToast('Sync Fehler', 'Inkrementelle Synchronisation fehlgeschlagen: ' + error.message, 'error');
                 });
         }
 

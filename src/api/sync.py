@@ -142,7 +142,7 @@ async def get_sync_status(
         )
 
 
-@router.post("/incremental", response_model=APISuccessResponse)
+@router.post("/incremental")
 @handle_api_errors
 async def sync_incremental(
     authenticated: bool = Depends(verify_api_key),
@@ -159,7 +159,7 @@ async def sync_incremental(
             "success": True,
             "message": "Incremental synchronization completed",
             "events_processed": sync_result.get("events_processed", 0),
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.utcnow().isoformat()
         }
 
     except Exception as e:
@@ -170,7 +170,7 @@ async def sync_incremental(
         )
 
 
-@router.post("/full", response_model=APISuccessResponse)
+@router.post("/full")
 @handle_api_errors
 async def sync_full(
     authenticated: bool = Depends(verify_api_key),
