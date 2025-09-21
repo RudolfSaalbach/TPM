@@ -42,8 +42,9 @@ class ChronosDashboard:
     
     def _setup_routes(self):
         """Setup dashboard routes with WORKING data integration"""
-        
+
         @self.router.get("/", response_class=HTMLResponse)
+        @self.router.get("/dashboard", response_class=HTMLResponse)
         async def dashboard_home(request: Request):
             """Main dashboard - WORKING TEMPLATE INTEGRATION"""
             
@@ -66,13 +67,56 @@ class ChronosDashboard:
                     "error_details": str(e)
                 }, status_code=500)
         
+        @self.router.get("/calendar", response_class=HTMLResponse)
+        async def calendar_view(request: Request):
+            """Calendar view"""
+            return self.templates.TemplateResponse("dashboard.html", {
+                "request": request,
+                "view": "calendar",
+                **await self._get_dashboard_data()
+            })
+
+        @self.router.get("/events", response_class=HTMLResponse)
+        async def events_view(request: Request):
+            """Events view"""
+            return self.templates.TemplateResponse("modular_events.html", {
+                "request": request
+            })
+
+        @self.router.get("/analytics", response_class=HTMLResponse)
+        async def analytics_view(request: Request):
+            """Analytics view"""
+            return self.templates.TemplateResponse("dashboard.html", {
+                "request": request,
+                "view": "analytics",
+                **await self._get_dashboard_data()
+            })
+
+        @self.router.get("/sync", response_class=HTMLResponse)
+        async def sync_view(request: Request):
+            """Sync view"""
+            return self.templates.TemplateResponse("dashboard.html", {
+                "request": request,
+                "view": "sync",
+                **await self._get_dashboard_data()
+            })
+
+        @self.router.get("/settings", response_class=HTMLResponse)
+        async def settings_view(request: Request):
+            """Settings view"""
+            return self.templates.TemplateResponse("dashboard.html", {
+                "request": request,
+                "view": "settings",
+                **await self._get_dashboard_data()
+            })
+
         @self.router.get("/api/dashboard-data")
         async def get_dashboard_data():
             """Get dashboard data as JSON - WORKING"""
-            
+
             try:
                 return await self._get_dashboard_data()
-                
+
             except Exception as e:
                 self.logger.error(f"Failed to get dashboard data: {e}")
                 raise HTTPException(status_code=500, detail=str(e))

@@ -19,7 +19,9 @@
       "Bash(git pull:*)",
       "Bash(dir templates)",
       "Bash(dir:*)",
-      "Bash(rd:*)"
+      "Bash(rd:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(docker compose logs:*)"
     ],
     "deny": [],
     "ask": []

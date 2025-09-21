@@ -3,27 +3,27 @@
    ========================================================================== */
 
 :root {
-    /* Colors */
-    --color-primary: #4a90e2;
-    --color-secondary: #50e3c2;
-    --color-accent: #f5a623;
-    --color-danger: #d0021b;
-    --color-warning: #f8e71c;
-    --color-success: #7ed321;
-    --color-info: #4a90e2;
+    /* Colors - Improved readability */
+    --color-primary: #60a5fa;
+    --color-secondary: #34d399;
+    --color-accent: #fbbf24;
+    --color-danger: #ef4444;
+    --color-warning: #f59e0b;
+    --color-success: #10b981;
+    --color-info: #3b82f6;
 
-    --color-text-primary: #ffffff;
-    --color-text-secondary: #b4b4b4;
-    --color-text-muted: #8e8e8e;
-    --color-text-accent: #f5a623;
+    --color-text-primary: #f9fafb;
+    --color-text-secondary: #d1d5db;
+    --color-text-muted: #9ca3af;
+    --color-text-accent: #fbbf24;
 
-    --color-bg-primary: #121212;
-    --color-bg-secondary: #1e1e1e;
-    --color-bg-tertiary: #2a2a2a;
-    --color-bg-elevated: #333333;
+    --color-bg-primary: #111827;
+    --color-bg-secondary: #1f2937;
+    --color-bg-tertiary: #374151;
+    --color-bg-elevated: #4b5563;
 
-    --color-border-primary: #444444;
-    --color-border-secondary: #666666;
+    --color-border-primary: #374151;
+    --color-border-secondary: #6b7280;
 
     /* Spacing */
     --space-1: 0.25rem;  /* 4px */

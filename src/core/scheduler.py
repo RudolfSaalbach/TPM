@@ -251,6 +251,27 @@ class ChronosScheduler:
                 'sync_time': datetime.utcnow().isoformat()
             }
 
+    async def sync_events(self, incremental: bool = True, days_ahead: int = 7) -> Dict[str, Any]:
+        """Sync events with optional incremental mode - compatibility wrapper for API"""
+        try:
+            if incremental:
+                self.logger.info("Performing incremental sync")
+                # For incremental sync, use a shorter time window
+                return await self.sync_calendar(days_ahead=min(days_ahead, 30), force_refresh=False)
+            else:
+                self.logger.info("Performing full sync")
+                # For full sync, use the full time window
+                return await self.sync_calendar(days_ahead=days_ahead, force_refresh=True)
+
+        except Exception as e:
+            self.logger.error(f"Error in sync_events: {e}")
+            return {
+                'success': False,
+                'events_processed': 0,
+                'error': str(e),
+                'sync_time': datetime.utcnow().isoformat()
+            }
+
     async def create_event(self, event: ChronosEvent) -> ChronosEvent:
         """Create a new event"""
         try:
