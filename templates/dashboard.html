@@ -430,26 +430,48 @@
         }
 
         function showToast(title, message, type = 'info') {
-            const toastContainer = document.getElementById('toastContainer');
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
 
             toast.innerHTML = `
                 <div class="toast-header">
                     <h4 class="toast-title">${title}</h4>
-                    <button class="modal-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                    <button class="toast-close" onclick="removeToast(this.parentElement.parentElement)">×</button>
                 </div>
                 <div class="toast-body">${message}</div>
             `;
 
             toastContainer.appendChild(toast);
 
-            // Auto-remove nach 5 Sekunden
+            // Animate in
             setTimeout(() => {
-                if (toast.parentElement) {
-                    toast.remove();
-                }
-            }, 5000);
+                toast.classList.add('show');
+            }, 100);
+
+            // Auto-remove nach 8 Sekunden (länger für bessere Sichtbarkeit)
+            setTimeout(() => {
+                removeToast(toast);
+            }, 8000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function removeToast(toast) {
+            if (toast && toast.parentElement) {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 400);
+            }
         }
 
         // Dashboard Data Loading
