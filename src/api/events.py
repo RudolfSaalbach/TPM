@@ -584,6 +584,227 @@ async def create_event_link(
         )
 
 
+@router.get("/events/{event_id}", response_model=Dict[str, Any])
+@handle_api_errors
+async def get_event_details(
+    event_id: str,
+    authenticated: bool = Depends(verify_api_key),
+    scheduler = Depends(get_scheduler)
+):
+    """Get detailed information for a specific event"""
+    try:
+        # Try to get event from scheduler first
+        if scheduler and hasattr(scheduler, 'get_event'):
+            try:
+                event = await scheduler.get_event(event_id)
+                if event:
+                    return {
+                        "id": event_id,
+                        "summary": event.get('summary', 'Untitled Event'),
+                        "description": event.get('description', ''),
+                        "start_time": event.get('start_time', ''),
+                        "end_time": event.get('end_time', ''),
+                        "location": event.get('location', ''),
+                        "priority": event.get('priority', 'medium'),
+                        "status": event.get('status', 'confirmed'),
+                        "created": event.get('created', ''),
+                        "updated": event.get('updated', ''),
+                        "calendar_id": event.get('calendar_id', ''),
+                        "source": "scheduler"
+                    }
+            except Exception as e:
+                logger.warning(f"Could not get event from scheduler: {e}")
+
+        # Fallback: Try to get from database
+        async with db_service.get_session() as session:
+            # Check if we have this event in our database
+            from src.core.models import ChronosEvent
+            from sqlalchemy import select
+
+            query = select(ChronosEvent).where(ChronosEvent.id == event_id)
+            result = await session.execute(query)
+            db_event = result.scalar_one_or_none()
+
+            if db_event:
+                return {
+                    "id": db_event.id,
+                    "summary": db_event.summary,
+                    "description": db_event.description or '',
+                    "start_time": db_event.start_time.isoformat() if db_event.start_time else '',
+                    "end_time": db_event.end_time.isoformat() if db_event.end_time else '',
+                    "location": db_event.location or '',
+                    "priority": db_event.priority.value if db_event.priority else 'medium',
+                    "status": db_event.status.value if db_event.status else 'confirmed',
+                    "created": db_event.created_at.isoformat() if db_event.created_at else '',
+                    "updated": db_event.updated_at.isoformat() if db_event.updated_at else '',
+                    "calendar_id": db_event.calendar_id or '',
+                    "source": "database"
+                }
+
+        # If not found anywhere, return 404
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Event with ID {event_id} not found"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting event details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get event details: {str(e)}"
+        )
+
+
+@router.put("/events/{event_id}", response_model=Dict[str, Any])
+@handle_api_errors
+async def update_event(
+    event_id: str,
+    event_data: Dict[str, Any],
+    authenticated: bool = Depends(verify_api_key),
+    scheduler = Depends(get_scheduler)
+):
+    """Update an existing event"""
+    try:
+        from datetime import datetime
+        from src.core.models import ChronosEvent, Priority, EventStatus
+
+        # First try to update via scheduler
+        if scheduler and hasattr(scheduler, 'update_event'):
+            try:
+                updated_event = await scheduler.update_event(event_id, event_data)
+                if updated_event:
+                    return {
+                        "success": True,
+                        "message": "Event updated successfully via scheduler",
+                        "event": updated_event
+                    }
+            except Exception as e:
+                logger.warning(f"Could not update event via scheduler: {e}")
+
+        # Fallback: Update in database
+        async with db_service.get_session() as session:
+            from sqlalchemy import select
+
+            # Get existing event
+            query = select(ChronosEvent).where(ChronosEvent.id == event_id)
+            result = await session.execute(query)
+            db_event = result.scalar_one_or_none()
+
+            if not db_event:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Event with ID {event_id} not found"
+                )
+
+            # Update fields
+            if 'summary' in event_data:
+                db_event.summary = event_data['summary']
+            if 'description' in event_data:
+                db_event.description = event_data['description']
+            if 'location' in event_data:
+                db_event.location = event_data['location']
+            if 'start_time' in event_data:
+                db_event.start_time = datetime.fromisoformat(event_data['start_time'].replace('Z', '+00:00'))
+            if 'end_time' in event_data:
+                db_event.end_time = datetime.fromisoformat(event_data['end_time'].replace('Z', '+00:00'))
+            if 'priority' in event_data:
+                try:
+                    db_event.priority = Priority(event_data['priority'])
+                except ValueError:
+                    db_event.priority = Priority.MEDIUM
+            if 'status' in event_data:
+                try:
+                    db_event.status = EventStatus(event_data['status'])
+                except ValueError:
+                    db_event.status = EventStatus.CONFIRMED
+
+            db_event.updated_at = datetime.utcnow()
+
+            await session.commit()
+            await session.refresh(db_event)
+
+            return {
+                "success": True,
+                "message": "Event updated successfully in database",
+                "event": {
+                    "id": db_event.id,
+                    "summary": db_event.summary,
+                    "description": db_event.description or '',
+                    "start_time": db_event.start_time.isoformat() if db_event.start_time else '',
+                    "end_time": db_event.end_time.isoformat() if db_event.end_time else '',
+                    "location": db_event.location or '',
+                    "priority": db_event.priority.value if db_event.priority else 'medium',
+                    "status": db_event.status.value if db_event.status else 'confirmed',
+                    "updated": db_event.updated_at.isoformat() if db_event.updated_at else ''
+                }
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating event: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update event: {str(e)}"
+        )
+
+
+@router.delete("/events/{event_id}", response_model=Dict[str, Any])
+@handle_api_errors
+async def delete_event(
+    event_id: str,
+    authenticated: bool = Depends(verify_api_key),
+    scheduler = Depends(get_scheduler)
+):
+    """Delete an existing event"""
+    try:
+        # First try to delete via scheduler
+        if scheduler and hasattr(scheduler, 'delete_event'):
+            try:
+                success = await scheduler.delete_event(event_id)
+                if success:
+                    return {
+                        "success": True,
+                        "message": "Event deleted successfully via scheduler"
+                    }
+            except Exception as e:
+                logger.warning(f"Could not delete event via scheduler: {e}")
+
+        # Fallback: Delete from database
+        async with db_service.get_session() as session:
+            from sqlalchemy import select
+
+            # Get existing event
+            query = select(ChronosEvent).where(ChronosEvent.id == event_id)
+            result = await session.execute(query)
+            db_event = result.scalar_one_or_none()
+
+            if not db_event:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Event with ID {event_id} not found"
+                )
+
+            await session.delete(db_event)
+            await session.commit()
+
+            return {
+                "success": True,
+                "message": "Event deleted successfully from database"
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting event: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete event: {str(e)}"
+        )
+
+
 @router.get("/events/{event_id}/links", response_model=List[EventLinkResponse])
 @handle_api_errors
 async def get_event_links(

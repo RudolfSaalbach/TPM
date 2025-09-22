@@ -370,3 +370,85 @@ async def get_repair_metrics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get repair metrics: {str(e)}"
         )
+
+
+@router.post("/regenerate-api-key", response_model=Dict[str, Any])
+@handle_api_errors
+async def regenerate_api_key(
+    authenticated: bool = Depends(verify_api_key)
+):
+    """Regenerate the API key for authentication"""
+    try:
+        import secrets
+        import string
+        from src.config.config_loader import load_config, save_config_value
+
+        # Generate new secure API key
+        alphabet = string.ascii_letters + string.digits + '-_'
+        new_api_key = ''.join(secrets.choice(alphabet) for _ in range(64))
+
+        # Try to update config file
+        try:
+            # Update the config file
+            save_config_value('api.api_key', new_api_key)
+
+            logger.info("API key regenerated successfully")
+
+            return {
+                "success": True,
+                "message": "API key regenerated successfully",
+                "new_key": new_api_key,
+                "key_length": len(new_api_key),
+                "generated_at": datetime.utcnow().isoformat(),
+                "note": "Please update your applications with the new API key. The old key is now invalid."
+            }
+
+        except Exception as config_error:
+            # Fallback: Return key but warn about persistence
+            logger.warning(f"Could not persist new API key to config: {config_error}")
+
+            return {
+                "success": True,
+                "message": "API key generated but could not be persisted to config file",
+                "new_key": new_api_key,
+                "key_length": len(new_api_key),
+                "generated_at": datetime.utcnow().isoformat(),
+                "warning": "Key generated but not saved to config file. Manual update required.",
+                "config_error": str(config_error)
+            }
+
+    except Exception as e:
+        logger.error(f"Error regenerating API key: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to regenerate API key: {str(e)}"
+        )
+
+
+@router.get("/current-api-key-info", response_model=Dict[str, Any])
+@handle_api_errors
+async def get_current_api_key_info(
+    authenticated: bool = Depends(verify_api_key)
+):
+    """Get information about the current API key (without revealing the key)"""
+    try:
+        from src.config.config_loader import load_config
+
+        config = load_config()
+        current_key = config.get('api', {}).get('api_key', '')
+
+        return {
+            "key_exists": bool(current_key),
+            "key_length": len(current_key) if current_key else 0,
+            "key_prefix": current_key[:8] + "..." if len(current_key) > 8 else "short",
+            "key_suffix": "..." + current_key[-4:] if len(current_key) > 4 else "",
+            "is_default": current_key in ['your-secret-api-key', 'super-secret-change-me', 'default-dev-key'],
+            "recommendation": "Change default key" if current_key in ['your-secret-api-key', 'super-secret-change-me', 'default-dev-key'] else "Key looks secure"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting API key info: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get API key info: {str(e)}"
+        )

@@ -88,7 +88,7 @@ async def get_backend_info(
         )
 
 
-@router.post("/connection/test", response_model=CalDAVConnectionTestResponse)
+@router.post("/test-connection", response_model=CalDAVConnectionTestResponse)
 @handle_api_errors
 async def test_caldav_connection(
     connection_data: CalDAVConnectionTest,
@@ -102,16 +102,53 @@ async def test_caldav_connection(
 
         logger.info(f"Testing connection to {connection_data.server_url}")
 
-        # TODO: Implement actual connection testing
-        # - Create temporary CalDAVAdapter with provided credentials
-        # - Try to fetch capabilities or calendar list
-        # - Return success/failure with details
+        # Implement actual connection testing
+        try:
+            import caldav
+            from caldav import DAVClient
 
-        return CalDAVConnectionTestResponse(
-            success=True,
-            message="Connection test successful",
-            server_url=connection_data.server_url,
-            details={
+            # Create temporary CalDAV client
+            client = DAVClient(
+                url=connection_data.server_url,
+                username=connection_data.username,
+                password=connection_data.password
+            )
+
+            # Test connection by getting principal
+            principal = client.principal()
+
+            # Try to get calendar home set
+            calendar_home = principal.calendar_home_set
+
+            # Try to list calendars
+            calendars = principal.calendars()
+            calendar_count = len(calendars)
+
+            return CalDAVConnectionTestResponse(
+                success=True,
+                message=f"Connection successful! Found {calendar_count} calendar(s)",
+                server_url=connection_data.server_url,
+                details={
+                    "calendar_count": calendar_count,
+                    "principal_url": str(principal.url) if principal else None,
+                    "calendar_home": str(calendar_home) if calendar_home else None,
+                    "calendars": [{"name": cal.name, "url": str(cal.url)} for cal in calendars[:5]]  # Max 5 for preview
+                }
+            )
+
+        except ImportError:
+            return CalDAVConnectionTestResponse(
+                success=False,
+                message="CalDAV library not available - install python-caldav",
+                server_url=connection_data.server_url,
+                details={"error": "python-caldav package not installed"}
+            )
+        except Exception as conn_error:
+            return CalDAVConnectionTestResponse(
+                success=False,
+                message=f"Connection failed: {str(conn_error)}",
+                server_url=connection_data.server_url,
+                details={
                 "server_type": "Unknown",  # Would be detected
                 "supports_caldav": True,
                 "supports_sync": True

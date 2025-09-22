@@ -44,3 +44,4 @@ importlib-metadata==8.5.0
 # PERFORMANCE MONITORING
 psutil==6.1.0
 psutil
+python-caldav
