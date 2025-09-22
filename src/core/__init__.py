@@ -14,7 +14,7 @@ from .models import (
     PluginConfig
 )
 
-# GoogleCalendarClient removed - CalDAV is now primary backend
+from .calendar_client import GoogleCalendarClient
 from .event_parser import EventParser
 from .analytics_engine import AnalyticsEngine
 from .ai_optimizer import AIOptimizer, OptimizationSuggestion
@@ -50,6 +50,7 @@ __all__ = [
     'PluginConfig',
     
     # Core Components
+    'GoogleCalendarClient',
     'EventParser',
     'AnalyticsEngine',
     'AIOptimizer',

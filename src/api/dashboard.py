@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 
 from src.core import (
     AnalyticsEngine, TimeboxEngine, ReplanEngine,
-    EventParser, Priority
+    GoogleCalendarClient, EventParser, Priority
 )
 from src.config.config_loader import load_config
 
@@ -26,11 +26,13 @@ class ChronosDashboard:
         analytics_engine: AnalyticsEngine,
         timebox_engine: TimeboxEngine,
         replan_engine: ReplanEngine,
+        calendar_client: GoogleCalendarClient = None,
         event_parser: EventParser = None
     ):
         self.analytics = analytics_engine
         self.timebox = timebox_engine
         self.replan = replan_engine
+        self.calendar_client = calendar_client
         self.event_parser = event_parser
         
         self.logger = logging.getLogger(__name__)
@@ -320,8 +322,17 @@ class ChronosDashboard:
         """Get system component status"""
         
         try:
-            # CalDAV is now primary - no legacy Google Calendar checking
-            calendar_status = "operational"  # Assume CalDAV operational via config
+            # Check calendar connection if available (Google Calendar fallback)
+            calendar_status = "unknown"
+            if self.calendar_client:
+                try:
+                    auth_result = await self.calendar_client.authenticate()
+                    calendar_status = "operational" if auth_result else "error"
+                except Exception:
+                    calendar_status = "error"
+            else:
+                # CalDAV is primary - assume operational via config
+                calendar_status = "operational"
             
             return {
                 "calendar_sync": calendar_status,

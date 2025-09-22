@@ -29,15 +29,15 @@ class CalendarSourceManager:
         calendar_config = config.get('calendar', {})
         caldav_config = config.get('caldav', {})
 
-        # Determine source type with fallback logic
+        # CalDAV ist Standard, Google Calendar als Fallback verfügbar
         if calendar_source_config.get('type'):
             self.source_type = calendar_source_config.get('type')
-        elif caldav_config.get('calendars'):  # If caldav.calendars exists, use caldav
+        elif caldav_config.get('calendars'):  # CalDAV automatisch wenn Kalender konfiguriert
             self.source_type = 'caldav'
         elif calendar_config.get('provider') == 'google':
             self.source_type = 'google'
         else:
-            self.source_type = 'caldav'  # Default to CalDAV
+            self.source_type = 'caldav'  # CalDAV als Standard-Default
 
         self.logger.info(f"Using calendar source type: {self.source_type}")
 
