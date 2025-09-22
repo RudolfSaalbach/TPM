@@ -1,16 +1,18 @@
-# Chronos Engine v2.1 - Unified Configuration
-# Default: CalDAV/Radicale backend with optional Google Calendar support
+# Chronos Engine v2.2 - Unified Configuration
+# Single source of truth for all Chronos Engine settings
 
-version: 1
+version: "2.2"
+environment: "production"
+timezone: "Europe/Berlin"
 
-# Calendar source configuration - CalDAV is now the default
+# Calendar source configuration - Radicale/CalDAV as PRIMARY backend
 calendar_source:
-  type: "caldav"                       # DEFAULT: Radicale/CalDAV
+  type: "caldav"
   timezone_default: "Europe/Berlin"
 
 # CalDAV/Radicale Configuration (PRIMARY BACKEND)
 caldav:
-  calendars:                           # All collections processed identically
+  calendars:
     - id: "automation"
       alias: "Automation"
       url: "http://10.210.1.1:5232/radicaleuser/8a04a78f-0785-8dc1-8593-ae54b948b5c5/"
@@ -28,52 +30,149 @@ caldav:
       timezone: "Europe/Berlin"
 
   auth:
-    mode: "basic"              # "none" | "basic" | "digest"
-    username: "radicaleuser"  # only used if mode ≠ "none"
+    mode: "basic"
+    username: "radicaleuser"
     password_ref: "env:RADICALE_PASSWORD"
 
   transport:
-    verify_tls: false         # false for http/WireGuard, true for https
+    verify_tls: false
     connect_timeout_s: 5
     read_timeout_s: 15
 
   sync:
-    use_sync_collection: true # RFC 6578 sync-token preferred
-    window_days: 400          # Fallback time window
+    use_sync_collection: true
+    window_days: 400
     parallel_requests: 3
 
   write:
-    if_match: true            # ETag protection
+    if_match: true
     retry_conflict: 1
     include_vtimezone: true
 
-# Google Calendar Configuration (OPTIONAL BACKEND)
-google:
-  enabled: false              # Switch to true to use Google instead of CalDAV
-  credentials_file: "config/credentials.json"
-  token_file: "config/token.json"
-  calendar_ids: ["primary"]   # or detailed config with aliases
-  timezone: "Europe/Berlin"
-
 # Database Configuration
 database:
-  url: "sqlite:///data/chronos.db"
-  echo: false
+  url: "sqlite+aiosqlite:///./data/chronos.db"
+  max_connections: 20
+  pool_timeout: 30
+  echo_sql: false
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"
 
 # API Configuration
 api:
-  api_key: "development-key"
   host: "0.0.0.0"
   port: 8080
-  cors_origins: ["*"]
+  debug: false
+  workers: 1
+  cors_origins: ["*", "http://localhost:3000", "http://localhost:8080"]
+  max_request_size: 16777216  # 16MB
+  timeout: 30
+
+# Security Configuration
+security:
+  api_key_expiry_days: 365
+  session_timeout_minutes: 480
+  max_failed_attempts: 5
+  lockout_duration_minutes: 30
+  rate_limit_per_hour: 1000
+  require_https: false
+  allowed_origins: ["*"]
+  secret_key: "development-secret-change-in-production"
+  encryption_enabled: true
+  api_key_rotation_days: 90
+  command_timeout_seconds: 300
+  max_workflow_depth: 5
+  audit_log: true
+  encrypt_sensitive_data: true
+
+# SMTP Configuration
+smtp:
+  host: "localhost"
+  port: 587
+  username: ""
+  password: ""
+  use_tls: true
+  use_ssl: false
+  timeout: 30
+  from_email: "noreply@chronos.local"
+  from_name: "Chronos Engine"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_enabled: true
+  file_path: "logs/chronos.log"
+  file_max_size: 10485760  # 10MB
+  file_backup_count: 5
+  console_enabled: true
+  structured: true
+  max_size_mb: 50
+  backup_count: 5
+  rotation: "daily"
+  retention: 30
+
+# Integration Configuration
+integrations:
+  telegram_enabled: false
+  telegram_bot_token: ""
+  telegram_webhook_secret: ""
+  telegram_allowed_chats: []
+  n8n_enabled: false
+  n8n_webhook_base_url: ""
+  n8n_webhook_secret: ""
+
+# Legacy fields for backward compatibility
+api_key: "super-secret-change-me"
+rate_limit: "100/minute"
+
+# Google Calendar Configuration (OPTIONAL BACKEND)
+google:
+  enabled: false
+  credentials_file: "config/credentials.json"
+  token_file: "config/token.json"
+  calendar_ids: ["primary"]
+  timezone: "Europe/Berlin"
+
+# Calendar Integration (Legacy support)
+calendar:
+  provider: "caldav"  # Changed from google to caldav
+  credentials_file: "config/credentials.json"
+  token_file: "config/token.json"
+  default_calendar_id: "automation"  # Use first Radicale calendar as default
+  sync_interval_minutes: 5
+  days_ahead: 30
+  enable_two_way_sync: true
+
+# Scheduling Engine
+scheduler:
+  enabled: true
+  sync_interval: 300  # 5 minutes (reduced from 3600)
+  max_workers: 5
+  replan:
+    enabled: true
+    time: "06:00"
+    strategy: "priority_first"
+  auto_conflict_resolution: false
+  default_working_hours:
+    start: "09:00"
+    end: "18:00"
+    break_start: "12:00"
+    break_end: "13:00"
+    working_days: [1, 2, 3, 4, 5]  # Monday to Friday
+  optimization:
+    enabled: true
+    consider_travel_time: true
+    respect_focus_blocks: true
+    minimize_conflicts: true
 
 # Processing Pipeline Configuration
 pipeline:
   order: ["UndefinedGuard","CalendarRepairer","KeywordEnricher","command_handler"]
 
-# Repair and Enrichment Configuration (BACKEND-AGNOSTIC)
+# Repair and Enrichment Configuration
 repair_and_enrich:
-  reserved_prefixes: ["ACTION","MEETING","CALL"]  # never rewrite these
+  reserved_prefixes: ["ACTION","MEETING","CALL"]
 
   parsing:
     accept_date_separators: [".","-","/"]
@@ -94,7 +193,7 @@ repair_and_enrich:
       original_summary: "X-CHRONOS-ORIGINAL-SUMMARY"
       payload: "X-CHRONOS-PAYLOAD"
 
-  # Repair Rules (identical processing for all calendars; short EN titles, DE/EN keywords)
+  # Repair Rules (identical processing for all calendars)
   rules:
     - id: "bday"
       keywords: ["BDAY","BIRTHDAY","GEB","GEBURTSTAG"]
@@ -166,30 +265,170 @@ repair_and_enrich:
         event_type: "anniversary_warning"
         tags: ["anniversary","reminder"]
 
-# Scheduler Configuration
-scheduler:
-  sync_interval: 3600       # Sync every hour
-  max_workers: 5
-  enabled: true
-
-# Analytics Configuration
+# Analytics and Reporting
 analytics:
   enabled: true
   cache_dir: "data/analytics"
+  retention_days: 365
+  enable_metrics: true
+  track_productivity: true
+  track_completion_rates: true
+  track_stress_levels: true
 
 # AI Configuration
 ai:
   enabled: false
   openai_api_key: "env:OPENAI_API_KEY"
+  optimization:
+    enabled: true
+    confidence_threshold: 0.7
+    max_suggestions: 10
   timebox:
-    enabled: false
+    enabled: true
+    min_block_minutes: 15
+    max_block_hours: 4
+    focus_block_min_hours: 2
 
-# Notification Configuration
+# Plugin Configuration
+plugins:
+  enabled: ["timebox", "replan", "analytics", "command_handler", "undefined_guard"]
+  custom_dir: "plugins/custom"
+  auto_load: true
+
+# Command Handler Plugin (v2.1)
+command_handler:
+  enabled: true
+  action_whitelist:
+    - "SHUTDOWN"
+    - "REBOOT"
+    - "SEND_MESSAGE"
+    - "RUN_BACKUP"
+    - "STATUS_CHECK"
+    - "UPDATE_STATUS"
+    - "SEND_NOTIFICATION"
+    - "DEPLOY"
+    - "RESTART_SERVICE"
+    - "UPDATE_CONFIG"
+    - "SYNC_DATA"
+    - "GENERATE_REPORT"
+
+# UNDEFINED Guard Plugin (v2.2)
+undefined_guard:
+  enabled: true
+  extra_patterns:
+    - "^acti[oa]n\\s*:"
+    - "^comand\\s*:"
+    - "^note\\s*:"
+
+# Task Queue Configuration
+task_queue:
+  max_concurrent: 5
+  max_concurrent_tasks: 5  # Backward compatibility
+  poll_interval_seconds: 1.0
+  task_timeout_seconds: 300
+  max_retries: 3
+
+# v2.2 Features Configuration
+
+# Sub-tasks (Checklists)
+sub_tasks:
+  enabled: true
+  auto_parse: true
+  completion_triggers_event: true
+  checkbox_patterns:
+    - "\\[\\s*\\]"
+    - "\\[x\\]"
+    - "\\[X\\]"
+
+# Event Linking
+event_links:
+  enabled: true
+  max_links_per_event: 20
+  allowed_link_types:
+    - "related"
+    - "depends_on"
+    - "blocks"
+    - "child_of"
+    - "follows"
+    - "references"
+
+# Availability Checking
+availability:
+  enabled: true
+  slot_duration_minutes: 30
+  max_attendees_per_request: 50
+  cache_duration_minutes: 15
+  include_travel_time: true
+
+# Action Workflows (v2.2)
+action_workflows:
+  - trigger_command: "DEPLOY"
+    trigger_system: "production"
+    follow_up_command: "STATUS_CHECK"
+    follow_up_system: "monitoring"
+    delay_seconds: 30
+    follow_up_params:
+      check_type: "post_deploy"
+      timeout: 300
+
+  - trigger_command: "BACKUP"
+    trigger_system: "database"
+    follow_up_command: "SEND_MESSAGE"
+    follow_up_system: "notification"
+    delay_seconds: 0
+    follow_up_params:
+      recipient: "admin@company.com"
+      template: "backup_complete"
+
+  - trigger_command: "UPDATE_CONFIG"
+    trigger_system: "web_server"
+    follow_up_command: "RESTART_SERVICE"
+    follow_up_system: "web_server"
+    delay_seconds: 10
+    follow_up_params:
+      graceful: true
+      timeout: 60
+
+# Notification Settings
 notifications:
   enabled: false
+  channels:
+    webhook:
+      enabled: true
+      retry_attempts: 3
+      default_url: "https://your-webhook-url.com/chronos"
+    email:
+      enabled: false
+      smtp_server: "smtp.gmail.com"
+      smtp_host: ""
+      smtp_port: 587
+      use_tls: true
+      username: ""
+      password: ""
 
-# Logging Configuration
-logging:
-  level: "INFO"
-  structured: true
-  file: "logs/chronos.log"
+# Performance Settings
+performance:
+  cache_size: 1000
+  batch_size: 100
+  parallel_processing: true
+  max_workers: 4
+
+# Feature Flags (v2.2)
+features:
+  sub_tasks: true
+  event_links: true
+  availability_check: true
+  action_workflows: true
+  undefined_guard: true
+  advanced_parsing: true
+  ai_suggestions: false
+  voice_commands: false
+
+# General Working Hours (fallback for scheduling)
+general:
+  working_hours:
+    start: 9
+    end: 18
+    break_start: 12
+    break_end: 13
+    working_days: [0, 1, 2, 3, 4]  # Monday=0 to Friday=4

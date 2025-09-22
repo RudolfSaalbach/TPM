@@ -24,7 +24,8 @@
       "Bash(docker compose logs:*)",
       "Bash(grep:*)",
       "Bash(xargs rm:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(del test_calendar_config.py)"
     ],
     "deny": [],
     "ask": []

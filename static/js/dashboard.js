@@ -127,7 +127,7 @@ class ChronosDashboard {
             this.showLoading();
 
             const [metricsResponse, eventsResponse, syncResponse] = await Promise.all([
-                fetch(`/api/dashboard-data`),
+                fetch(`/api/v1/dashboard-data`),
                 fetch(`${this.config.apiBaseUrl}/events?limit=10`),
                 fetch(`${this.config.apiBaseUrl}/sync/status`)
             ]);

@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events - Chronos Engine</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Premium CSS -->
+    <link rel="stylesheet" href="/static/css/chronos-premium.css">
+</head>
+<body>
+    <!-- Skip Link für Barrierefreiheit -->
+    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+
+    <div class="app-container">
+        <!-- Sidebar Overlay für Mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar" role="navigation" aria-label="Hauptnavigation">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <div class="logo-icon" aria-hidden="true">⏰</div>
+                    <span class="logo-text">Chronos</span>
+                </a>
+            </div>
+
+            <div class="sidebar-nav">
+                <a href="/dashboard" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Dashboard">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/calendar" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Kalender">📅</span>
+                    <span>Kalender</span>
+                </a>
+                <a href="/events" class="nav-item active" aria-current="page">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Events">📋</span>
+                    <span>Events</span>
+                </a>
+                <a href="/analytics" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Analytics">📈</span>
+                    <span>Analytics</span>
+                </a>
+                <a href="/settings" class="nav-item">
+                    <div class="nav-item-indicator"></div>
+                    <span class="nav-icon" role="img" aria-label="Einstellungen">⚙️</span>
+                    <span>Einstellungen</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    <div class="header-title">
+                        <h1>Events</h1>
+                        <p class="header-subtitle">Verwalte und organisiere deine Termine und Aufgaben.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="toggleSidebar()" aria-label="Seitenleiste umschalten">
+                            <span aria-hidden="true">☰</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportEvents()" aria-label="Events exportieren">
+                            <span aria-hidden="true">📥</span>
+                            Exportieren
+                        </button>
+                        <button class="btn btn-primary" onclick="createNewEvent()" aria-label="Neues Event erstellen">
+                            <span aria-hidden="true">➕</span>
+                            Neues Event
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Events Content -->
+            <div class="dashboard-content animate-fade-in">
+                <!-- Event Controls -->
+                <section class="events-controls" aria-label="Event-Filter und Suche">
+                    <div class="controls-row">
+                        <div class="search-section">
+                            <div class="search-group">
+                                <input type="search" id="eventSearch" class="search-input"
+                                       placeholder="Events durchsuchen..."
+                                       oninput="searchEvents()"
+                                       aria-label="Events durchsuchen">
+                                <button class="search-btn" onclick="clearSearch()" aria-label="Suche löschen">
+                                    <span aria-hidden="true">×</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <div class="filter-group">
+                                <label for="statusFilter" class="filter-label">Status:</label>
+                                <select id="statusFilter" class="filter-select" onchange="filterEvents()">
+                                    <option value="all">Alle Status</option>
+                                    <option value="upcoming">Bevorstehend</option>
+                                    <option value="ongoing">Läuft</option>
+                                    <option value="completed">Abgeschlossen</option>
+                                    <option value="cancelled">Abgesagt</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <label for="priorityFilter" class="filter-label">Priorität:</label>
+                                <select id="priorityFilter" class="filter-select" onchange="filterEvents()">
+                                    <option value="all">Alle Prioritäten</option>
+                                    <option value="high">Hoch</option>
+                                    <option value="medium">Mittel</option>
+                                    <option value="low">Niedrig</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <label for="categoryFilter" class="filter-label">Kategorie:</label>
+                                <select id="categoryFilter" class="filter-select" onchange="filterEvents()">
+                                    <option value="all">Alle Kategorien</option>
+                                    <option value="meeting">Meetings</option>
+                                    <option value="task">Aufgaben</option>
+                                    <option value="personal">Persönlich</option>
+                                    <option value="deadline">Deadlines</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="view-controls">
+                            <div class="view-toggle" role="tablist" aria-label="Anzeigemodus">
+                                <button class="view-btn active" role="tab" aria-selected="true" onclick="setView('list')" aria-controls="events-container">
+                                    <span aria-hidden="true">📋</span>
+                                    Liste
+                                </button>
+                                <button class="view-btn" role="tab" aria-selected="false" onclick="setView('cards')" aria-controls="events-container">
+                                    <span aria-hidden="true">📇</span>
+                                    Karten
+                                </button>
+                                <button class="view-btn" role="tab" aria-selected="false" onclick="setView('timeline')" aria-controls="events-container">
+                                    <span aria-hidden="true">📈</span>
+                                    Timeline
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="quick-stats-bar">
+                        <div class="stat-chip">
+                            <span class="stat-number" id="totalEvents">{{ events|length or 24 }}</span>
+                            <span class="stat-label">Gesamt</span>
+                        </div>
+                        <div class="stat-chip upcoming">
+                            <span class="stat-number" id="upcomingEvents">8</span>
+                            <span class="stat-label">Bevorstehend</span>
+                        </div>
+                        <div class="stat-chip high-priority">
+                            <span class="stat-number" id="highPriorityEvents">3</span>
+                            <span class="stat-label">Hoch-Priorität</span>
+                        </div>
+                        <div class="stat-chip overdue">
+                            <span class="stat-number" id="overdueEvents">1</span>
+                            <span class="stat-label">Überfällig</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Events List -->
+                <section class="events-section" aria-labelledby="events-heading">
+                    <div class="section-header">
+                        <h2 id="events-heading">Deine Events</h2>
+                        <div class="sort-controls">
+                            <label for="sortSelect" class="sr-only">Sortierung auswählen</label>
+                            <select id="sortSelect" class="sort-select" onchange="sortEvents()">
+                                <option value="date-asc">Datum (aufsteigend)</option>
+                                <option value="date-desc">Datum (absteigend)</option>
+                                <option value="priority-desc">Priorität (hoch zu niedrig)</option>
+                                <option value="priority-asc">Priorität (niedrig zu hoch)</option>
+                                <option value="title-asc">Titel (A-Z)</option>
+                                <option value="title-desc">Titel (Z-A)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="events-container" class="events-container list-view" role="region" aria-live="polite">
+                        <!-- Event Items -->
+                        <article class="event-card" data-priority="high" data-status="upcoming" data-category="meeting">
+                            <div class="event-priority-indicator priority-high"></div>
+                            <div class="event-content">
+                                <div class="event-header">
+                                    <div class="event-main-info">
+                                        <h3 class="event-title">Sprint Planning Meeting</h3>
+                                        <div class="event-meta">
+                                            <time datetime="2024-12-23T10:00" class="event-time">
+                                                <span aria-hidden="true">📅</span>
+                                                23. Dez 2024, 10:00 - 12:00
+                                            </time>
+                                            <span class="event-category">
+                                                <span aria-hidden="true">🏢</span>
+                                                Meeting
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="event-badges">
+                                        <div class="priority-label high">
+                                            <span class="sr-only">Hohe Priorität</span>
+                                            Hoch
+                                        </div>
+                                        <div class="status-badge upcoming">Bevorstehend</div>
+                                    </div>
+                                </div>
+                                <div class="event-description">
+                                    Planung des nächsten Sprints mit dem gesamten Entwicklungsteam. Diskussion über Backlog-Items und Schätzungen.
+                                </div>
+                                <div class="event-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">📍</span>
+                                        <span>Konferenzraum A, Hauptgebäude</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">👥</span>
+                                        <span>6 Teilnehmer</span>
+                                    </div>
+                                </div>
+                                <div class="event-actions">
+                                    <button class="btn btn-ghost btn-sm" onclick="viewEvent(1)" aria-label="Event anzeigen">
+                                        <span aria-hidden="true">👁</span>
+                                        Anzeigen
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="editEvent(1)" aria-label="Event bearbeiten">
+                                        <span aria-hidden="true">✏️</span>
+                                        Bearbeiten
+                                    </button>
+                                    <button class="btn btn-ghost btn-sm" onclick="duplicateEvent(1)" aria-label="Event duplizieren">
+                                        <span aria-hidden="true">📋</span>
+                                        Duplizieren
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="event-card" data-priority="medium" data-status="ongoing" data-category="task">
+                            <div class="event-priority-indicator priority-medium"></div>
+                            <div class="event-content">
+                                <div class="event-header">
+                                    <div class="event-main-info">
+                                        <h3 class="event-title">Code Review Session</h3>
+                                        <div class="event-meta">
+                                            <time datetime="2024-12-21T14:30" class="event-time">
+                                                <span aria-hidden="true">📅</span>
+                                                Heute, 14:30 - 16:00
+                                            </time>
+                                            <span class="event-category">
+                                                <span aria-hidden="true">💻</span>
+                                                Aufgabe
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="event-badges">
+                                        <div class="priority-label medium">
+                                            <span class="sr-only">Mittlere Priorität</span>
+                                            Mittel
+                                        </div>
+                                        <div class="status-badge ongoing">Läuft</div>
+                                    </div>
+                                </div>
+                                <div class="event-description">
+                                    Review der neuen Features für das Dashboard. Fokus auf Performance und Accessibility.
+                                </div>
+                                <div class="event-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">💻</span>
+                                        <span>Remote via Teams</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">⏱️</span>
+                                        <span>Läuft seit 45 Min</span>
+                                    </div>
+                                </div>
+                                <div class="event-actions">
+                                    <button class="btn btn-primary btn-sm" onclick="joinEvent(2)" aria-label="Event beitreten">
+                                        <span aria-hidden="true">▶️</span>
+                                        Beitreten
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="editEvent(2)" aria-label="Event bearbeiten">
+                                        <span aria-hidden="true">✏️</span>
+                                        Bearbeiten
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="event-card" data-priority="low" data-status="completed" data-category="personal">
+                            <div class="event-priority-indicator priority-low"></div>
+                            <div class="event-content">
+                                <div class="event-header">
+                                    <div class="event-main-info">
+                                        <h3 class="event-title">Lunch & Learn Session</h3>
+                                        <div class="event-meta">
+                                            <time datetime="2024-12-21T12:00" class="event-time">
+                                                <span aria-hidden="true">📅</span>
+                                                Heute, 12:00 - 13:00
+                                            </time>
+                                            <span class="event-category">
+                                                <span aria-hidden="true">🎓</span>
+                                                Persönlich
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="event-badges">
+                                        <div class="priority-label low">
+                                            <span class="sr-only">Niedrige Priorität</span>
+                                            Niedrig
+                                        </div>
+                                        <div class="status-badge completed">Abgeschlossen</div>
+                                    </div>
+                                </div>
+                                <div class="event-description">
+                                    Lernsession über neue JavaScript Features während der Mittagspause.
+                                </div>
+                                <div class="event-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">📚</span>
+                                        <span>Selbststudium</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">✅</span>
+                                        <span>Abgeschlossen vor 2h</span>
+                                    </div>
+                                </div>
+                                <div class="event-actions">
+                                    <button class="btn btn-ghost btn-sm" onclick="viewEvent(3)" aria-label="Event anzeigen">
+                                        <span aria-hidden="true">👁</span>
+                                        Anzeigen
+                                    </button>
+                                    <button class="btn btn-ghost btn-sm" onclick="duplicateEvent(3)" aria-label="Event duplizieren">
+                                        <span aria-hidden="true">📋</span>
+                                        Wiederholen
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="event-card overdue" data-priority="high" data-status="overdue" data-category="deadline">
+                            <div class="event-priority-indicator priority-high"></div>
+                            <div class="event-content">
+                                <div class="event-header">
+                                    <div class="event-main-info">
+                                        <h3 class="event-title">Quarterly Report Deadline</h3>
+                                        <div class="event-meta">
+                                            <time datetime="2024-12-20T17:00" class="event-time">
+                                                <span aria-hidden="true">⚠️</span>
+                                                Gestern, 17:00 (ÜBERFÄLLIG)
+                                            </time>
+                                            <span class="event-category">
+                                                <span aria-hidden="true">📊</span>
+                                                Deadline
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="event-badges">
+                                        <div class="priority-label high">
+                                            <span class="sr-only">Hohe Priorität</span>
+                                            Hoch
+                                        </div>
+                                        <div class="status-badge overdue">Überfällig</div>
+                                    </div>
+                                </div>
+                                <div class="event-description">
+                                    Abgabe des Quartalsberichts für Q4 2024. Muss dringend nachgeholt werden.
+                                </div>
+                                <div class="event-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">📋</span>
+                                        <span>Management Review</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">⚠️</span>
+                                        <span>1 Tag überfällig</span>
+                                    </div>
+                                </div>
+                                <div class="event-actions">
+                                    <button class="btn btn-danger btn-sm" onclick="markComplete(4)" aria-label="Als abgeschlossen markieren">
+                                        <span aria-hidden="true">✅</span>
+                                        Abschließen
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="editEvent(4)" aria-label="Event bearbeiten">
+                                        <span aria-hidden="true">✏️</span>
+                                        Bearbeiten
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="event-card" data-priority="medium" data-status="upcoming" data-category="meeting">
+                            <div class="event-priority-indicator priority-medium"></div>
+                            <div class="event-content">
+                                <div class="event-header">
+                                    <div class="event-main-info">
+                                        <h3 class="event-title">Weekly Team Sync</h3>
+                                        <div class="event-meta">
+                                            <time datetime="2024-12-23T09:00" class="event-time">
+                                                <span aria-hidden="true">🔄</span>
+                                                Mo, 23. Dez, 09:00 - 09:30 (Wöchentlich)
+                                            </time>
+                                            <span class="event-category">
+                                                <span aria-hidden="true">👥</span>
+                                                Meeting
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="event-badges">
+                                        <div class="priority-label medium">
+                                            <span class="sr-only">Mittlere Priorität</span>
+                                            Mittel
+                                        </div>
+                                        <div class="status-badge recurring">Wiederkehrend</div>
+                                    </div>
+                                </div>
+                                <div class="event-description">
+                                    Wöchentliches Sync-Meeting zur Abstimmung der Teammitglieder und Besprechung aktueller Projekte.
+                                </div>
+                                <div class="event-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">🔄</span>
+                                        <span>Jeden Montag</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon" aria-hidden="true">👥</span>
+                                        <span>8 Teilnehmer</span>
+                                    </div>
+                                </div>
+                                <div class="event-actions">
+                                    <button class="btn btn-ghost btn-sm" onclick="viewEvent(5)" aria-label="Event anzeigen">
+                                        <span aria-hidden="true">👁</span>
+                                        Anzeigen
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="editSeries(5)" aria-label="Serie bearbeiten">
+                                        <span aria-hidden="true">🔄</span>
+                                        Serie bearbeiten
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="empty-state" class="empty-state" style="display: none;">
+                        <div class="empty-icon" aria-hidden="true">📋</div>
+                        <h3>Keine Events gefunden</h3>
+                        <p>Es wurden keine Events gefunden, die deinen Filterkriterien entsprechen.</p>
+                        <button class="btn btn-primary" onclick="clearAllFilters()">
+                            Filter zurücksetzen
+                        </button>
+                    </div>
+
+                    <!-- Load More -->
+                    <div class="load-more-section">
+                        <button class="btn btn-secondary" onclick="loadMoreEvents()" id="loadMoreBtn">
+                            <span aria-hidden="true">⬇️</span>
+                            Weitere Events laden
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="createNewEvent()" aria-label="Neues Event erstellen">
+        <span aria-hidden="true">➕</span>
+    </button>
+
+    <!-- Event Detail Modal -->
+    <div class="modal-overlay" id="eventModal" onclick="closeEventModal()" style="display: none;">
+        <div class="modal large" onclick="event.stopPropagation()" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
+            <div class="modal-header">
+                <h2 id="modalTitle">Event Details</h2>
+                <button class="modal-close" onclick="closeEventModal()" aria-label="Modal schließen">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body" id="eventModalBody">
+                <!-- Event details will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEventModal()">Schließen</button>
+                <button class="btn btn-secondary" onclick="editEventFromModal()">Bearbeiten</button>
+                <button class="btn btn-danger" onclick="deleteEventFromModal()">Löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Modal -->
+    <div class="modal-overlay" id="bulkModal" onclick="closeBulkModal()" style="display: none;">
+        <div class="modal" onclick="event.stopPropagation()" role="dialog" aria-labelledby="bulkModalTitle" aria-modal="true">
+            <div class="modal-header">
+                <h2 id="bulkModalTitle">Bulk-Aktionen</h2>
+                <button class="modal-close" onclick="closeBulkModal()" aria-label="Modal schließen">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Wähle eine Aktion für die ausgewählten Events:</p>
+                <div class="bulk-actions">
+                    <button class="btn btn-secondary" onclick="bulkComplete()">Als abgeschlossen markieren</button>
+                    <button class="btn btn-secondary" onclick="bulkDelete()">Löschen</button>
+                    <button class="btn btn-secondary" onclick="bulkExport()">Exportieren</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeBulkModal()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer" role="region" aria-live="polite" aria-label="Benachrichtigungen"></div>
+
+    <!-- Custom Styles für Events -->
+    <style>
+        /* Events-specific styles */
+        .events-controls {
+            margin-bottom: var(--space-6);
+        }
+
+        .controls-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: var(--space-6);
+            align-items: end;
+            margin-bottom: var(--space-5);
+        }
+
+        .search-section {
+            min-width: 0;
+        }
+
+        .search-group {
+            position: relative;
+            display: flex;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: var(--space-3) var(--space-4);
+            border: 1px solid var(--border-base);
+            border-radius: var(--radius-md);
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            min-width: 0;
+        }
+
+        .search-input:focus {
+            outline: 2px solid var(--state-focus-ring);
+            outline-offset: 2px;
+            border-color: var(--border-focus);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: var(--space-2);
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: var(--space-1);
+            border-radius: var(--radius-sm);
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .search-btn:hover {
+            background: var(--state-hover);
+            color: var(--text-primary);
+        }
+
+        .filter-section {
+            display: flex;
+            gap: var(--space-4);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .filter-label {
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: var(--letter-spacing-wide);
+        }
+
+        .filter-select, .sort-select {
+            padding: var(--space-3);
+            border: 1px solid var(--border-base);
+            border-radius: var(--radius-md);
+            background: var(--surface-primary);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            min-width: 120px;
+            cursor: pointer;
+        }
+
+        .filter-select:focus, .sort-select:focus {
+            outline: 2px solid var(--state-focus-ring);
+            outline-offset: 2px;
+            border-color: var(--border-focus);
+        }
+
+        .view-toggle {
+            display: flex;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-md);
+            padding: var(--space-1);
+        }
+
+        .view-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-out);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            white-space: nowrap;
+        }
+
+        .view-btn.active {
+            background: var(--primary-500);
+            color: white;
+        }
+
+        .view-btn:hover:not(.active) {
+            background: var(--state-hover);
+            color: var(--text-primary);
+        }
+
+        /* Quick Stats Bar */
+        .quick-stats-bar {
+            display: flex;
+            gap: var(--space-4);
+            padding: var(--space-4);
+            background: var(--surface-secondary);
+            border-radius: var(--radius-lg);
+            flex-wrap: wrap;
+        }
+
+        .stat-chip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: var(--space-3) var(--space-4);
+            background: var(--surface-primary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            min-width: 80px;
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .stat-chip:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-chip.upcoming {
+            border-color: var(--primary-400);
+            background: var(--state-selected);
+        }
+
+        .stat-chip.high-priority {
+            border-color: var(--danger-400);
+            background: var(--status-danger-bg);
+        }
+
+        .stat-chip.overdue {
+            border-color: var(--warning-400);
+            background: var(--status-warning-bg);
+        }
+
+        .stat-number {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-bold);
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: var(--letter-spacing-wide);
+            margin-top: var(--space-1);
+        }
+
+        /* Events Container */
+        .events-container {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .events-container.cards-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: var(--space-5);
+        }
+
+        .events-container.timeline-view {
+            position: relative;
+        }
+
+        .events-container.timeline-view::before {
+            content: '';
+            position: absolute;
+            left: var(--space-8);
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border-base);
+        }
+
+        /* Event Cards */
+        .event-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            transition: all var(--duration-base) var(--ease-out);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .event-card:hover {
+            border-color: var(--border-base);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .event-card.overdue {
+            border-color: var(--warning-400);
+            background: linear-gradient(90deg, var(--status-warning-bg), var(--surface-primary) 4px);
+        }
+
+        .event-content {
+            padding: var(--space-5);
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--space-4);
+            gap: var(--space-4);
+        }
+
+        .event-main-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .event-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-2);
+            line-height: var(--line-height-tight);
+        }
+
+        .event-meta {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .event-time, .event-category {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .event-badges {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+
+        .status-badge {
+            padding: var(--space-1) var(--space-3);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+            text-transform: uppercase;
+            letter-spacing: var(--letter-spacing-wide);
+        }
+
+        .status-badge.upcoming {
+            background: var(--state-selected);
+            color: var(--primary-600);
+        }
+
+        .status-badge.ongoing {
+            background: var(--status-success-bg);
+            color: var(--success-600);
+        }
+
+        .status-badge.completed {
+            background: var(--surface-secondary);
+            color: var(--text-muted);
+        }
+
+        .status-badge.overdue {
+            background: var(--status-danger-bg);
+            color: var(--danger-600);
+        }
+
+        .status-badge.recurring {
+            background: var(--status-warning-bg);
+            color: var(--warning-600);
+        }
+
+        .event-description {
+            color: var(--text-secondary);
+            line-height: var(--line-height-base);
+            margin-bottom: var(--space-4);
+        }
+
+        .event-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-4);
+            margin-bottom: var(--space-5);
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+        }
+
+        .detail-icon {
+            opacity: 0.7;
+        }
+
+        .event-actions {
+            display: flex;
+            gap: var(--space-3);
+            flex-wrap: wrap;
+            padding-top: var(--space-4);
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .btn-sm {
+            padding: var(--space-2) var(--space-3);
+            font-size: var(--font-size-xs);
+            min-height: 32px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--space-10);
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: var(--font-size-2xl);
+            margin-bottom: var(--space-4);
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: var(--font-size-lg);
+            color: var(--text-primary);
+            margin-bottom: var(--space-2);
+        }
+
+        .empty-state p {
+            margin-bottom: var(--space-5);
+        }
+
+        /* Load More */
+        .load-more-section {
+            text-align: center;
+            padding: var(--space-6);
+        }
+
+        /* Section Header */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-5);
+        }
+
+        .section-header h2 {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+
+        .sort-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        /* Modal Extensions */
+        .modal.large {
+            max-width: 600px;
+        }
+
+        .bulk-actions {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            margin: var(--space-4) 0;
+        }
+
+        /* Timeline View Specific */
+        .timeline-view .event-card {
+            margin-left: var(--space-16);
+            position: relative;
+        }
+
+        .timeline-view .event-card::before {
+            content: '';
+            position: absolute;
+            left: calc(-1 * var(--space-16));
+            top: var(--space-6);
+            width: 12px;
+            height: 12px;
+            background: var(--primary-500);
+            border: 3px solid var(--surface-primary);
+            border-radius: var(--radius-full);
+            z-index: 1;
+        }
+
+        .timeline-view .event-card.overdue::before {
+            background: var(--warning-500);
+        }
+
+        .timeline-view .event-card.completed::before {
+            background: var(--success-500);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .controls-row {
+                grid-template-columns: 1fr;
+                gap: var(--space-4);
+            }
+
+            .filter-section {
+                flex-wrap: wrap;
+                gap: var(--space-3);
+            }
+
+            .filter-group {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .view-toggle {
+                justify-content: center;
+            }
+
+            .quick-stats-bar {
+                justify-content: center;
+            }
+
+            .event-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .event-badges {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+
+            .event-actions {
+                justify-content: center;
+            }
+
+            .events-container.cards-view {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline-view .event-card {
+                margin-left: var(--space-8);
+            }
+
+            .modal.large {
+                max-width: 95%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .event-actions {
+                flex-direction: column;
+            }
+
+            .btn-sm {
+                justify-content: center;
+            }
+
+            .quick-stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+
+    <!-- JavaScript -->
+    <script>
+        // Global Variables
+        let currentView = 'list';
+        let currentFilters = {
+            status: 'all',
+            priority: 'all',
+            category: 'all',
+            search: ''
+        };
+        let currentSort = 'date-asc';
+        let events = [];
+        let filteredEvents = [];
+
+        // Initialize Events Page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEvents();
+            loadEvents();
+            setupEventListeners();
+        });
+
+        function initializeEvents() {
+            updateEventCounts();
+            setupKeyboardShortcuts();
+        }
+
+        function setupEventListeners() {
+            // Search input debounced
+            let searchTimeout;
+            const searchInput = document.getElementById('eventSearch');
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(searchEvents, 300);
+            });
+
+            // Filter changes
+            document.getElementById('statusFilter').addEventListener('change', filterEvents);
+            document.getElementById('priorityFilter').addEventListener('change', filterEvents);
+            document.getElementById('categoryFilter').addEventListener('change', filterEvents);
+            document.getElementById('sortSelect').addEventListener('change', sortEvents);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+        }
+
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                if (e.altKey) {
+                    switch(e.key) {
+                        case 'n':
+                            e.preventDefault();
+                            createNewEvent();
+                            break;
+                        case 'f':
+                            e.preventDefault();
+                            document.getElementById('eventSearch').focus();
+                            break;
+                        case '1':
+                            e.preventDefault();
+                            setView('list');
+                            break;
+                        case '2':
+                            e.preventDefault();
+                            setView('cards');
+                            break;
+                        case '3':
+                            e.preventDefault();
+                            setView('timeline');
+                            break;
+                        case 'e':
+                            e.preventDefault();
+                            exportEvents();
+                            break;
+                    }
+                }
+            });
+        }
+
+        function handleKeyboardShortcuts(e) {
+            // Handle event card navigation with arrow keys
+            const focusedElement = document.activeElement;
+            if (focusedElement.classList.contains('event-card')) {
+                switch(e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        navigateToNextEvent(focusedElement);
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        navigateToPrevEvent(focusedElement);
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        const eventId = focusedElement.dataset.eventId;
+                        if (eventId) viewEvent(eventId);
+                        break;
+                }
+            }
+        }
+
+        function navigateToNextEvent(currentCard) {
+            const nextCard = currentCard.nextElementSibling;
+            if (nextCard && nextCard.classList.contains('event-card')) {
+                nextCard.focus();
+                nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function navigateToPrevEvent(currentCard) {
+            const prevCard = currentCard.previousElementSibling;
+            if (prevCard && prevCard.classList.contains('event-card')) {
+                prevCard.focus();
+                prevCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // View Management
+        function setView(view) {
+            currentView = view;
+
+            // Update view buttons
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-selected', 'false');
+            });
+
+            event.target.classList.add('active');
+            event.target.setAttribute('aria-selected', 'true');
+
+            // Update container class
+            const container = document.getElementById('events-container');
+            container.className = `events-container ${view}-view`;
+
+            showToast('Ansicht geändert', `${view.charAt(0).toUpperCase() + view.slice(1)}-Ansicht aktiviert`, 'info');
+
+            // Re-render events in new view
+            renderEvents();
+        }
+
+        // Event Loading and Rendering
+        async function loadEvents() {
+            try {
+                // In real app, fetch from API
+                events = generateMockEvents();
+                filteredEvents = [...events];
+                renderEvents();
+                updateEventCounts();
+            } catch (error) {
+                console.error('Failed to load events:', error);
+                showToast('Fehler', 'Events konnten nicht geladen werden', 'error');
+            }
+        }
+
+        function generateMockEvents() {
+            // Mock data - in real app, this comes from API
+            return [
+                {
+                    id: 1,
+                    title: 'Sprint Planning Meeting',
+                    description: 'Planung des nächsten Sprints mit dem gesamten Entwicklungsteam.',
+                    datetime: '2024-12-23T10:00',
+                    duration: 120,
+                    priority: 'high',
+                    status: 'upcoming',
+                    category: 'meeting',
+                    location: 'Konferenzraum A',
+                    participants: 6
+                },
+                {
+                    id: 2,
+                    title: 'Code Review Session',
+                    description: 'Review der neuen Features für das Dashboard.',
+                    datetime: '2024-12-21T14:30',
+                    duration: 90,
+                    priority: 'medium',
+                    status: 'ongoing',
+                    category: 'task',
+                    location: 'Remote via Teams',
+                    participants: 3
+                }
+                // More mock events would be added here
+            ];
+        }
+
+        function renderEvents() {
+            const container = document.getElementById('events-container');
+            const emptyState = document.getElementById('empty-state');
+
+            if (filteredEvents.length === 0) {
+                container.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            container.style.display = 'flex';
+            emptyState.style.display = 'none';
+
+            // The HTML already contains the event cards as a demo
+            // In a real app, this would dynamically generate cards from filteredEvents
+        }
+
+        // Filtering and Sorting
+        function searchEvents() {
+            const query = document.getElementById('eventSearch').value.toLowerCase();
+            currentFilters.search = query;
+            applyFilters();
+        }
+
+        function filterEvents() {
+            currentFilters.status = document.getElementById('statusFilter').value;
+            currentFilters.priority = document.getElementById('priorityFilter').value;
+            currentFilters.category = document.getElementById('categoryFilter').value;
+            applyFilters();
+        }
+
+        function applyFilters() {
+            filteredEvents = events.filter(event => {
+                const matchesSearch = !currentFilters.search ||
+                    event.title.toLowerCase().includes(currentFilters.search) ||
+                    event.description.toLowerCase().includes(currentFilters.search);
+
+                const matchesStatus = currentFilters.status === 'all' || event.status === currentFilters.status;
+                const matchesPriority = currentFilters.priority === 'all' || event.priority === currentFilters.priority;
+                const matchesCategory = currentFilters.category === 'all' || event.category === currentFilters.category;
+
+                return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+            });
+
+            renderEvents();
+            updateEventCounts();
+
+            // Show feedback for filters
+            const activeFilters = Object.entries(currentFilters).filter(([key, value]) =>
+                value !== 'all' && value !== ''
+            );
+
+            if (activeFilters.length > 0) {
+                const filterText = activeFilters.map(([key, value]) => `${key}: ${value}`).join(', ');
+                showToast('Filter angewendet', filterText, 'info');
+            }
+        }
+
+        function sortEvents() {
+            currentSort = document.getElementById('sortSelect').value;
+
+            filteredEvents.sort((a, b) => {
+                switch(currentSort) {
+                    case 'date-asc':
+                        return new Date(a.datetime) - new Date(b.datetime);
+                    case 'date-desc':
+                        return new Date(b.datetime) - new Date(a.datetime);
+                    case 'priority-desc':
+                        const priorityOrder = { high: 3, medium: 2, low: 1 };
+                        return priorityOrder[b.priority] - priorityOrder[a.priority];
+                    case 'priority-asc':
+                        const priorityOrderAsc = { high: 3, medium: 2, low: 1 };
+                        return priorityOrderAsc[a.priority] - priorityOrderAsc[b.priority];
+                    case 'title-asc':
+                        return a.title.localeCompare(b.title);
+                    case 'title-desc':
+                        return b.title.localeCompare(a.title);
+                    default:
+                        return 0;
+                }
+            });
+
+            renderEvents();
+            showToast('Sortierung geändert', currentSort.replace('-', ' '), 'info');
+        }
+
+        function clearSearch() {
+            document.getElementById('eventSearch').value = '';
+            currentFilters.search = '';
+            applyFilters();
+        }
+
+        function clearAllFilters() {
+            document.getElementById('eventSearch').value = '';
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('priorityFilter').value = 'all';
+            document.getElementById('categoryFilter').value = 'all';
+
+            currentFilters = {
+                status: 'all',
+                priority: 'all',
+                category: 'all',
+                search: ''
+            };
+
+            applyFilters();
+            showToast('Filter zurückgesetzt', 'Alle Filter wurden entfernt', 'info');
+        }
+
+        // Event Actions
+        function viewEvent(eventId) {
+            const event = events.find(e => e.id == eventId);
+            if (!event) return;
+
+            const modal = document.getElementById('eventModal');
+            const modalBody = document.getElementById('eventModalBody');
+
+            modalBody.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                    <div class="event-header">
+                        <h3 style="color: var(--text-primary); margin-bottom: var(--space-2);">${event.title}</h3>
+                        <div class="priority-label ${event.priority}">${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)} Priorität</div>
+                    </div>
+                    <div class="event-details">
+                        <div><strong>Zeit:</strong> ${new Date(event.datetime).toLocaleString('de-DE')}</div>
+                        <div><strong>Dauer:</strong> ${event.duration} Minuten</div>
+                        <div><strong>Status:</strong> ${event.status}</div>
+                        <div><strong>Kategorie:</strong> ${event.category}</div>
+                        ${event.location ? `<div><strong>Ort:</strong> ${event.location}</div>` : ''}
+                        ${event.participants ? `<div><strong>Teilnehmer:</strong> ${event.participants}</div>` : ''}
+                    </div>
+                    <div>
+                        <strong>Beschreibung:</strong>
+                        <p style="margin-top: var(--space-2);">${event.description}</p>
+                    </div>
+                </div>
+            `;
+
+            modal.style.display = 'flex';
+            modal.querySelector('.modal').focus();
+        }
+
+        function editEvent(eventId) {
+            showToast('Event bearbeiten', `Event ${eventId} wird bearbeitet...`, 'info');
+            // In real app, open edit modal or navigate to edit page
+        }
+
+        function editSeries(eventId) {
+            showToast('Serie bearbeiten', `Ereignis-Serie ${eventId} wird bearbeitet...`, 'info');
+        }
+
+        function duplicateEvent(eventId) {
+            showToast('Event dupliziert', `Event ${eventId} wurde dupliziert`, 'success');
+            // In real app, duplicate the event
+        }
+
+        function markComplete(eventId) {
+            showToast('Event abgeschlossen', `Event ${eventId} wurde als abgeschlossen markiert`, 'success');
+            // In real app, update event status
+        }
+
+        function joinEvent(eventId) {
+            showToast('Event beigetreten', `Du bist dem Event ${eventId} beigetreten`, 'success');
+        }
+
+        function deleteEventFromModal() {
+            showToast('Event gelöscht', 'Event wurde erfolgreich gelöscht', 'success');
+            closeEventModal();
+        }
+
+        function editEventFromModal() {
+            closeEventModal();
+            showToast('Event bearbeiten', 'Event-Editor wird geöffnet...', 'info');
+        }
+
+        // Modal Management
+        function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+        }
+
+        function closeBulkModal() {
+            document.getElementById('bulkModal').style.display = 'none';
+        }
+
+        // Utility Functions
+        function createNewEvent() {
+            showToast('Neues Event', 'Event-Editor wird geöffnet...', 'info');
+        }
+
+        function exportEvents() {
+            showToast('Export gestartet', 'Events werden exportiert...', 'info');
+            // In real app, trigger export functionality
+        }
+
+        function loadMoreEvents() {
+            showToast('Lade weitere Events', 'Weitere Events werden geladen...', 'info');
+            // In real app, load more events from API
+        }
+
+        function updateEventCounts() {
+            // Update stat chips with current counts
+            document.getElementById('totalEvents').textContent = filteredEvents.length;
+
+            const upcoming = filteredEvents.filter(e => e.status === 'upcoming').length;
+            document.getElementById('upcomingEvents').textContent = upcoming;
+
+            const highPriority = filteredEvents.filter(e => e.priority === 'high').length;
+            document.getElementById('highPriorityEvents').textContent = highPriority;
+
+            const overdue = filteredEvents.filter(e => e.status === 'overdue').length;
+            document.getElementById('overdueEvents').textContent = overdue;
+        }
+
+        // Bulk Actions
+        function bulkComplete() {
+            showToast('Bulk-Aktion', 'Ausgewählte Events als abgeschlossen markiert', 'success');
+            closeBulkModal();
+        }
+
+        function bulkDelete() {
+            showToast('Bulk-Aktion', 'Ausgewählte Events gelöscht', 'success');
+            closeBulkModal();
+        }
+
+        function bulkExport() {
+            showToast('Bulk-Export', 'Ausgewählte Events werden exportiert...', 'info');
+            closeBulkModal();
+        }
+
+        // Shared Functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (window.innerWidth <= 768) {
+                const isOpen = sidebar.classList.contains('open');
+                sidebar.classList.toggle('open', !isOpen);
+                overlay.classList.toggle('open', !isOpen);
+                sidebar.setAttribute('aria-hidden', isOpen);
+            }
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            sidebar.setAttribute('aria-hidden', 'true');
+        }
+
+        // Toast System (simplified)
+        function showToast(title, message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.setAttribute('role', 'alert');
+
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <h4 class="toast-title">${title}</h4>
+                    <button class="toast-close" onclick="removeToast(this.parentElement.parentElement)" aria-label="Benachrichtigung schließen">×</button>
+                </div>
+                <div class="toast-body">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => removeToast(toast), 8000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container';
+            container.setAttribute('role', 'region');
+            container.setAttribute('aria-live', 'polite');
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function removeToast(toast) {
+            if (toast && toast.parentElement) {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 400);
+            }
+        }
+    </script>
+</body>
+</html>

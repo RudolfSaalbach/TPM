@@ -95,7 +95,7 @@
                                 <span class="metric-label">Gesamte Events</span>
                                 <div class="metric-icon" aria-hidden="true">📅</div>
                             </div>
-                            <div class="metric-value" id="totalEvents">{{ productivity_metrics.total_events or 127 }}</div>
+                            <div class="metric-value" id="totalEvents">{{ productivity_metrics.total_events or 0 }}</div>
                             <div class="metric-change positive" id="eventsChange">
                                 <span aria-label="Anstieg">↗</span>
                                 <span>+18% diese Woche</span>
@@ -131,7 +131,7 @@
                                 <span class="metric-label">Abgeschlossene Tasks</span>
                                 <div class="metric-icon" aria-hidden="true">✅</div>
                             </div>
-                            <div class="metric-value" id="completedTasks">{{ productivity_metrics.completed_tasks or 42 }}</div>
+                            <div class="metric-value" id="completedTasks">{{ productivity_metrics.completed_tasks or 0 }}</div>
                             <div class="metric-change negative" id="tasksChange">
                                 <span aria-label="Rückgang">↓</span>
                                 <span>-3 vs. gestern</span>
@@ -157,7 +157,7 @@
                                 <span class="metric-label">CalDAV Events</span>
                                 <div class="metric-icon" aria-hidden="true">📊</div>
                             </div>
-                            <div class="metric-value" id="caldavEvents">{{ caldav_events or 98 }}</div>
+                            <div class="metric-value" id="caldavEvents">{{ caldav_events or 0 }}</div>
                             <div class="metric-change positive" id="caldavChange">
                                 <span aria-label="Anstieg">↗</span>
                                 <span>+7 neue Events</span>
@@ -220,42 +220,12 @@
                         <button class="btn btn-secondary">Alle anzeigen</button>
                     </div>
 
-                    <div class="event-list">
-                        <article class="event-item">
-                            <time class="event-time" datetime="09:00">09:00</time>
-                            <div class="event-details">
-                                <h3>Team Standup</h3>
-                                <p class="event-meta">Tägliches Sync-Meeting • 15 Minuten</p>
-                            </div>
-                            <div class="priority-label low">
-                                <span class="sr-only">Niedrige Priorität</span>
-                                Niedrig
-                            </div>
-                        </article>
-
-                        <article class="event-item">
-                            <time class="event-time" datetime="10:30">10:30</time>
-                            <div class="event-details">
-                                <h3>Client Präsentation</h3>
-                                <p class="event-meta">Projekt Review • 90 Minuten</p>
-                            </div>
-                            <div class="priority-label high">
-                                <span class="sr-only">Hohe Priorität</span>
-                                Hoch
-                            </div>
-                        </article>
-
-                        <article class="event-item">
-                            <time class="event-time" datetime="14:00">14:00</time>
-                            <div class="event-details">
-                                <h3>Sprint Planning</h3>
-                                <p class="event-meta">Zweiwöchentliche Planung • 2 Stunden</p>
-                            </div>
-                            <div class="priority-label medium">
-                                <span class="sr-only">Mittlere Priorität</span>
-                                Mittel
-                            </div>
-                        </article>
+                    <div class="event-list" id="todayEventsList">
+                        <!-- Events werden dynamisch über loadTodayEvents() geladen -->
+                        <div class="loading-events" id="eventsLoading">
+                            <div class="spinner" style="width: 20px; height: 20px;"></div>
+                            <span>Events werden geladen...</span>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -457,7 +427,7 @@
         // Data Loading
         async function loadDashboardData() {
             try {
-                const response = await fetch('/api/dashboard-data');
+                const response = await fetch('/api/v1/dashboard-data');
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
@@ -469,19 +439,137 @@
                 // Update Sync Status
                 updateSyncStatus(data.sync_status || {});
 
+                // Load today's events
+                await loadTodayEvents();
+
             } catch (error) {
                 console.error('Fehler beim Laden der Dashboard-Daten:', error);
-                // Fallback zu statischen Daten bei Fehler
+                showToast('Fehler', 'Dashboard-Daten konnten nicht geladen werden', 'error');
             }
+        }
+
+        async function loadTodayEvents() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const response = await fetch(`/api/v1/events?date=${today}`, {
+                    headers: {
+                        'X-API-Key': 'super-secret-change-me'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const events = await response.json();
+                displayTodayEvents(events);
+
+            } catch (error) {
+                console.error('Fehler beim Laden der heutigen Events:', error);
+                document.getElementById('eventsLoading').innerHTML =
+                    '<p style="color: var(--text-muted); text-align: center;">Keine Events für heute gefunden</p>';
+            }
+        }
+
+        function displayTodayEvents(events) {
+            const eventsList = document.getElementById('todayEventsList');
+            const loading = document.getElementById('eventsLoading');
+
+            if (loading) {
+                loading.remove();
+            }
+
+            if (!events || events.length === 0) {
+                eventsList.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Keine Events für heute</p>';
+                return;
+            }
+
+            eventsList.innerHTML = events.map(event => {
+                const startTime = new Date(event.start_time).toLocaleTimeString('de-DE', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const endTime = event.end_time ? new Date(event.end_time).toLocaleTimeString('de-DE', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : null;
+
+                const duration = endTime ? ` - ${endTime}` : '';
+                const priority = event.priority || 'medium';
+
+                return `
+                    <article class="event-item" onclick="viewEventDetails('${event.id}')">
+                        <time class="event-time" datetime="${event.start_time}">${startTime}${duration}</time>
+                        <div class="event-details">
+                            <h3>${event.summary || event.title}</h3>
+                            <p class="event-meta">${event.description || 'Kein Beschreibung'}</p>
+                        </div>
+                        <div class="priority-label ${priority}">
+                            <span class="sr-only">${priority === 'high' ? 'Hohe' : priority === 'low' ? 'Niedrige' : 'Mittlere'} Priorität</span>
+                            ${priority === 'high' ? 'Hoch' : priority === 'low' ? 'Niedrig' : 'Mittel'}
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function viewEventDetails(eventId) {
+            // Event-Details in Modal anzeigen
+            fetch(`/api/v1/events/${eventId}`, {
+                headers: {
+                    'X-API-Key': 'super-secret-change-me'
+                }
+            })
+            .then(response => response.json())
+            .then(event => {
+                const startTime = new Date(event.start_time).toLocaleString('de-DE');
+                const endTime = event.end_time ? new Date(event.end_time).toLocaleString('de-DE') : 'Offen';
+
+                showModal('event-details', event.summary || event.title, `
+                    <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                        <div>
+                            <strong>Startzeit:</strong> ${startTime}
+                        </div>
+                        <div>
+                            <strong>Endzeit:</strong> ${endTime}
+                        </div>
+                        ${event.description ? `
+                            <div>
+                                <strong>Beschreibung:</strong><br>
+                                ${event.description}
+                            </div>
+                        ` : ''}
+                        ${event.location ? `
+                            <div>
+                                <strong>Ort:</strong> ${event.location}
+                            </div>
+                        ` : ''}
+                        <div>
+                            <strong>Priorität:</strong>
+                            <span class="priority-label ${event.priority || 'medium'}">${
+                                event.priority === 'high' ? 'Hoch' :
+                                event.priority === 'low' ? 'Niedrig' : 'Mittel'
+                            }</span>
+                        </div>
+                    </div>
+                `, [
+                    { text: 'Schließen', action: 'closeModal', class: 'btn-primary' }
+                ]);
+            })
+            .catch(error => {
+                console.error('Fehler beim Laden der Event-Details:', error);
+                showToast('Fehler', 'Event-Details konnten nicht geladen werden', 'error');
+            });
         }
 
         function updateMetrics(metrics) {
             const elements = {
-                totalEvents: metrics.total_events || 127,
-                productivityRate: ((metrics.completion_rate || 0.873) * 100).toFixed(1) + '%',
-                timeSaved: (metrics.total_hours || 4.5).toFixed(1) + 'h',
-                completedTasks: metrics.completed_tasks || 42,
-                caldavEvents: metrics.caldav_events || 98
+                totalEvents: metrics.total_events || 0,
+                productivityRate: ((metrics.completion_rate || 0) * 100).toFixed(1) + '%',
+                timeSaved: (metrics.total_hours || 0).toFixed(1) + 'h',
+                completedTasks: metrics.completed_tasks || 0,
+                caldavEvents: metrics.caldav_events || 0
             };
 
             Object.entries(elements).forEach(([id, value]) => {
@@ -495,14 +583,95 @@
         function updateSyncStatus(syncStatus) {
             const lastUpdate = document.getElementById('lastUpdate');
             if (lastUpdate) {
-                lastUpdate.textContent = syncStatus.last_update || 'vor 3 Min';
+                if (syncStatus.last_update) {
+                    const updateTime = new Date(syncStatus.last_update);
+                    const now = new Date();
+                    const diffMinutes = Math.floor((now - updateTime) / (1000 * 60));
+
+                    if (diffMinutes < 1) {
+                        lastUpdate.textContent = 'gerade eben';
+                    } else if (diffMinutes < 60) {
+                        lastUpdate.textContent = `vor ${diffMinutes} Min`;
+                    } else {
+                        const diffHours = Math.floor(diffMinutes / 60);
+                        lastUpdate.textContent = `vor ${diffHours} Std`;
+                    }
+                } else {
+                    lastUpdate.textContent = 'Nie synchronisiert';
+                }
             }
         }
 
         // Event Creation
         function createNewEvent() {
-            // Hier würde Modal für neues Event geöffnet
-            showToast('Neues Event', 'Event-Editor wird geöffnet...', 'info');
+            showModal('event-modal', 'Neues Event erstellen', `
+                <form id="eventForm">
+                    <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                        <div>
+                            <label for="eventTitle" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Titel</label>
+                            <input type="text" id="eventTitle" name="title" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                        </div>
+                        <div>
+                            <label for="eventDate" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Datum</label>
+                            <input type="date" id="eventDate" name="date" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                        </div>
+                        <div>
+                            <label for="eventTime" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Zeit</label>
+                            <input type="time" id="eventTime" name="time" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                        </div>
+                        <div>
+                            <label for="eventPriority" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Priorität</label>
+                            <select id="eventPriority" name="priority" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);">
+                                <option value="low">Niedrig</option>
+                                <option value="medium" selected>Mittel</option>
+                                <option value="high">Hoch</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            `, [
+                { text: 'Abbrechen', action: 'closeModal', class: 'btn-secondary' },
+                { text: 'Event erstellen', action: 'createEvent', class: 'btn-primary' }
+            ]);
+        }
+
+
+        async function createEvent() {
+            const form = document.getElementById('eventForm');
+            const formData = new FormData(form);
+
+            const eventData = {
+                title: formData.get('title'),
+                start_time: `${formData.get('date')}T${formData.get('time')}:00`,
+                priority: formData.get('priority'),
+                description: formData.get('description') || ''
+            };
+
+            try {
+                const response = await fetch('/api/v1/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': 'super-secret-change-me'
+                    },
+                    body: JSON.stringify(eventData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                showToast('Event erstellt', `"${eventData.title}" wurde erfolgreich erstellt`, 'success');
+                closeModal();
+
+                // Dashboard neu laden um neues Event anzuzeigen
+                await loadDashboardData();
+
+            } catch (error) {
+                console.error('Fehler beim Erstellen des Events:', error);
+                showToast('Fehler', 'Event konnte nicht erstellt werden: ' + error.message, 'error');
+            }
         }
 
         // Utility Functions

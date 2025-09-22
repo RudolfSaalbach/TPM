@@ -86,22 +86,32 @@ def load_config() -> Dict[str, Any]:
         }
     }
     
-    # Load YAML configuration if it exists
-    # First try the new unified config.yaml at root
-    yaml_paths = [Path('config.yaml'), Path('config/chronos.yaml')]
+    # Load YAML configuration from standardized location
+    # Single source of truth: config/chronos.yaml
+    yaml_path = Path('config/chronos.yaml')
 
-    for yaml_path in yaml_paths:
-        if yaml_path.exists():
-            try:
-                with open(yaml_path, 'r') as f:
-                    yaml_config = yaml.safe_load(f)
-                    if yaml_config:
-                        _deep_update(config, yaml_config)
-                        logger.info(f"Configuration loaded from {yaml_path}")
-                        break
-            except Exception as e:
-                logger.warning(f"Could not load {yaml_path}: {e}")
-                continue
+    if yaml_path.exists():
+        try:
+            with open(yaml_path, 'r', encoding='utf-8') as f:
+                yaml_config = yaml.safe_load(f)
+                if yaml_config:
+                    _deep_update(config, yaml_config)
+                    logger.info(f"Configuration loaded from {yaml_path}")
+
+                    # Log calendar configuration for debugging
+                    caldav_config = yaml_config.get('caldav', {})
+                    calendars = caldav_config.get('calendars', [])
+                    if calendars:
+                        logger.info(f"Found {len(calendars)} Radicale calendars configured: {[cal.get('alias', cal.get('id')) for cal in calendars]}")
+                    else:
+                        logger.warning("No Radicale calendars found in configuration")
+
+        except Exception as e:
+            logger.error(f"Failed to load configuration from {yaml_path}: {e}")
+            logger.error("Using default configuration - some features may not work correctly")
+    else:
+        logger.error(f"Configuration file {yaml_path} not found!")
+        logger.error("Using default configuration - calendar sync will not work")
     
     # Override with environment variables
     if os.getenv('CHRONOS_API_KEY'):

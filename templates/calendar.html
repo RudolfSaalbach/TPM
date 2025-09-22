@@ -1,1279 +1,696 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kalender - Chronos Engine</title>
+{% extends "base.html" %}
 
-    <!-- Inter Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% block title %}Kalender - Chronos Engine{% endblock %}
 
-    <!-- Premium CSS -->
-    <link rel="stylesheet" href="/static/css/chronos-premium.css">
-</head>
-<body>
-    <!-- Skip Link für Barrierefreiheit -->
-    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+{% block page_title %}Kalender{% endblock %}
+{% block page_subtitle %}Verwalte deine Events und Termine{% endblock %}
 
-    <div class="app-container">
-        <!-- Sidebar Overlay für Mobile -->
-        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+{% block header_actions %}
+<button class="btn btn-secondary" onclick="refreshCalendar()" aria-label="Kalender aktualisieren">
+    <span aria-hidden="true">🔄</span>
+    Aktualisieren
+</button>
+<button class="btn btn-primary" onclick="createNewEvent()" aria-label="Neues Event erstellen">
+    <span aria-hidden="true">➕</span>
+    Neues Event
+</button>
+{% endblock %}
 
-        <!-- Sidebar Navigation -->
-        <nav class="sidebar" id="sidebar" role="navigation" aria-label="Hauptnavigation">
-            <div class="sidebar-header">
-                <a href="/" class="logo">
-                    <div class="logo-icon" aria-hidden="true">⏰</div>
-                    <span class="logo-text">Chronos</span>
-                </a>
+{% block content %}
+<div class="calendar-layout animate-fade-in">
+    <!-- Calendar Controls -->
+    <section class="calendar-controls" aria-labelledby="calendar-controls-heading">
+        <h2 id="calendar-controls-heading" class="sr-only">Kalender Navigation</h2>
+        <div class="controls-row">
+            <div class="view-controls">
+                <button class="btn btn-secondary active" onclick="switchView('month')" aria-pressed="true">Monat</button>
+                <button class="btn btn-secondary" onclick="switchView('week')" aria-pressed="false">Woche</button>
+                <button class="btn btn-secondary" onclick="switchView('day')" aria-pressed="false">Tag</button>
             </div>
 
-            <div class="sidebar-nav">
-                <a href="/dashboard" class="nav-item">
-                    <div class="nav-item-indicator"></div>
-                    <span class="nav-icon" role="img" aria-label="Dashboard">📊</span>
-                    <span>Dashboard</span>
-                </a>
-                <a href="/calendar" class="nav-item active" aria-current="page">
-                    <div class="nav-item-indicator"></div>
-                    <span class="nav-icon" role="img" aria-label="Kalender">📅</span>
-                    <span>Kalender</span>
-                </a>
-                <a href="/events" class="nav-item">
-                    <div class="nav-item-indicator"></div>
-                    <span class="nav-icon" role="img" aria-label="Events">📋</span>
-                    <span>Events</span>
-                </a>
-                <a href="/analytics" class="nav-item">
-                    <div class="nav-item-indicator"></div>
-                    <span class="nav-icon" role="img" aria-label="Analytics">📈</span>
-                    <span>Analytics</span>
-                </a>
-                <a href="/settings" class="nav-item">
-                    <div class="nav-item-indicator"></div>
-                    <span class="nav-icon" role="img" aria-label="Einstellungen">⚙️</span>
-                    <span>Einstellungen</span>
-                </a>
-            </div>
-        </nav>
-
-        <!-- Main Content Area -->
-        <main class="main-content" id="main-content">
-            <!-- Header -->
-            <header class="header">
-                <div class="header-content">
-                    <div class="header-title">
-                        <h1>Kalender</h1>
-                        <p class="header-subtitle">Verwalte deine Termine und Events effizient.</p>
-                    </div>
-                    <div class="header-actions">
-                        <button class="btn btn-secondary" onclick="toggleSidebar()" aria-label="Seitenleiste umschalten">
-                            <span aria-hidden="true">☰</span>
-                        </button>
-                        <button class="btn btn-secondary" onclick="goToToday()" aria-label="Zu heute springen">
-                            <span aria-hidden="true">📅</span>
-                            Heute
-                        </button>
-                        <button class="btn btn-primary" onclick="createNewEvent()" aria-label="Neues Event erstellen">
-                            <span aria-hidden="true">➕</span>
-                            Neues Event
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Calendar Content -->
-            <div class="dashboard-content animate-fade-in">
-                <!-- Calendar Controls -->
-                <section class="calendar-controls" aria-label="Kalender-Navigation">
-                    <div class="calendar-header">
-                        <div class="calendar-nav">
-                            <button class="btn btn-ghost" onclick="previousMonth()" aria-label="Vorheriger Monat">
-                                <span aria-hidden="true">‹</span>
-                            </button>
-                            <h2 id="currentMonth" class="calendar-title">Dezember 2024</h2>
-                            <button class="btn btn-ghost" onclick="nextMonth()" aria-label="Nächster Monat">
-                                <span aria-hidden="true">›</span>
-                            </button>
-                        </div>
-
-                        <div class="view-controls">
-                            <div class="view-toggle" role="tablist" aria-label="Kalender-Ansicht">
-                                <button class="view-btn active" role="tab" aria-selected="true" onclick="setView('month')" aria-controls="calendar-grid">
-                                    Monat
-                                </button>
-                                <button class="view-btn" role="tab" aria-selected="false" onclick="setView('week')" aria-controls="calendar-grid">
-                                    Woche
-                                </button>
-                                <button class="view-btn" role="tab" aria-selected="false" onclick="setView('day')" aria-controls="calendar-grid">
-                                    Tag
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Calendar Filters -->
-                    <div class="calendar-filters">
-                        <div class="filter-group">
-                            <label for="categoryFilter" class="filter-label">Kategorie:</label>
-                            <select id="categoryFilter" class="filter-select" onchange="filterEvents()">
-                                <option value="all">Alle Kategorien</option>
-                                <option value="meeting">Meetings</option>
-                                <option value="task">Aufgaben</option>
-                                <option value="personal">Persönlich</option>
-                                <option value="deadline">Deadlines</option>
-                            </select>
-                        </div>
-
-                        <div class="filter-group">
-                            <label for="priorityFilter" class="filter-label">Priorität:</label>
-                            <select id="priorityFilter" class="filter-select" onchange="filterEvents()">
-                                <option value="all">Alle Prioritäten</option>
-                                <option value="high">Hoch</option>
-                                <option value="medium">Mittel</option>
-                                <option value="low">Niedrig</option>
-                            </select>
-                        </div>
-
-                        <div class="filter-group">
-                            <input type="search" id="eventSearch" class="search-input" placeholder="Events durchsuchen..."
-                                   oninput="searchEvents()" aria-label="Events durchsuchen">
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Main Calendar Layout -->
-                <div class="calendar-layout">
-                    <!-- Calendar Grid -->
-                    <section class="calendar-main" aria-label="Kalender-Ansicht">
-                        <table class="calendar-grid" role="grid" aria-labelledby="currentMonth" id="calendar-grid">
-                            <thead>
-                                <tr role="row">
-                                    <th role="columnheader" scope="col" aria-label="Montag">Mo</th>
-                                    <th role="columnheader" scope="col" aria-label="Dienstag">Di</th>
-                                    <th role="columnheader" scope="col" aria-label="Mittwoch">Mi</th>
-                                    <th role="columnheader" scope="col" aria-label="Donnerstag">Do</th>
-                                    <th role="columnheader" scope="col" aria-label="Freitag">Fr</th>
-                                    <th role="columnheader" scope="col" aria-label="Samstag">Sa</th>
-                                    <th role="columnheader" scope="col" aria-label="Sonntag">So</th>
-                                </tr>
-                            </thead>
-                            <tbody id="calendar-body">
-                                <!-- Calendar days will be generated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </section>
-
-                    <!-- Mini Calendar & Event Details Sidebar -->
-                    <aside class="calendar-sidebar" aria-label="Kalender-Details">
-                        <!-- Mini Calendar -->
-                        <div class="mini-calendar card">
-                            <h3 class="mini-calendar-title">Schnellnavigation</h3>
-                            <div class="mini-calendar-nav">
-                                <button class="mini-nav-btn" onclick="previousMiniMonth()" aria-label="Vorheriger Monat in Minikalender">‹</button>
-                                <span id="miniCurrentMonth" class="mini-month-title">Dez 2024</span>
-                                <button class="mini-nav-btn" onclick="nextMiniMonth()" aria-label="Nächster Monat in Minikalender">›</button>
-                            </div>
-                            <div class="mini-calendar-grid" id="mini-calendar">
-                                <!-- Mini calendar will be generated by JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- Selected Day Events -->
-                        <div class="day-events card">
-                            <h3 id="selectedDayTitle">Heute - 21. Dezember</h3>
-                            <div class="day-events-list" id="dayEventsList">
-                                <div class="day-event">
-                                    <time class="event-time" datetime="09:00">09:00</time>
-                                    <div class="event-info">
-                                        <h4 class="event-title">Team Standup</h4>
-                                        <div class="priority-label low">Niedrig</div>
-                                    </div>
-                                </div>
-
-                                <div class="day-event">
-                                    <time class="event-time" datetime="14:00">14:00</time>
-                                    <div class="event-info">
-                                        <h4 class="event-title">Client Präsentation</h4>
-                                        <div class="priority-label high">Hoch</div>
-                                    </div>
-                                </div>
-
-                                <div class="day-event">
-                                    <time class="event-time" datetime="16:30">16:30</time>
-                                    <div class="event-info">
-                                        <h4 class="event-title">Code Review</h4>
-                                        <div class="priority-label medium">Mittel</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button class="btn btn-secondary btn-sm" onclick="viewAllDayEvents()" style="margin-top: var(--space-4); width: 100%;">
-                                Alle Events anzeigen
-                            </button>
-                        </div>
-
-                        <!-- Quick Stats -->
-                        <div class="quick-stats card">
-                            <h3>Statistiken</h3>
-                            <div class="stat-item">
-                                <span class="stat-label">Events heute:</span>
-                                <span class="stat-value" id="todayEventsCount">3</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-label">Diese Woche:</span>
-                                <span class="stat-value" id="weekEventsCount">12</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-label">Kommende Deadlines:</span>
-                                <span class="stat-value" id="upcomingDeadlines">2</span>
-                            </div>
-                        </div>
-                    </aside>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Floating Action Button -->
-    <button class="fab" onclick="createNewEvent()" aria-label="Neues Event erstellen">
-        <span aria-hidden="true">➕</span>
-    </button>
-
-    <!-- Event Detail Modal -->
-    <div class="modal-overlay" id="eventModal" onclick="closeEventModal()" style="display: none;">
-        <div class="modal" onclick="event.stopPropagation()" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
-            <div class="modal-header">
-                <h2 id="modalTitle">Event Details</h2>
-                <button class="modal-close" onclick="closeEventModal()" aria-label="Modal schließen">
-                    <span aria-hidden="true">×</span>
+            <div class="date-navigation">
+                <button class="btn btn-secondary" onclick="navigateCalendar(-1)" aria-label="Vorheriger Monat">
+                    <span aria-hidden="true">‹</span>
+                </button>
+                <h2 id="currentMonth" class="current-period">Dezember 2024</h2>
+                <button class="btn btn-secondary" onclick="navigateCalendar(1)" aria-label="Nächster Monat">
+                    <span aria-hidden="true">›</span>
                 </button>
             </div>
-            <div class="modal-body" id="eventModalBody">
-                <!-- Event details will be populated by JavaScript -->
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeEventModal()">Schließen</button>
-                <button class="btn btn-primary" onclick="editEvent()">Bearbeiten</button>
-            </div>
+
+            <button class="btn btn-secondary" onclick="goToToday()">Heute</button>
         </div>
+    </section>
+
+    <!-- Main Calendar Grid -->
+    <div class="calendar-main">
+        <!-- Calendar Grid -->
+        <section class="calendar-view" aria-labelledby="calendar-view-heading">
+            <h2 id="calendar-view-heading" class="sr-only">Kalender Ansicht</h2>
+
+            <!-- Calendar Header -->
+            <div class="calendar-header">
+                <div class="weekday">Mo</div>
+                <div class="weekday">Di</div>
+                <div class="weekday">Mi</div>
+                <div class="weekday">Do</div>
+                <div class="weekday">Fr</div>
+                <div class="weekday">Sa</div>
+                <div class="weekday">So</div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="calendar-grid" id="calendarGrid" role="grid" aria-label="Kalender Grid">
+                <!-- Dynamic calendar days will be inserted here -->
+            </div>
+        </section>
+
+        <!-- Sidebar -->
+        <aside class="calendar-sidebar">
+            <!-- Today's Events -->
+            <div class="today-events card">
+                <h3>Heute</h3>
+                <div class="day-events" id="todayEvents">
+                    <div class="loading-events" id="todayEventsLoading">
+                        <div class="spinner" style="width: 20px; height: 20px;"></div>
+                        <span>Events werden geladen...</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-secondary btn-sm" onclick="viewAllDayEvents()" style="margin-top: var(--space-4); width: 100%;">
+                    Alle Events anzeigen
+                </button>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="quick-stats card">
+                <h3>Statistiken</h3>
+                <div class="stat-item">
+                    <span class="stat-label">Events heute:</span>
+                    <span class="stat-value" id="todayEventsCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Diese Woche:</span>
+                    <span class="stat-value" id="weekEventsCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Kommende Deadlines:</span>
+                    <span class="stat-value" id="upcomingDeadlines">0</span>
+                </div>
+            </div>
+        </aside>
     </div>
+</div>
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer" role="region" aria-live="polite" aria-label="Benachrichtigungen"></div>
+<!-- Floating Action Button -->
+<button class="fab" onclick="createNewEvent()" aria-label="Neues Event erstellen">
+    <span aria-hidden="true">➕</span>
+</button>
+{% endblock %}
 
-    <!-- Custom Styles für Calendar -->
-    <style>
-        /* Calendar-specific styles */
-        .calendar-layout {
-            display: grid;
-            grid-template-columns: 1fr 320px;
-            gap: var(--space-6);
-            margin-top: var(--space-6);
-        }
+{% block extra_scripts %}
+<script>
+    // Calendar-specific JavaScript
+    let currentDate = new Date();
+    let currentView = 'month';
 
-        .calendar-controls {
-            margin-bottom: var(--space-6);
-        }
+    // Initialize calendar on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        generateCalendar();
+        loadTodayEvents();
+    });
 
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--space-5);
-        }
+    function generateCalendar() {
+        const grid = document.getElementById('calendarGrid');
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
 
-        .calendar-nav {
-            display: flex;
-            align-items: center;
-            gap: var(--space-4);
-        }
+        // Update header
+        document.getElementById('currentMonth').textContent =
+            new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(currentDate);
 
-        .calendar-title {
-            font-size: var(--font-size-lg);
-            font-weight: var(--font-weight-semibold);
-            color: var(--text-primary);
-            min-width: 200px;
-            text-align: center;
-        }
+        // Clear existing calendar
+        grid.innerHTML = '';
 
-        .view-controls {
-            display: flex;
-            gap: var(--space-3);
-        }
+        // Get first day of month and number of days
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - firstDay.getDay() + 1); // Start from Monday
 
-        .view-toggle {
-            display: flex;
-            background: var(--surface-secondary);
-            border-radius: var(--radius-md);
-            padding: var(--space-1);
-        }
+        // Generate 6 weeks (42 days)
+        for (let i = 0; i < 42; i++) {
+            const dayDate = new Date(startDate);
+            dayDate.setDate(startDate.getDate() + i);
 
-        .view-btn {
-            padding: var(--space-2) var(--space-4);
-            border: none;
-            background: transparent;
-            color: var(--text-secondary);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all var(--duration-fast) var(--ease-out);
-            font-size: var(--font-size-sm);
-            font-weight: var(--font-weight-medium);
-        }
+            const dayElement = document.createElement('button');
+            dayElement.className = 'calendar-day';
+            dayElement.setAttribute('data-date', dayDate.toISOString().split('T')[0]);
 
-        .view-btn.active {
-            background: var(--primary-500);
-            color: white;
-        }
-
-        .view-btn:hover:not(.active) {
-            background: var(--state-hover);
-            color: var(--text-primary);
-        }
-
-        .calendar-filters {
-            display: flex;
-            gap: var(--space-4);
-            flex-wrap: wrap;
-            align-items: end;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-2);
-        }
-
-        .filter-label {
-            font-size: var(--font-size-sm);
-            font-weight: var(--font-weight-medium);
-            color: var(--text-secondary);
-        }
-
-        .filter-select, .search-input {
-            padding: var(--space-3);
-            border: 1px solid var(--border-base);
-            border-radius: var(--radius-md);
-            background: var(--surface-primary);
-            color: var(--text-primary);
-            font-size: var(--font-size-sm);
-            min-width: 150px;
-        }
-
-        .search-input {
-            min-width: 200px;
-        }
-
-        .filter-select:focus, .search-input:focus {
-            outline: 2px solid var(--state-focus-ring);
-            outline-offset: 2px;
-            border-color: var(--border-focus);
-        }
-
-        /* Calendar Grid */
-        .calendar-grid {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 1px;
-            background: var(--border-subtle);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-        }
-
-        .calendar-grid th {
-            background: var(--surface-secondary);
-            padding: var(--space-4);
-            text-align: center;
-            font-weight: var(--font-weight-semibold);
-            color: var(--text-secondary);
-            font-size: var(--font-size-sm);
-        }
-
-        .calendar-day {
-            background: var(--surface-primary);
-            padding: var(--space-3);
-            height: 120px;
-            vertical-align: top;
-            position: relative;
-            cursor: pointer;
-            transition: all var(--duration-fast) var(--ease-out);
-            border: none;
-        }
-
-        .calendar-day:hover {
-            background: var(--state-hover);
-        }
-
-        .calendar-day:focus {
-            outline: 2px solid var(--state-focus-ring);
-            outline-offset: -2px;
-            z-index: 1;
-        }
-
-        .calendar-day.today {
-            background: var(--state-selected);
-        }
-
-        .calendar-day.today::after {
-            content: '';
-            position: absolute;
-            top: var(--space-2);
-            right: var(--space-2);
-            width: 8px;
-            height: 8px;
-            background: var(--primary-500);
-            border-radius: var(--radius-full);
-        }
-
-        .calendar-day.other-month {
-            color: var(--text-muted);
-            background: var(--surface-secondary);
-        }
-
-        .day-number {
-            font-weight: var(--font-weight-semibold);
-            margin-bottom: var(--space-2);
-        }
-
-        .day-events {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-1);
-        }
-
-        .calendar-event {
-            background: var(--primary-500);
-            color: white;
-            padding: var(--space-1) var(--space-2);
-            border-radius: var(--radius-sm);
-            font-size: var(--font-size-xs);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            cursor: pointer;
-        }
-
-        .calendar-event.high-priority {
-            background: var(--danger-500);
-        }
-
-        .calendar-event.medium-priority {
-            background: var(--warning-400);
-        }
-
-        .calendar-event.low-priority {
-            background: var(--success-500);
-        }
-
-        /* Sidebar Components */
-        .calendar-sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-5);
-        }
-
-        .mini-calendar-title, .day-events h3, .quick-stats h3 {
-            font-size: var(--font-size-md);
-            font-weight: var(--font-weight-semibold);
-            color: var(--text-primary);
-            margin-bottom: var(--space-4);
-        }
-
-        .mini-calendar-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--space-3);
-        }
-
-        .mini-nav-btn {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: var(--space-1);
-            border-radius: var(--radius-sm);
-            transition: all var(--duration-fast) var(--ease-out);
-        }
-
-        .mini-nav-btn:hover {
-            background: var(--state-hover);
-            color: var(--text-primary);
-        }
-
-        .mini-month-title {
-            font-weight: var(--font-weight-semibold);
-            color: var(--text-primary);
-        }
-
-        .mini-calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 1px;
-            background: var(--border-subtle);
-            border-radius: var(--radius-md);
-            overflow: hidden;
-        }
-
-        .mini-day {
-            aspect-ratio: 1;
-            background: var(--surface-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: var(--font-size-xs);
-            cursor: pointer;
-            transition: all var(--duration-fast) var(--ease-out);
-        }
-
-        .mini-day:hover {
-            background: var(--state-hover);
-        }
-
-        .mini-day.selected {
-            background: var(--primary-500);
-            color: white;
-        }
-
-        .mini-day.today {
-            background: var(--state-selected);
-            font-weight: var(--font-weight-semibold);
-        }
-
-        .day-event {
-            display: flex;
-            align-items: center;
-            gap: var(--space-3);
-            padding: var(--space-3);
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-subtle);
-            transition: all var(--duration-fast) var(--ease-out);
-        }
-
-        .day-event:hover {
-            background: var(--state-hover);
-            border-color: var(--border-base);
-        }
-
-        .event-time {
-            font-size: var(--font-size-sm);
-            font-weight: var(--font-weight-semibold);
-            color: var(--primary-600);
-            min-width: 50px;
-        }
-
-        .event-info {
-            flex: 1;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .event-title {
-            font-size: var(--font-size-sm);
-            font-weight: var(--font-weight-medium);
-            color: var(--text-primary);
-        }
-
-        .stat-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: var(--space-2) 0;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .stat-item:last-child {
-            border-bottom: none;
-        }
-
-        .stat-label {
-            font-size: var(--font-size-sm);
-            color: var(--text-secondary);
-        }
-
-        .stat-value {
-            font-size: var(--font-size-sm);
-            font-weight: var(--font-weight-semibold);
-            color: var(--text-primary);
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: var(--bg-overlay);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal {
-            background: var(--surface-primary);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-xl);
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: var(--space-6);
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .modal-header h2 {
-            font-size: var(--font-size-lg);
-            font-weight: var(--font-weight-semibold);
-            color: var(--text-primary);
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: var(--space-1);
-            border-radius: var(--radius-sm);
-            transition: all var(--duration-fast) var(--ease-out);
-        }
-
-        .modal-close:hover {
-            background: var(--state-hover);
-            color: var(--text-primary);
-        }
-
-        .modal-body {
-            padding: var(--space-6);
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: var(--space-3);
-            padding: var(--space-6);
-            border-top: 1px solid var(--border-subtle);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .calendar-layout {
-                grid-template-columns: 1fr;
+            // Check if day is in current month
+            if (dayDate.getMonth() !== month) {
+                dayElement.classList.add('other-month');
             }
 
-            .calendar-sidebar {
-                order: -1;
+            // Check if today
+            const today = new Date();
+            if (dayDate.toDateString() === today.toDateString()) {
+                dayElement.classList.add('today');
             }
 
-            .calendar-header {
-                flex-direction: column;
-                gap: var(--space-4);
-                align-items: stretch;
-            }
+            // Load events for this day from API
+            loadDayEvents(dayDate, dayElement);
 
-            .calendar-filters {
-                justify-content: space-between;
-            }
+            dayElement.innerHTML = `
+                <span class="day-number">${dayDate.getDate()}</span>
+            `;
 
-            .filter-group {
-                flex: 1;
-                min-width: 0;
-            }
-
-            .filter-select, .search-input {
-                min-width: 0;
-            }
-
-            .calendar-day {
-                height: 80px;
-                padding: var(--space-2);
-            }
-
-            .day-number {
-                font-size: var(--font-size-xs);
-            }
+            dayElement.addEventListener('click', () => selectDay(dayDate));
+            grid.appendChild(dayElement);
         }
-    </style>
+    }
 
-    <!-- JavaScript -->
-    <script>
-        // Global Variables
-        let currentDate = new Date();
-        let selectedDate = new Date();
-        let currentView = 'month';
-        let events = [];
+    function navigateCalendar(direction) {
+        currentDate.setMonth(currentDate.getMonth() + direction);
+        generateCalendar();
+    }
 
-        // Initialize Calendar
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCalendar();
-            loadEvents();
-            setupEventListeners();
+    function goToToday() {
+        currentDate = new Date();
+        generateCalendar();
+    }
+
+    function switchView(view) {
+        currentView = view;
+
+        // Update button states
+        document.querySelectorAll('.view-controls .btn').forEach(btn => {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-pressed', 'false');
+        });
+        event.target.classList.add('active');
+        event.target.setAttribute('aria-pressed', 'true');
+
+        // TODO: Implement different calendar views
+        showToast('Ansicht gewechselt', `${view} Ansicht aktiviert`, 'info');
+    }
+
+    function selectDay(date) {
+        // Remove previous selection
+        document.querySelectorAll('.calendar-day.selected').forEach(day => {
+            day.classList.remove('selected');
         });
 
-        function initializeCalendar() {
-            updateCalendarTitle();
-            renderCalendar();
-            renderMiniCalendar();
-            updateSelectedDay();
-        }
+        // Add selection to clicked day
+        event.target.classList.add('selected');
 
-        function setupEventListeners() {
-            // Keyboard Navigation
-            document.addEventListener('keydown', handleKeyboardNavigation);
+        // Load events for selected day
+        loadDayEvents(date);
+    }
 
-            // Calendar click events
-            document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('calendar-day')) {
-                    selectDay(e.target);
+    async function loadDayEvents(date, dayElement = null) {
+        try {
+            const dateString = date.toISOString().split('T')[0];
+            const response = await fetch(`/api/v1/events?date=${dateString}`, {
+                headers: {
+                    'X-API-Key': 'super-secret-change-me'
                 }
             });
 
-            // Modal events
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    closeEventModal();
+            if (response.ok) {
+                const events = await response.json();
+                if (dayElement && events.length > 0) {
+                    dayElement.classList.add('has-events');
+                }
+                return events;
+            }
+        } catch (error) {
+            console.error('Fehler beim Laden der Events für', date, error);
+        }
+        return [];
+    }
+
+    async function loadTodayEvents() {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const response = await fetch(`/api/v1/events?date=${today}`, {
+                headers: {
+                    'X-API-Key': 'super-secret-change-me'
                 }
             });
-        }
 
-        // Keyboard Navigation
-        function handleKeyboardNavigation(e) {
-            // Arrow keys for calendar navigation
-            if (e.target.classList.contains('calendar-day')) {
-                switch(e.key) {
-                    case 'ArrowLeft':
-                        e.preventDefault();
-                        navigateDay(-1);
-                        break;
-                    case 'ArrowRight':
-                        e.preventDefault();
-                        navigateDay(1);
-                        break;
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        navigateDay(-7);
-                        break;
-                    case 'ArrowDown':
-                        e.preventDefault();
-                        navigateDay(7);
-                        break;
-                    case 'Enter':
-                    case ' ':
-                        e.preventDefault();
-                        viewDayEvents(selectedDate);
-                        break;
-                    case 'Home':
-                        e.preventDefault();
-                        goToToday();
-                        break;
-                }
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
 
-            // Global shortcuts
-            if (e.altKey) {
-                switch(e.key) {
-                    case 't':
-                        e.preventDefault();
-                        goToToday();
-                        break;
-                    case 'n':
-                        e.preventDefault();
-                        createNewEvent();
-                        break;
-                    case 'ArrowLeft':
-                        e.preventDefault();
-                        previousMonth();
-                        break;
-                    case 'ArrowRight':
-                        e.preventDefault();
-                        nextMonth();
-                        break;
-                }
-            }
+            const events = await response.json();
+            displayTodayEvents(events);
+            updateStatistics(events);
+
+        } catch (error) {
+            console.error('Fehler beim Laden der heutigen Events:', error);
+            document.getElementById('todayEventsLoading').innerHTML =
+                '<p style="color: var(--text-muted); text-align: center;">Keine Events für heute gefunden</p>';
+        }
+    }
+
+    function displayTodayEvents(events) {
+        const eventsContainer = document.getElementById('todayEvents');
+        const loading = document.getElementById('todayEventsLoading');
+
+        if (loading) {
+            loading.remove();
         }
 
-        // Calendar Navigation
-        function previousMonth() {
-            currentDate.setMonth(currentDate.getMonth() - 1);
-            updateCalendarTitle();
-            renderCalendar();
-            renderMiniCalendar();
+        if (!events || events.length === 0) {
+            eventsContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Keine Events für heute</p>';
+            return;
         }
 
-        function nextMonth() {
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            updateCalendarTitle();
-            renderCalendar();
-            renderMiniCalendar();
-        }
-
-        function goToToday() {
-            currentDate = new Date();
-            selectedDate = new Date();
-            updateCalendarTitle();
-            renderCalendar();
-            renderMiniCalendar();
-            updateSelectedDay();
-            showToast('Navigation', 'Zu heute gesprungen', 'info');
-        }
-
-        function setView(view) {
-            currentView = view;
-
-            // Update view buttons
-            document.querySelectorAll('.view-btn').forEach(btn => {
-                btn.classList.remove('active');
-                btn.setAttribute('aria-selected', 'false');
+        eventsContainer.innerHTML = events.map(event => {
+            const startTime = new Date(event.start_time).toLocaleTimeString('de-DE', {
+                hour: '2-digit',
+                minute: '2-digit'
             });
 
-            event.target.classList.add('active');
-            event.target.setAttribute('aria-selected', 'true');
-
-            // Re-render calendar based on view
-            renderCalendar();
-
-            showToast('Ansicht geändert', `${view.charAt(0).toUpperCase() + view.slice(1)}-Ansicht aktiviert`, 'info');
-        }
-
-        // Calendar Rendering
-        function updateCalendarTitle() {
-            const months = [
-                'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-                'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
-            ];
-
-            const monthName = months[currentDate.getMonth()];
-            const year = currentDate.getFullYear();
-
-            document.getElementById('currentMonth').textContent = `${monthName} ${year}`;
-            document.getElementById('miniCurrentMonth').textContent = `${monthName.substr(0, 3)} ${year}`;
-        }
-
-        function renderCalendar() {
-            const tbody = document.getElementById('calendar-body');
-            tbody.innerHTML = '';
-
-            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-            const startDate = new Date(firstDay);
-
-            // Start from Monday
-            const dayOfWeek = (firstDay.getDay() + 6) % 7;
-            startDate.setDate(startDate.getDate() - dayOfWeek);
-
-            const today = new Date();
-            let date = new Date(startDate);
-
-            for (let week = 0; week < 6; week++) {
-                const row = document.createElement('tr');
-                row.setAttribute('role', 'row');
-
-                for (let day = 0; day < 7; day++) {
-                    const cell = document.createElement('td');
-                    cell.className = 'calendar-day';
-                    cell.setAttribute('role', 'gridcell');
-                    cell.tabIndex = 0;
-
-                    const dayNumber = date.getDate();
-                    const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                    const isToday = date.toDateString() === today.toDateString();
-                    const isSelected = date.toDateString() === selectedDate.toDateString();
-
-                    // Set ARIA attributes
-                    const dateStr = date.toLocaleDateString('de-DE', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    });
-                    cell.setAttribute('aria-label', dateStr);
-
-                    if (!isCurrentMonth) {
-                        cell.classList.add('other-month');
-                    }
-
-                    if (isToday) {
-                        cell.classList.add('today');
-                        cell.setAttribute('aria-current', 'date');
-                    }
-
-                    if (isSelected) {
-                        cell.classList.add('selected');
-                        cell.setAttribute('aria-selected', 'true');
-                    }
-
-                    // Day content
-                    const dayDiv = document.createElement('div');
-                    dayDiv.className = 'day-number';
-                    dayDiv.textContent = dayNumber;
-                    cell.appendChild(dayDiv);
-
-                    // Add events for this day
-                    const dayEvents = getEventsForDay(date);
-                    if (dayEvents.length > 0) {
-                        const eventsDiv = document.createElement('div');
-                        eventsDiv.className = 'day-events';
-
-                        dayEvents.slice(0, 3).forEach(event => {
-                            const eventDiv = document.createElement('div');
-                            eventDiv.className = `calendar-event ${event.priority}-priority`;
-                            eventDiv.textContent = event.title;
-                            eventDiv.onclick = (e) => {
-                                e.stopPropagation();
-                                showEventModal(event);
-                            };
-                            eventsDiv.appendChild(eventDiv);
-                        });
-
-                        if (dayEvents.length > 3) {
-                            const moreDiv = document.createElement('div');
-                            moreDiv.className = 'calendar-event';
-                            moreDiv.textContent = `+${dayEvents.length - 3} weitere`;
-                            moreDiv.onclick = (e) => {
-                                e.stopPropagation();
-                                viewDayEvents(date);
-                            };
-                            eventsDiv.appendChild(moreDiv);
-                        }
-
-                        cell.appendChild(eventsDiv);
-                    }
-
-                    // Click handler
-                    cell.onclick = () => selectDay(cell, date);
-                    cell.dataset.date = date.toISOString();
-
-                    row.appendChild(cell);
-                    date.setDate(date.getDate() + 1);
-                }
-
-                tbody.appendChild(row);
-            }
-        }
-
-        function renderMiniCalendar() {
-            const miniCalendar = document.getElementById('mini-calendar');
-            miniCalendar.innerHTML = '';
-
-            // Add day headers
-            const dayHeaders = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-            dayHeaders.forEach(day => {
-                const dayHeader = document.createElement('div');
-                dayHeader.textContent = day;
-                dayHeader.style.background = 'var(--surface-secondary)';
-                dayHeader.style.fontWeight = 'var(--font-weight-semibold)';
-                dayHeader.style.color = 'var(--text-secondary)';
-                dayHeader.style.padding = 'var(--space-1)';
-                dayHeader.style.textAlign = 'center';
-                dayHeader.style.fontSize = 'var(--font-size-xs)';
-                miniCalendar.appendChild(dayHeader);
-            });
-
-            // Add calendar days
-            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            const startDate = new Date(firstDay);
-            const dayOfWeek = (firstDay.getDay() + 6) % 7;
-            startDate.setDate(startDate.getDate() - dayOfWeek);
-
-            const today = new Date();
-            let date = new Date(startDate);
-
-            for (let i = 0; i < 42; i++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'mini-day';
-                dayDiv.textContent = date.getDate();
-
-                const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                const isToday = date.toDateString() === today.toDateString();
-                const isSelected = date.toDateString() === selectedDate.toDateString();
-
-                if (!isCurrentMonth) {
-                    dayDiv.style.color = 'var(--text-muted)';
-                }
-
-                if (isToday) {
-                    dayDiv.classList.add('today');
-                }
-
-                if (isSelected) {
-                    dayDiv.classList.add('selected');
-                }
-
-                const dateToSelect = new Date(date);
-                dayDiv.onclick = () => {
-                    selectedDate = dateToSelect;
-                    renderMiniCalendar();
-                    renderCalendar();
-                    updateSelectedDay();
-                };
-
-                miniCalendar.appendChild(dayDiv);
-                date.setDate(date.getDate() + 1);
-            }
-        }
-
-        // Day Selection
-        function selectDay(dayElement, date = null) {
-            if (date) {
-                selectedDate = new Date(date);
-            } else if (dayElement.dataset.date) {
-                selectedDate = new Date(dayElement.dataset.date);
-            }
-
-            // Update visual selection
-            document.querySelectorAll('.calendar-day').forEach(day => {
-                day.classList.remove('selected');
-                day.setAttribute('aria-selected', 'false');
-            });
-
-            dayElement.classList.add('selected');
-            dayElement.setAttribute('aria-selected', 'true');
-            dayElement.focus();
-
-            updateSelectedDay();
-            renderMiniCalendar();
-        }
-
-        function updateSelectedDay() {
-            const dayName = selectedDate.toLocaleDateString('de-DE', { weekday: 'long' });
-            const dayDate = selectedDate.toLocaleDateString('de-DE', {
-                day: 'numeric',
-                month: 'long'
-            });
-
-            document.getElementById('selectedDayTitle').textContent = `${dayName} - ${dayDate}`;
-
-            // Update day events
-            const dayEvents = getEventsForDay(selectedDate);
-            updateDayEventsList(dayEvents);
-        }
-
-        function updateDayEventsList(events) {
-            const container = document.getElementById('dayEventsList');
-            container.innerHTML = '';
-
-            if (events.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; color: var(--text-muted); padding: var(--space-4);">
-                        Keine Events für diesen Tag
+            return `
+                <div class="day-event" onclick="viewEventDetails('${event.id}')">
+                    <time class="event-time" datetime="${event.start_time}">${startTime}</time>
+                    <div class="event-info">
+                        <h4 class="event-title">${event.summary || event.title}</h4>
+                        <div class="priority-label ${event.priority || 'medium'}">${
+                            event.priority === 'high' ? 'Hoch' :
+                            event.priority === 'low' ? 'Niedrig' : 'Mittel'
+                        }</div>
                     </div>
-                `;
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function updateStatistics(todayEvents = null) {
+        try {
+            // Events heute
+            if (todayEvents) {
+                document.getElementById('todayEventsCount').textContent = todayEvents.length;
+            }
+
+            // Events diese Woche
+            const weekStart = new Date();
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Montag
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6); // Sonntag
+
+            const weekResponse = await fetch(`/api/v1/events?start=${weekStart.toISOString().split('T')[0]}&end=${weekEnd.toISOString().split('T')[0]}`, {
+                headers: {
+                    'X-API-Key': 'super-secret-change-me'
+                }
+            });
+
+            if (weekResponse.ok) {
+                const weekEvents = await weekResponse.json();
+                document.getElementById('weekEventsCount').textContent = weekEvents.length || 0;
+            }
+
+            // Kommende Deadlines (Events mit hoher Priorität in den nächsten 7 Tagen)
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+
+            const deadlinesResponse = await fetch(`/api/v1/events?start=${new Date().toISOString().split('T')[0]}&end=${nextWeek.toISOString().split('T')[0]}&priority=high`, {
+                headers: {
+                    'X-API-Key': 'super-secret-change-me'
+                }
+            });
+
+            if (deadlinesResponse.ok) {
+                const deadlines = await deadlinesResponse.json();
+                document.getElementById('upcomingDeadlines').textContent = deadlines.length || 0;
+            }
+
+        } catch (error) {
+            console.error('Fehler beim Laden der Statistiken:', error);
+        }
+    }
+
+    function refreshCalendar() {
+        showToast('Kalender aktualisiert', 'Alle Events wurden neu geladen', 'success');
+        generateCalendar();
+        loadTodayEvents();
+    }
+
+    function createNewEvent() {
+        showModal('event-modal', 'Neues Event erstellen', `
+            <form id="eventForm">
+                <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                    <div>
+                        <label for="eventTitle" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Titel</label>
+                        <input type="text" id="eventTitle" name="title" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                    </div>
+                    <div>
+                        <label for="eventDate" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Datum</label>
+                        <input type="date" id="eventDate" name="date" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+                        <div>
+                            <label for="eventStartTime" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Startzeit</label>
+                            <input type="time" id="eventStartTime" name="startTime" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                        </div>
+                        <div>
+                            <label for="eventEndTime" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Endzeit</label>
+                            <input type="time" id="eventEndTime" name="endTime" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="eventPriority" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Priorität</label>
+                        <select id="eventPriority" name="priority" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);">
+                            <option value="low">Niedrig</option>
+                            <option value="medium" selected>Mittel</option>
+                            <option value="high">Hoch</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="eventDescription" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Beschreibung</label>
+                        <textarea id="eventDescription" name="description" rows="3" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md); resize: vertical;"></textarea>
+                    </div>
+                </div>
+            </form>
+        `, [
+            { text: 'Abbrechen', action: 'closeModal', class: 'btn-secondary' },
+            { text: 'Event erstellen', action: 'createEvent', class: 'btn-primary' }
+        ]);
+    }
+
+    async function createEvent() {
+        const form = document.getElementById('eventForm');
+        const formData = new FormData(form);
+
+        const eventData = {
+            title: formData.get('title'),
+            start_time: `${formData.get('date')}T${formData.get('startTime')}:00`,
+            end_time: formData.get('endTime') ? `${formData.get('date')}T${formData.get('endTime')}:00` : null,
+            priority: formData.get('priority'),
+            description: formData.get('description') || ''
+        };
+
+        try {
+            const response = await fetch('/api/v1/events', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': 'super-secret-change-me'
+                },
+                body: JSON.stringify(eventData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            showToast('Event erstellt', `"${eventData.title}" wurde erfolgreich erstellt`, 'success');
+            closeModal();
+
+            // Refresh calendar to show new event
+            generateCalendar();
+            loadTodayEvents();
+
+        } catch (error) {
+            console.error('Fehler beim Erstellen des Events:', error);
+            showToast('Fehler', 'Event konnte nicht erstellt werden: ' + error.message, 'error');
+        }
+    }
+
+    async function viewAllDayEvents() {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const response = await fetch(`/api/v1/events?date=${today}`, {
+                headers: {
+                    'X-API-Key': 'super-secret-change-me'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const events = await response.json();
+
+            if (!events || events.length === 0) {
+                showModal('day-events-modal', 'Alle Events von heute', `
+                    <p style="color: var(--text-muted); text-align: center; padding: var(--space-8);">
+                        Keine Events für heute gefunden
+                    </p>
+                `, [
+                    { text: 'Schließen', action: 'closeModal', class: 'btn-primary' }
+                ]);
                 return;
             }
 
-            events.forEach(event => {
-                const eventDiv = document.createElement('div');
-                eventDiv.className = 'day-event';
-                eventDiv.innerHTML = `
-                    <time class="event-time" datetime="${event.time}">${event.time}</time>
-                    <div class="event-info">
-                        <h4 class="event-title">${event.title}</h4>
-                        <div class="priority-label ${event.priority}">${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}</div>
+            const eventsHtml = events.map(event => {
+                const startTime = new Date(event.start_time).toLocaleTimeString('de-DE', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const endTime = event.end_time ? new Date(event.end_time).toLocaleTimeString('de-DE', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : null;
+
+                const timeRange = endTime ? `${startTime} - ${endTime}` : startTime;
+
+                return `
+                    <div class="day-event" onclick="viewEventDetails('${event.id}'); closeModal();">
+                        <time class="event-time" datetime="${event.start_time}">${timeRange}</time>
+                        <div class="event-info">
+                            <h4 class="event-title">${event.summary || event.title}</h4>
+                            ${event.description ? `<p>${event.description}</p>` : ''}
+                            <div class="priority-label ${event.priority || 'medium'}">${
+                                event.priority === 'high' ? 'Hoch' :
+                                event.priority === 'low' ? 'Niedrig' : 'Mittel'
+                            }</div>
+                        </div>
                     </div>
                 `;
-                eventDiv.onclick = () => showEventModal(event);
-                container.appendChild(eventDiv);
-            });
-        }
+            }).join('');
 
-        // Event Management
-        function getEventsForDay(date) {
-            // Mock events - in real app, this would come from API
-            const mockEvents = [
-                { id: 1, title: 'Team Standup', time: '09:00', priority: 'low', date: new Date(2024, 11, 21) },
-                { id: 2, title: 'Client Präsentation', time: '14:00', priority: 'high', date: new Date(2024, 11, 21) },
-                { id: 3, title: 'Code Review', time: '16:30', priority: 'medium', date: new Date(2024, 11, 21) },
-                { id: 4, title: 'Sprint Planning', time: '10:00', priority: 'medium', date: new Date(2024, 11, 22) },
-                { id: 5, title: 'Deployment', time: '15:00', priority: 'high', date: new Date(2024, 11, 23) }
-            ];
-
-            return mockEvents.filter(event =>
-                event.date.toDateString() === date.toDateString()
-            );
-        }
-
-        async function loadEvents() {
-            try {
-                // In real app, load from API
-                events = []; // Mock data handled in getEventsForDay
-                updateStats();
-            } catch (error) {
-                console.error('Failed to load events:', error);
-                showToast('Fehler', 'Events konnten nicht geladen werden', 'error');
-            }
-        }
-
-        function updateStats() {
-            const today = new Date();
-            const startOfWeek = new Date(today);
-            startOfWeek.setDate(today.getDate() - today.getDay() + 1);
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-            const todayEvents = getEventsForDay(today).length;
-            document.getElementById('todayEventsCount').textContent = todayEvents;
-
-            // Calculate week events (mock)
-            document.getElementById('weekEventsCount').textContent = '12';
-            document.getElementById('upcomingDeadlines').textContent = '2';
-        }
-
-        // Event Modal
-        function showEventModal(event) {
-            const modal = document.getElementById('eventModal');
-            const modalBody = document.getElementById('eventModalBody');
-
-            modalBody.innerHTML = `
+            showModal('day-events-modal', `Alle Events von heute (${events.length})`, `
                 <div style="display: flex; flex-direction: column; gap: var(--space-4);">
-                    <div>
-                        <h3 style="color: var(--text-primary); margin-bottom: var(--space-2);">${event.title}</h3>
-                        <div class="priority-label ${event.priority}">${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)} Priorität</div>
-                    </div>
-                    <div>
-                        <strong>Zeit:</strong> ${event.time}
-                    </div>
-                    <div>
-                        <strong>Datum:</strong> ${event.date.toLocaleDateString('de-DE')}
-                    </div>
-                    <div>
-                        <strong>Beschreibung:</strong> Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                    </div>
+                    ${eventsHtml}
                 </div>
-            `;
+            `, [
+                { text: 'Schließen', action: 'closeModal', class: 'btn-primary' }
+            ]);
 
-            modal.style.display = 'flex';
-            modal.querySelector('.modal').focus();
+        } catch (error) {
+            console.error('Fehler beim Laden aller Events:', error);
+            showModal('day-events-modal', 'Fehler', `
+                <p style="color: var(--danger-600); text-align: center; padding: var(--space-8);">
+                    Events konnten nicht geladen werden: ${error.message}
+                </p>
+            `, [
+                { text: 'Schließen', action: 'closeModal', class: 'btn-primary' }
+            ]);
         }
+    }
+</script>
 
-        function closeEventModal() {
-            document.getElementById('eventModal').style.display = 'none';
-        }
+<style>
+/* Calendar-specific styles */
+.calendar-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    padding: var(--space-6);
+}
 
-        function editEvent() {
-            closeEventModal();
-            showToast('Event bearbeiten', 'Event-Editor wird geöffnet...', 'info');
-        }
+.calendar-controls .controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
 
-        // Utility Functions
-        function createNewEvent() {
-            showToast('Neues Event', 'Event-Editor wird geöffnet...', 'info');
-        }
+.view-controls {
+    display: flex;
+    gap: var(--space-2);
+}
 
-        function viewAllDayEvents() {
-            showToast('Alle Events', 'Detailansicht wird geöffnet...', 'info');
-        }
+.date-navigation {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
 
-        function viewDayEvents(date) {
-            showToast('Tagesansicht', `Events für ${date.toLocaleDateString('de-DE')} werden geladen...`, 'info');
-        }
+.current-period {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+    min-width: 200px;
+    text-align: center;
+}
 
-        function filterEvents() {
-            const category = document.getElementById('categoryFilter').value;
-            const priority = document.getElementById('priorityFilter').value;
+.calendar-main {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: var(--space-6);
+}
 
-            showToast('Filter angewendet', `Kategorie: ${category}, Priorität: ${priority}`, 'info');
-            // In real app, re-render calendar with filtered events
-        }
+.calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    margin-bottom: var(--space-4);
+}
 
-        function searchEvents() {
-            const query = document.getElementById('eventSearch').value;
-            if (query.length > 2) {
-                showToast('Suche', `Suche nach: "${query}"`, 'info');
-                // In real app, filter events based on search
-            }
-        }
+.weekday {
+    padding: var(--space-3);
+    text-align: center;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-secondary);
+    background: var(--surface-secondary);
+    border-radius: var(--radius-sm);
+}
 
-        function navigateDay(days) {
-            selectedDate.setDate(selectedDate.getDate() + days);
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: var(--border-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
 
-            // If we've moved to a different month, update calendar
-            if (selectedDate.getMonth() !== currentDate.getMonth()) {
-                currentDate = new Date(selectedDate);
-                updateCalendarTitle();
-                renderCalendar();
-                renderMiniCalendar();
-            } else {
-                renderCalendar();
-            }
+.calendar-day {
+    aspect-ratio: 1;
+    padding: var(--space-3);
+    background: var(--surface-primary);
+    position: relative;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    min-height: 100px;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+}
 
-            updateSelectedDay();
-        }
+.calendar-day:hover {
+    background: var(--state-hover);
+    z-index: 1;
+    box-shadow: var(--shadow-sm);
+}
 
-        // Mini Calendar Navigation
-        function previousMiniMonth() {
-            previousMonth();
-        }
+.calendar-day.selected {
+    background: var(--state-selected);
+    border: 2px solid var(--primary-500);
+}
 
-        function nextMiniMonth() {
-            nextMonth();
-        }
+.calendar-day.today {
+    background: var(--primary-50);
+    font-weight: var(--font-weight-semibold);
+}
 
-        // Sidebar toggle (shared function)
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
+.calendar-day.other-month {
+    color: var(--text-muted);
+    background: var(--surface-tertiary);
+}
 
-            if (window.innerWidth <= 768) {
-                const isOpen = sidebar.classList.contains('open');
-                sidebar.classList.toggle('open', !isOpen);
-                overlay.classList.toggle('open', !isOpen);
-                sidebar.setAttribute('aria-hidden', isOpen);
-            }
-        }
+.calendar-day.has-events::after {
+    content: '';
+    position: absolute;
+    bottom: var(--space-2);
+    right: var(--space-2);
+    width: 6px;
+    height: 6px;
+    background: var(--primary-500);
+    border-radius: var(--radius-full);
+}
 
-        function closeSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
+.day-number {
+    font-weight: var(--font-weight-medium);
+}
 
-            sidebar.classList.remove('open');
-            overlay.classList.remove('open');
-            sidebar.setAttribute('aria-hidden', 'true');
-        }
+.calendar-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
 
-        // Toast function (simplified version)
-        function showToast(title, message, type = 'info') {
-            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.setAttribute('role', 'alert');
+.day-events {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
 
-            toast.innerHTML = `
-                <div class="toast-header">
-                    <h4 class="toast-title">${title}</h4>
-                    <button class="toast-close" onclick="removeToast(this.parentElement.parentElement)" aria-label="Benachrichtigung schließen">×</button>
-                </div>
-                <div class="toast-body">${message}</div>
-            `;
+.day-event {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-left: 3px solid var(--primary-500);
+    background: var(--surface-secondary);
+    border-radius: var(--radius-sm);
+}
 
-            toastContainer.appendChild(toast);
+.event-time {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+}
 
-            setTimeout(() => toast.classList.add('show'), 100);
-            setTimeout(() => removeToast(toast), 8000);
-        }
+.event-info {
+    flex: 1;
+}
 
-        function createToastContainer() {
-            const container = document.createElement('div');
-            container.id = 'toastContainer';
-            container.className = 'toast-container';
-            container.setAttribute('role', 'region');
-            container.setAttribute('aria-live', 'polite');
-            document.body.appendChild(container);
-            return container;
-        }
+.event-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    margin: 0 0 var(--space-1) 0;
+}
 
-        function removeToast(toast) {
-            if (toast && toast.parentElement) {
-                toast.classList.add('fade-out');
-                setTimeout(() => toast.remove(), 400);
-            }
-        }
-    </script>
-</body>
-</html>
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.stat-value {
+    font-weight: var(--font-weight-semibold);
+    color: var(--primary-600);
+}
+
+@media (max-width: 768px) {
+    .calendar-main {
+        grid-template-columns: 1fr;
+    }
+
+    .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .calendar-day {
+        min-height: 60px;
+        font-size: var(--font-size-xs);
+    }
+}
+</style>
+{% endblock %}

@@ -24,9 +24,22 @@ class CalendarSourceManager:
         self.config = config
         self.logger = logging.getLogger(__name__)
 
-        # Determine source type from config
+        # Determine source type from config (check multiple possible locations)
         calendar_source_config = config.get('calendar_source', {})
-        self.source_type = calendar_source_config.get('type', 'caldav')  # Default to CalDAV
+        calendar_config = config.get('calendar', {})
+        caldav_config = config.get('caldav', {})
+
+        # Determine source type with fallback logic
+        if calendar_source_config.get('type'):
+            self.source_type = calendar_source_config.get('type')
+        elif caldav_config.get('calendars'):  # If caldav.calendars exists, use caldav
+            self.source_type = 'caldav'
+        elif calendar_config.get('provider') == 'google':
+            self.source_type = 'google'
+        else:
+            self.source_type = 'caldav'  # Default to CalDAV
+
+        self.logger.info(f"Using calendar source type: {self.source_type}")
 
         # Initialize the appropriate adapter
         self.adapter = self._create_adapter()

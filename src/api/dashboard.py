@@ -110,7 +110,7 @@ class ChronosDashboard:
                 **await self._get_dashboard_data()
             })
 
-        @self.router.get("/api/dashboard-data")
+        @self.router.get("/api/v1/dashboard-data")
         async def get_dashboard_data():
             """Get dashboard data as JSON - WORKING"""
 

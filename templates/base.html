@@ -266,6 +266,72 @@
                 }, 400);
             }
         }
+
+        // Modal System
+        function showModal(id, title, content, actions = []) {
+            // Remove existing modal if any
+            const existingModal = document.getElementById('currentModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Create modal structure
+            const modalOverlay = document.createElement('div');
+            modalOverlay.id = 'currentModal';
+            modalOverlay.className = 'modal-overlay';
+            modalOverlay.innerHTML = `
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3 class="modal-title">${title}</h3>
+                        <button class="modal-close" onclick="closeModal()" aria-label="Dialog schließen">×</button>
+                    </div>
+                    <div class="modal-body">
+                        ${content}
+                    </div>
+                    ${actions.length > 0 ? `
+                        <div class="modal-footer">
+                            ${actions.map(action => `
+                                <button class="btn ${action.class}" onclick="${action.action}()">${action.text}</button>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            // Add to DOM
+            document.body.appendChild(modalOverlay);
+
+            // Show with animation
+            setTimeout(() => {
+                modalOverlay.classList.add('show');
+            }, 10);
+
+            // Close on escape key
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+
+            // Close on overlay click
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    closeModal();
+                }
+            });
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('currentModal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.remove();
+                }, 200);
+            }
+        }
     </script>
 
     {% block extra_scripts %}{% endblock %}
