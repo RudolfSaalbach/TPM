@@ -622,6 +622,14 @@ body {
   position: relative;
 }
 
+/* Dashboard Content Area */
+.dashboard-content {
+  flex: 1;
+  padding: var(--space-6);
+  overflow-y: auto;
+  container-type: inline-size;
+}
+
 /* Header */
 .header {
   background: var(--surface-primary);
