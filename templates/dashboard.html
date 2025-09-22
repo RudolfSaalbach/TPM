@@ -174,10 +174,22 @@
                             <div class="chart-header">
                                 <div>
                                     <h3 class="chart-title">Wochenübersicht</h3>
-                                    <p class="chart-subtitle">Produktivität der letzten 7 Tage</p>
+                                    <p class="chart-subtitle analytics-period-label">Produktivität der letzten 7 Tage</p>
+                                </div>
+                                <div class="chart-actions" style="display: flex; gap: var(--space-2); align-items: center;">
+                                    <div class="time-range-buttons" style="display: flex; gap: 2px;">
+                                        <button class="btn btn-sm time-range-button" data-range="7d" onclick="setTimeRange('7d')" style="padding: 4px 8px; font-size: 12px;">7T</button>
+                                        <button class="btn btn-sm time-range-button active" data-range="30d" onclick="setTimeRange('30d')" style="padding: 4px 8px; font-size: 12px;">30T</button>
+                                        <button class="btn btn-sm time-range-button" data-range="90d" onclick="setTimeRange('90d')" style="padding: 4px 8px; font-size: 12px;">90T</button>
+                                    </div>
+                                    <div class="chart-type-buttons" style="display: flex; gap: 2px;">
+                                        <button class="btn btn-sm chart-type-button active" data-chart="productivity" data-type="bar" onclick="switchChartType('productivity', 'bar')" title="Balkendiagramm" style="padding: 4px 6px; font-size: 12px;">📊</button>
+                                        <button class="btn btn-sm chart-type-button" data-chart="productivity" data-type="line" onclick="switchChartType('productivity', 'line')" title="Liniendiagramm" style="padding: 4px 6px; font-size: 12px;">📈</button>
+                                        <button class="btn btn-sm chart-type-button" data-chart="productivity" data-type="area" onclick="switchChartType('productivity', 'area')" title="Flächendiagramm" style="padding: 4px 6px; font-size: 12px;">📉</button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="chart-placeholder" role="img" aria-label="Säulendiagramm der Wochenproduktivität">
+                            <div class="chart-placeholder productivity-chart" data-chart="productivity" role="img" aria-label="Säulendiagramm der Wochenproduktivität">
                                 <div class="chart-bar" style="height: 60%"></div>
                                 <div class="chart-bar" style="height: 80%"></div>
                                 <div class="chart-bar" style="height: 70%"></div>
@@ -210,6 +222,27 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <!-- Analytics Actions Section -->
+                <section class="analytics-actions" aria-labelledby="analytics-actions-heading">
+                    <div class="section-header">
+                        <h2 id="analytics-actions-heading" class="chart-title">Analytics-Aktionen</h2>
+                    </div>
+                    <div class="analytics-controls" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-6);">
+                        <button class="btn btn-primary analytics-action-btn" onclick="refreshAnalytics()" style="padding: var(--space-3); display: flex; flex-direction: column; align-items: center; gap: var(--space-2);">
+                            <span style="font-size: 1.5em;">🔄</span>
+                            <span>Analytics aktualisieren</span>
+                        </button>
+                        <button class="btn btn-secondary analytics-action-btn" onclick="exportAnalytics()" style="padding: var(--space-3); display: flex; flex-direction: column; align-items: center; gap: var(--space-2);">
+                            <span style="font-size: 1.5em;">📥</span>
+                            <span>Daten exportieren</span>
+                        </button>
+                        <button class="btn btn-info analytics-action-btn" onclick="generateReport()" style="padding: var(--space-3); display: flex; flex-direction: column; align-items: center; gap: var(--space-2);">
+                            <span style="font-size: 1.5em;">📊</span>
+                            <span>Report generieren</span>
+                        </button>
                     </div>
                 </section>
 
@@ -1121,61 +1154,664 @@
         }
 
         // Analytics Functions
-        function refreshAnalytics() {
-            showToast('Info', 'Analytics werden aktualisiert...', 'info');
-            // Refresh analytics data
-            setTimeout(() => {
-                showToast('Erfolg', 'Analytics aktualisiert!', 'success');
-            }, 1000);
+        async function refreshAnalytics() {
+            try {
+                showToast('Info', 'Analytics werden aktualisiert...', 'info');
+
+                // Refresh dashboard data via existing endpoint
+                const response = await fetch('/api/v1/dashboard-data', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Dashboard API error: ${response.status}`);
+                }
+
+                const dashboardData = await response.json();
+
+                // Update analytics widgets with new data
+                if (dashboardData.productivity_metrics) {
+                    updateProductivityMetrics(dashboardData.productivity_metrics);
+                }
+
+                if (dashboardData.priority_distribution) {
+                    updatePriorityDistribution(dashboardData.priority_distribution);
+                }
+
+                if (dashboardData.time_distribution) {
+                    updateTimeDistribution(dashboardData.time_distribution);
+                }
+
+                if (dashboardData.recommendations) {
+                    updateRecommendations(dashboardData.recommendations);
+                }
+
+                showToast('Erfolg', 'Analytics erfolgreich aktualisiert!', 'success');
+
+            } catch (error) {
+                console.error('Error refreshing analytics:', error);
+                showToast('Fehler', 'Analytics-Update fehlgeschlagen: ' + error.message, 'error');
+            }
         }
 
-        function exportAnalytics() {
-            showToast('Info', 'Exportiere Analytics...', 'info');
-            // Export analytics data
-            const data = {
-                timestamp: new Date().toISOString(),
-                metrics: 'analytics-data-placeholder'
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `chronos-analytics-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('Erfolg', 'Analytics exportiert!', 'success');
+        function updateProductivityMetrics(metrics) {
+            // Update productivity metrics display
+            const completionElement = document.querySelector('.completion-rate');
+            if (completionElement && metrics.completion_rate !== undefined) {
+                completionElement.textContent = (metrics.completion_rate * 100).toFixed(1) + '%';
+            }
+
+            const eventsElement = document.querySelector('.total-events');
+            if (eventsElement && metrics.total_events !== undefined) {
+                eventsElement.textContent = metrics.total_events.toLocaleString();
+            }
+
+            const hoursElement = document.querySelector('.total-hours');
+            if (hoursElement && metrics.total_hours !== undefined) {
+                hoursElement.textContent = metrics.total_hours.toFixed(1) + 'h';
+            }
         }
 
-        function setTimeRange(range) {
-            showToast('Info', `Zeitbereich gesetzt auf: ${range}`, 'info');
-            // Set analytics time range
-            console.log(`Analytics time range set to: ${range}`);
+        function updatePriorityDistribution(distribution) {
+            // Update priority distribution display
+            Object.entries(distribution).forEach(([priority, count]) => {
+                const element = document.querySelector(`.priority-${priority.toLowerCase()}`);
+                if (element) {
+                    element.textContent = count.toLocaleString();
+                }
+            });
+        }
+
+        function updateTimeDistribution(timeData) {
+            try {
+                // Update time distribution chart with real visualization
+                const chartElement = document.querySelector('.time-chart, [data-chart="time-distribution"]');
+                if (!chartElement) return;
+
+                // Convert hour data to chart bars
+                const maxValue = Math.max(...Object.values(timeData));
+                const hours = Object.keys(timeData).sort((a, b) => parseInt(a) - parseInt(b));
+
+                // Create time distribution chart HTML
+                const chartHTML = `
+                    <div class="time-distribution-chart" style="display: flex; align-items: end; gap: 2px; height: 120px; padding: 10px; overflow-x: auto;">
+                        ${hours.map(hour => {
+                            const value = timeData[hour] || 0;
+                            const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
+                            const displayHour = parseInt(hour);
+                            const timeLabel = displayHour === 0 ? '00' : displayHour < 10 ? `0${displayHour}` : displayHour.toString();
+
+                            return `
+                                <div class="time-bar-container" style="display: flex; flex-direction: column; align-items: center; min-width: 12px;">
+                                    <div class="time-bar" style="
+                                        background: var(--primary-500);
+                                        width: 12px;
+                                        height: ${Math.max(percentage, 2)}%;
+                                        border-radius: 2px 2px 0 0;
+                                        opacity: ${percentage > 0 ? 1 : 0.3};
+                                        transition: height 0.3s ease;
+                                        margin-bottom: 2px;
+                                    " title="${timeLabel}:00 - ${value.toFixed(1)}h"></div>
+                                    ${(displayHour % 3 === 0) ? `<span style="font-size: 10px; color: var(--text-muted);">${timeLabel}</span>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+
+                chartElement.innerHTML = chartHTML;
+
+                // Update peak hours display
+                const peakHour = hours.reduce((max, hour) =>
+                    timeData[hour] > timeData[max] ? hour : max, hours[0]);
+
+                const peakElement = document.querySelector('.peak-hours');
+                if (peakElement && timeData[peakHour] > 0) {
+                    const peakTime = parseInt(peakHour);
+                    const peakLabel = peakTime === 0 ? '00:00' :
+                                     peakTime < 10 ? `0${peakTime}:00` : `${peakTime}:00`;
+                    peakElement.textContent = `${peakLabel} (${timeData[peakHour].toFixed(1)}h)`;
+                }
+
+            } catch (error) {
+                console.error('Error updating time distribution:', error);
+            }
+        }
+
+        function updateRecommendations(recommendations) {
+            // Update recommendations list
+            const recContainer = document.querySelector('.recommendations-container');
+            if (recContainer && recommendations.length > 0) {
+                const recHtml = recommendations.map(rec => `
+                    <div class="recommendation ${rec.priority}" style="margin-bottom: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); background: var(--${rec.priority === 'high' ? 'warning' : rec.priority === 'medium' ? 'info' : 'success'}-50);">
+                        <span class="rec-type" style="font-weight: var(--font-weight-medium);">${rec.type}:</span>
+                        <span class="rec-message">${rec.message}</span>
+                    </div>
+                `).join('');
+                recContainer.innerHTML = recHtml;
+            }
+        }
+
+        async function exportAnalytics() {
+            try {
+                showToast('Info', 'Exportiere Analytics...', 'info');
+
+                // Get real analytics data from backend
+                const response = await fetch('/api/v1/analytics/productivity?days=30', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Analytics API error: ${response.status}`);
+                }
+
+                const analyticsData = await response.json();
+
+                // Create comprehensive export data
+                const exportData = {
+                    timestamp: new Date().toISOString(),
+                    period: {
+                        start: analyticsData.period_start,
+                        end: analyticsData.period_end,
+                        days: 30
+                    },
+                    metrics: analyticsData.metrics,
+                    export_metadata: {
+                        chronos_version: '2.2.0',
+                        format_version: '1.0',
+                        exported_by: 'Chronos Analytics Engine'
+                    }
+                };
+
+                // Create and download file
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `chronos-analytics-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('Erfolg', `Analytics-Daten (${analyticsData.metrics.total_events} Events) exportiert!`, 'success');
+
+            } catch (error) {
+                console.error('Error exporting analytics:', error);
+                showToast('Fehler', 'Analytics-Export fehlgeschlagen: ' + error.message, 'error');
+            }
+        }
+
+        async function setTimeRange(range) {
+            try {
+                showToast('Info', `Zeitbereich wird auf ${range} gesetzt...`, 'info');
+
+                // Map range to days for API call
+                const rangeDaysMap = {
+                    '7d': 7,
+                    '30d': 30,
+                    '90d': 90,
+                    '365d': 365,
+                    'week': 7,
+                    'month': 30,
+                    'quarter': 90,
+                    'year': 365
+                };
+
+                const days = rangeDaysMap[range] || 30;
+
+                // Get analytics data for the specified range
+                const response = await fetch(`/api/v1/analytics/productivity?days=${days}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Analytics API error: ${response.status}`);
+                }
+
+                const analyticsData = await response.json();
+
+                // Update analytics displays with new time range
+                if (analyticsData.metrics) {
+                    updateProductivityMetrics(analyticsData.metrics);
+                }
+
+                // Update range display indicators
+                document.querySelectorAll('.time-range-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-range="${range}"]`)?.classList.add('active');
+
+                // Update chart period labels
+                const periodLabel = document.querySelector('.analytics-period-label');
+                if (periodLabel) {
+                    const periodText = range === '7d' ? 'Letzte 7 Tage' :
+                                     range === '30d' ? 'Letzte 30 Tage' :
+                                     range === '90d' ? 'Letzte 90 Tage' :
+                                     range === '365d' ? 'Letztes Jahr' : `Letzte ${days} Tage`;
+                    periodLabel.textContent = periodText;
+                }
+
+                showToast('Erfolg', `Analytics für ${range.replace('d', ' Tage')} aktualisiert!`, 'success');
+
+            } catch (error) {
+                console.error('Error setting time range:', error);
+                showToast('Fehler', 'Zeitbereich konnte nicht gesetzt werden: ' + error.message, 'error');
+            }
         }
 
         function switchChartType(chart, type) {
-            showToast('Info', `Chart-Typ geändert: ${chart} -> ${type}`, 'info');
-            // Switch chart visualization type
-            console.log(`Switching ${chart} chart to ${type}`);
+            try {
+                showToast('Info', `Chart-Typ wird auf ${type} geändert...`, 'info');
+
+                // Get the chart container
+                const chartContainer = document.querySelector(`#${chart}-chart, .${chart}-chart, [data-chart="${chart}"]`);
+                if (!chartContainer) {
+                    throw new Error(`Chart container für ${chart} nicht gefunden`);
+                }
+
+                // Update chart type attribute and visual representation
+                chartContainer.setAttribute('data-chart-type', type);
+
+                // Switch visualization based on type
+                switch (type) {
+                    case 'bar':
+                        renderBarChart(chartContainer, chart);
+                        break;
+                    case 'line':
+                        renderLineChart(chartContainer, chart);
+                        break;
+                    case 'pie':
+                        renderPieChart(chartContainer, chart);
+                        break;
+                    case 'area':
+                        renderAreaChart(chartContainer, chart);
+                        break;
+                    default:
+                        renderBarChart(chartContainer, chart); // Default to bar chart
+                }
+
+                // Update chart type selector buttons
+                const typeButtons = document.querySelectorAll(`[data-chart="${chart}"] .chart-type-button`);
+                typeButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.getAttribute('data-type') === type) {
+                        btn.classList.add('active');
+                    }
+                });
+
+                // Save user preference for this chart type
+                if (window.localStorage) {
+                    const chartPrefs = JSON.parse(localStorage.getItem('chronos-chart-preferences') || '{}');
+                    chartPrefs[chart] = type;
+                    localStorage.setItem('chronos-chart-preferences', JSON.stringify(chartPrefs));
+                }
+
+                showToast('Erfolg', `${chart}-Chart auf ${type} umgestellt!`, 'success');
+
+            } catch (error) {
+                console.error('Error switching chart type:', error);
+                showToast('Fehler', 'Chart-Typ konnte nicht geändert werden: ' + error.message, 'error');
+            }
         }
 
-        function applyInsight(id) {
-            showToast('Erfolg', `AI-Insight ${id} angewendet!`, 'success');
-            // Apply AI insight
-            console.log(`Applying insight: ${id}`);
+        function renderBarChart(container, chartName) {
+            // Simple bar chart representation
+            container.innerHTML = `
+                <div class="chart-placeholder bar-chart" style="display: flex; align-items: end; gap: 4px; height: 120px; padding: 10px;">
+                    <div class="chart-bar" style="background: var(--primary-500); width: 20px; height: 60%; border-radius: 2px 2px 0 0;"></div>
+                    <div class="chart-bar" style="background: var(--primary-500); width: 20px; height: 80%; border-radius: 2px 2px 0 0;"></div>
+                    <div class="chart-bar" style="background: var(--primary-500); width: 20px; height: 70%; border-radius: 2px 2px 0 0;"></div>
+                    <div class="chart-bar" style="background: var(--primary-500); width: 20px; height: 90%; border-radius: 2px 2px 0 0;"></div>
+                    <div class="chart-bar" style="background: var(--primary-500); width: 20px; height: 85%; border-radius: 2px 2px 0 0;"></div>
+                </div>
+            `;
         }
 
-        function dismissInsight(id) {
-            showToast('Info', `Insight ${id} ausgeblendet`, 'info');
-            // Dismiss AI insight
-            console.log(`Dismissing insight: ${id}`);
+        function renderLineChart(container, chartName) {
+            // Simple line chart representation
+            container.innerHTML = `
+                <div class="chart-placeholder line-chart" style="height: 120px; padding: 10px; position: relative;">
+                    <svg width="100%" height="100%" style="overflow: visible;">
+                        <polyline fill="none" stroke="var(--primary-500)" stroke-width="2"
+                                  points="10,80 30,50 50,60 70,30 90,40"
+                                  style="vector-effect: non-scaling-stroke;"/>
+                        <circle cx="10" cy="80" r="3" fill="var(--primary-500)"/>
+                        <circle cx="30" cy="50" r="3" fill="var(--primary-500)"/>
+                        <circle cx="50" cy="60" r="3" fill="var(--primary-500)"/>
+                        <circle cx="70" cy="30" r="3" fill="var(--primary-500)"/>
+                        <circle cx="90" cy="40" r="3" fill="var(--primary-500)"/>
+                    </svg>
+                </div>
+            `;
         }
 
-        function generateReport() {
-            showToast('Info', 'Generiere Report...', 'info');
-            // Generate analytics report
-            setTimeout(() => {
-                showToast('Erfolg', 'Report generiert!', 'success');
-            }, 2000);
+        function renderPieChart(container, chartName) {
+            // Simple pie chart representation
+            container.innerHTML = `
+                <div class="chart-placeholder pie-chart" style="height: 120px; padding: 10px; display: flex; justify-content: center; align-items: center;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(
+                        var(--primary-500) 0deg 120deg,
+                        var(--primary-400) 120deg 240deg,
+                        var(--primary-300) 240deg 360deg
+                    );"></div>
+                </div>
+            `;
+        }
+
+        function renderAreaChart(container, chartName) {
+            // Simple area chart representation
+            container.innerHTML = `
+                <div class="chart-placeholder area-chart" style="height: 120px; padding: 10px; position: relative;">
+                    <svg width="100%" height="100%" style="overflow: visible;">
+                        <defs>
+                            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:var(--primary-500);stop-opacity:0.6" />
+                                <stop offset="100%" style="stop-color:var(--primary-500);stop-opacity:0.1" />
+                            </linearGradient>
+                        </defs>
+                        <polygon fill="url(#areaGradient)" stroke="var(--primary-500)" stroke-width="2"
+                                 points="10,100 10,80 30,50 50,60 70,30 90,40 90,100" />
+                    </svg>
+                </div>
+            `;
+        }
+
+        async function applyInsight(id) {
+            try {
+                showToast('Info', `AI-Insight ${id} wird angewendet...`, 'info');
+
+                // Apply the insight via backend API
+                const response = await fetch('/api/v1/ai/apply-insight', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        insight_id: id,
+                        action: 'apply'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Remove the insight from UI
+                    const insightElement = document.querySelector(`[data-insight-id="${id}"]`);
+                    if (insightElement) {
+                        insightElement.style.transition = 'opacity 0.3s ease';
+                        insightElement.style.opacity = '0';
+                        setTimeout(() => insightElement.remove(), 300);
+                    }
+
+                    // Refresh relevant data if needed
+                    if (result.requires_refresh) {
+                        await refreshAnalytics();
+                    }
+
+                    showToast('Erfolg', `AI-Insight angewendet: ${result.message || 'Optimierung aktiviert'}`, 'success');
+                } else {
+                    throw new Error(result.message || 'Insight konnte nicht angewendet werden');
+                }
+
+            } catch (error) {
+                console.error('Error applying insight:', error);
+                showToast('Fehler', `Insight konnte nicht angewendet werden: ${error.message}`, 'error');
+            }
+        }
+
+        async function dismissInsight(id) {
+            try {
+                showToast('Info', `Insight ${id} wird ausgeblendet...`, 'info');
+
+                // Dismiss the insight via backend API
+                const response = await fetch('/api/v1/ai/dismiss-insight', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        insight_id: id,
+                        action: 'dismiss'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Remove the insight from UI with animation
+                    const insightElement = document.querySelector(`[data-insight-id="${id}"]`);
+                    if (insightElement) {
+                        insightElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        insightElement.style.opacity = '0';
+                        insightElement.style.transform = 'translateX(100%)';
+                        setTimeout(() => insightElement.remove(), 300);
+                    }
+
+                    showToast('Info', 'Insight ausgeblendet', 'info');
+                } else {
+                    throw new Error(result.message || 'Insight konnte nicht ausgeblendet werden');
+                }
+
+            } catch (error) {
+                console.error('Error dismissing insight:', error);
+                showToast('Fehler', `Insight konnte nicht ausgeblendet werden: ${error.message}`, 'error');
+            }
+        }
+
+        async function generateReport() {
+            try {
+                showToast('Info', 'Generiere umfassenden Analytics-Report...', 'info');
+
+                // Get comprehensive report from backend
+                const response = await fetch('/api/v1/analytics/report', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Report API error: ${response.status}`);
+                }
+
+                const reportData = await response.json();
+
+                if (!reportData.success) {
+                    throw new Error('Report generation failed on server');
+                }
+
+                // Show report in modal
+                const report = reportData.report;
+                const reportHtml = `
+                    <div style="display: flex; flex-direction: column; gap: var(--space-4); max-height: 70vh; overflow-y: auto;">
+                        <div class="report-header" style="text-align: center; padding: var(--space-4); background: var(--primary-50); border-radius: var(--radius-md);">
+                            <h3 style="margin: 0; color: var(--primary-700);">📊 Chronos Analytics Report</h3>
+                            <p style="margin: var(--space-2) 0 0 0; color: var(--text-secondary);">
+                                Generiert am: ${new Date(reportData.generated_at).toLocaleString('de-DE')}
+                            </p>
+                        </div>
+
+                        <div class="report-metrics" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-3);">
+                            ${Object.entries(report.summary || {}).map(([key, value]) => `
+                                <div style="padding: var(--space-3); background: var(--neutral-50); border-radius: var(--radius-md); text-align: center;">
+                                    <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--primary-600);">
+                                        ${typeof value === 'number' ? (value < 1 ? (value * 100).toFixed(1) + '%' : value.toLocaleString()) : value}
+                                    </div>
+                                    <div style="font-size: var(--font-size-sm); color: var(--text-secondary); text-transform: capitalize;">
+                                        ${key.replace(/_/g, ' ')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div class="report-insights" style="background: var(--success-50); padding: var(--space-4); border-radius: var(--radius-md);">
+                            <h4 style="margin: 0 0 var(--space-3) 0; color: var(--success-700);">💡 Wichtige Erkenntnisse</h4>
+                            ${report.insights ? `
+                                <ul style="margin: 0; padding-left: var(--space-5);">
+                                    ${report.insights.map(insight => `<li style="margin-bottom: var(--space-2); color: var(--text-primary);">${insight}</li>`).join('')}
+                                </ul>
+                            ` : '<p style="margin: 0; color: var(--text-secondary);">Keine besonderen Erkenntnisse verfügbar.</p>'}
+                        </div>
+
+                        <div class="report-recommendations" style="background: var(--warning-50); padding: var(--space-4); border-radius: var(--radius-md);">
+                            <h4 style="margin: 0 0 var(--space-3) 0; color: var(--warning-700);">🎯 Empfehlungen</h4>
+                            ${report.recommendations ? `
+                                <ul style="margin: 0; padding-left: var(--space-5);">
+                                    ${report.recommendations.map(rec => `<li style="margin-bottom: var(--space-2); color: var(--text-primary);">${rec}</li>`).join('')}
+                                </ul>
+                            ` : '<p style="margin: 0; color: var(--text-secondary);">Keine Empfehlungen verfügbar.</p>'}
+                        </div>
+                    </div>
+                `;
+
+                showModal('analytics-report-modal', '📊 Analytics Report', reportHtml, `
+                    <button class="btn btn-secondary" onclick="closeModal()">Schließen</button>
+                    <button class="btn btn-primary" onclick="downloadReportPDF()">Als PDF herunterladen</button>
+                `);
+
+                showToast('Erfolg', 'Analytics-Report erfolgreich generiert!', 'success');
+
+            } catch (error) {
+                console.error('Error generating report:', error);
+                showToast('Fehler', 'Report-Generierung fehlgeschlagen: ' + error.message, 'error');
+            }
+        }
+
+        async function downloadReportPDF() {
+            try {
+                showToast('Info', 'PDF-Report wird generiert...', 'info');
+
+                // Get comprehensive report data from backend
+                const response = await fetch('/api/v1/analytics/report?format=pdf', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`PDF generation API error: ${response.status}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+
+                if (contentType && contentType.includes('application/pdf')) {
+                    // Backend provided a real PDF
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `chronos-analytics-report-${new Date().toISOString().split('T')[0]}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showToast('Erfolg', 'PDF-Report erfolgreich heruntergeladen!', 'success');
+                } else {
+                    // Fallback: Create HTML-based printable version
+                    const result = await response.json();
+                    const report = result.report;
+
+                    const printableHTML = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>Chronos Analytics Report</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+                                .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }
+                                .metric { border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: center; }
+                                .metric-value { font-size: 24px; font-weight: bold; color: #2563eb; }
+                                .metric-label { color: #666; text-transform: capitalize; }
+                                .section { margin: 30px 0; }
+                                .section h3 { color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
+                                ul { padding-left: 20px; }
+                                li { margin-bottom: 8px; }
+                                .footer { margin-top: 50px; text-align: center; color: #666; font-size: 12px; }
+                                @media print { body { margin: 0; } }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h1>📊 Chronos Analytics Report</h1>
+                                <p>Generiert am: ${new Date().toLocaleString('de-DE')}</p>
+                            </div>
+
+                            <div class="metrics">
+                                ${Object.entries(report.summary || {}).map(([key, value]) => `
+                                    <div class="metric">
+                                        <div class="metric-value">${typeof value === 'number' ? (value < 1 ? (value * 100).toFixed(1) + '%' : value.toLocaleString()) : value}</div>
+                                        <div class="metric-label">${key.replace(/_/g, ' ')}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div class="section">
+                                <h3>💡 Wichtige Erkenntnisse</h3>
+                                ${report.insights ? `<ul>${report.insights.map(insight => `<li>${insight}</li>`).join('')}</ul>` : '<p>Keine besonderen Erkenntnisse verfügbar.</p>'}
+                            </div>
+
+                            <div class="section">
+                                <h3>🎯 Empfehlungen</h3>
+                                ${report.recommendations ? `<ul>${report.recommendations.map(rec => `<li>${rec}</li>`).join('')}</ul>` : '<p>Keine Empfehlungen verfügbar.</p>'}
+                            </div>
+
+                            <div class="footer">
+                                <p>Erstellt mit Chronos Engine v2.2.0 | ${new Date().toLocaleDateString('de-DE')}</p>
+                            </div>
+                        </body>
+                        </html>
+                    `;
+
+                    // Create printable HTML file
+                    const htmlBlob = new Blob([printableHTML], { type: 'text/html' });
+                    const htmlUrl = URL.createObjectURL(htmlBlob);
+
+                    // Open in new window for printing
+                    const printWindow = window.open(htmlUrl, '_blank');
+                    if (printWindow) {
+                        printWindow.onload = () => {
+                            setTimeout(() => {
+                                printWindow.print();
+                                URL.revokeObjectURL(htmlUrl);
+                            }, 500);
+                        };
+                    }
+
+                    showToast('Erfolg', 'Report-Druckansicht geöffnet!', 'success');
+                }
+
+            } catch (error) {
+                console.error('Error downloading PDF report:', error);
+                showToast('Fehler', `PDF-Download fehlgeschlagen: ${error.message}`, 'error');
+            }
         }
 
         // Template Management Functions
@@ -1205,93 +1841,432 @@
             `, '<button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button><button class="btn btn-primary" onclick="saveTemplate()">Vorlage speichern</button>');
         }
 
-        function saveTemplate() {
+        async function saveTemplate() {
             const form = document.getElementById('templateForm');
             if (form && form.checkValidity()) {
                 const formData = new FormData(form);
                 const templateData = {
                     name: formData.get('name'),
                     description: formData.get('description'),
-                    category: formData.get('category')
+                    category: formData.get('category'),
+                    template_data: {
+                        summary: formData.get('name'),
+                        description: formData.get('description'),
+                        duration_minutes: 60,
+                        location: '',
+                        priority: 'MEDIUM'
+                    },
+                    default_duration_minutes: 60,
+                    default_priority: 'MEDIUM',
+                    is_active: true
                 };
 
-                // Save template (placeholder implementation)
-                console.log('Saving template:', templateData);
-                closeModal();
-                showToast('Erfolg', 'Vorlage erfolgreich gespeichert!', 'success');
+                try {
+                    const response = await fetch('/api/v1/templates', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                        },
+                        body: JSON.stringify(templateData)
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        closeModal();
+                        showToast('Erfolg', 'Vorlage erfolgreich gespeichert!', 'success');
+                        loadTemplates();
+                    } else {
+                        const error = await response.json();
+                        showToast('Fehler', `Fehler beim Speichern: ${error.detail}`, 'error');
+                    }
+                } catch (error) {
+                    showToast('Fehler', `Netzwerkfehler: ${error.message}`, 'error');
+                }
             } else {
                 showToast('Fehler', 'Bitte füllen Sie alle Pflichtfelder aus.', 'error');
             }
         }
 
-        function editTemplate(id) {
-            showToast('Info', `Bearbeite Vorlage ${id}...`, 'info');
-            // TODO: Implement template editing
-        }
+        async function editTemplate(id) {
+            try {
+                const response = await fetch(`/api/v1/templates/${id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                    }
+                });
 
-        function useTemplate(id) {
-            showToast('Erfolg', `Vorlage ${id} verwendet!`, 'success');
-            // TODO: Implement template usage
-        }
+                if (response.ok) {
+                    const template = await response.json();
 
-        function deleteTemplate(id) {
-            if (confirm('Sind Sie sicher, dass Sie diese Vorlage löschen möchten?')) {
-                showToast('Erfolg', `Vorlage ${id} gelöscht!`, 'success');
-                // TODO: Implement template deletion
+                    showModal('edit-template-modal', 'Vorlage bearbeiten', `
+                        <form id="editTemplateForm">
+                            <input type="hidden" name="templateId" value="${id}">
+                            <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                                <div>
+                                    <label for="editTemplateName" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Name der Vorlage</label>
+                                    <input type="text" id="editTemplateName" name="name" value="${template.name}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                                </div>
+                                <div>
+                                    <label for="editTemplateDescription" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Beschreibung</label>
+                                    <textarea id="editTemplateDescription" name="description" rows="3" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);">${template.description || ''}</textarea>
+                                </div>
+                                <div>
+                                    <label for="editTemplateCategory" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Kategorie</label>
+                                    <select id="editTemplateCategory" name="category" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);">
+                                        <option value="meeting" ${template.category === 'meeting' ? 'selected' : ''}>Meeting</option>
+                                        <option value="task" ${template.category === 'task' ? 'selected' : ''}>Aufgabe</option>
+                                        <option value="appointment" ${template.category === 'appointment' ? 'selected' : ''}>Termin</option>
+                                        <option value="reminder" ${template.category === 'reminder' ? 'selected' : ''}>Erinnerung</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    `, '<button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button><button class="btn btn-primary" onclick="updateTemplate()">Aktualisieren</button>');
+                } else {
+                    showToast('Fehler', 'Vorlage konnte nicht geladen werden.', 'error');
+                }
+            } catch (error) {
+                showToast('Fehler', `Fehler beim Laden: ${error.message}`, 'error');
             }
+        }
+
+        async function updateTemplate() {
+            const form = document.getElementById('editTemplateForm');
+            if (form && form.checkValidity()) {
+                const formData = new FormData(form);
+                const templateId = formData.get('templateId');
+                const templateData = {
+                    name: formData.get('name'),
+                    description: formData.get('description'),
+                    category: formData.get('category')
+                };
+
+                try {
+                    const response = await fetch(`/api/v1/templates/${templateId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                        },
+                        body: JSON.stringify(templateData)
+                    });
+
+                    if (response.ok) {
+                        closeModal();
+                        showToast('Erfolg', 'Vorlage erfolgreich aktualisiert!', 'success');
+                        loadTemplates();
+                    } else {
+                        const error = await response.json();
+                        showToast('Fehler', `Fehler beim Aktualisieren: ${error.detail}`, 'error');
+                    }
+                } catch (error) {
+                    showToast('Fehler', `Netzwerkfehler: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function useTemplate(id) {
+            try {
+                const response = await fetch(`/api/v1/templates/${id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                    }
+                });
+
+                if (response.ok) {
+                    const template = await response.json();
+                    const templateData = template.template_data;
+
+                    showModal('use-template-modal', 'Event aus Vorlage erstellen', `
+                        <form id="useTemplateForm">
+                            <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                                <div>
+                                    <label for="useTemplateTitle" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Titel</label>
+                                    <input type="text" id="useTemplateTitle" name="title" value="${templateData.summary || template.name}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                                </div>
+                                <div>
+                                    <label for="useTemplateDate" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Datum</label>
+                                    <input type="date" id="useTemplateDate" name="date" value="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+                                    <div>
+                                        <label for="useTemplateTime" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Startzeit</label>
+                                        <input type="time" id="useTemplateTime" name="time" value="09:00" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                                    </div>
+                                    <div>
+                                        <label for="useTemplateDuration" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Dauer (Min)</label>
+                                        <input type="number" id="useTemplateDuration" name="duration" value="${template.default_duration_minutes || 60}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="useTemplateDescription" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Beschreibung</label>
+                                    <textarea id="useTemplateDescription" name="description" rows="3" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);">${templateData.description || ''}</textarea>
+                                </div>
+                                <div>
+                                    <label for="useTemplateLocation" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Ort</label>
+                                    <input type="text" id="useTemplateLocation" name="location" value="${templateData.location || ''}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);">
+                                </div>
+                            </div>
+                        </form>
+                    `, '<button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button><button class="btn btn-primary" onclick="createEventFromTemplate()">Event erstellen</button>');
+                } else {
+                    showToast('Fehler', 'Vorlage konnte nicht geladen werden.', 'error');
+                }
+            } catch (error) {
+                showToast('Fehler', `Fehler beim Laden: ${error.message}`, 'error');
+            }
+        }
+
+        async function createEventFromTemplate() {
+            const form = document.getElementById('useTemplateForm');
+            if (form && form.checkValidity()) {
+                const formData = new FormData(form);
+                const duration = parseInt(formData.get('duration'));
+                const startTime = new Date(`${formData.get('date')}T${formData.get('time')}`);
+                const endTime = new Date(startTime.getTime() + duration * 60000);
+
+                const eventData = {
+                    summary: formData.get('title'),
+                    description: formData.get('description'),
+                    start_time: startTime.toISOString(),
+                    end_time: endTime.toISOString(),
+                    location: formData.get('location'),
+                    priority: 'medium'
+                };
+
+                try {
+                    const response = await fetch('/api/v1/events', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                        },
+                        body: JSON.stringify(eventData)
+                    });
+
+                    if (response.ok) {
+                        closeModal();
+                        showToast('Erfolg', 'Event aus Vorlage erstellt!', 'success');
+                        refreshDashboard();
+                    } else {
+                        const error = await response.json();
+                        showToast('Fehler', `Fehler beim Erstellen: ${error.detail}`, 'error');
+                    }
+                } catch (error) {
+                    showToast('Fehler', `Netzwerkfehler: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function deleteTemplate(id) {
+            if (confirm('Sind Sie sicher, dass Sie diese Vorlage löschen möchten?')) {
+                try {
+                    const response = await fetch(`/api/v1/templates/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        showToast('Erfolg', 'Vorlage erfolgreich gelöscht!', 'success');
+                        loadTemplates();
+                    } else {
+                        const error = await response.json();
+                        showToast('Fehler', `Fehler beim Löschen: ${error.detail}`, 'error');
+                    }
+                } catch (error) {
+                    showToast('Fehler', `Netzwerkfehler: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/api/v1/templates', {
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    renderTemplatesList(result.templates);
+                }
+            } catch (error) {
+                console.error('Error loading templates:', error);
+            }
+        }
+
+        function renderTemplatesList(templates) {
+            const container = document.querySelector('.templates-list');
+            if (!container) return;
+
+            if (templates.length === 0) {
+                container.innerHTML = '<p>Keine Vorlagen vorhanden.</p>';
+                return;
+            }
+
+            container.innerHTML = templates.map(template => `
+                <div class="template-item">
+                    <div class="template-info">
+                        <h4>${template.name}</h4>
+                        <p>${template.description || ''}</p>
+                        <span class="template-category">${template.category}</span>
+                    </div>
+                    <div class="template-actions">
+                        <button class="btn btn-sm btn-primary" onclick="useTemplate('${template.id}')">Verwenden</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editTemplate('${template.id}')">Bearbeiten</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTemplate('${template.id}')">Löschen</button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         // Settings Functions
-        function saveSettings() {
-            showToast('Info', 'Speichere Einstellungen...', 'info');
-
-            // Collect all settings from forms
-            const settings = {};
-            const forms = document.querySelectorAll('form[data-settings]');
-
-            forms.forEach(form => {
-                const formData = new FormData(form);
-                const category = form.dataset.settings;
-                settings[category] = {};
-
-                for (let [key, value] of formData.entries()) {
-                    settings[category][key] = value;
-                }
-            });
-
-            // Save to localStorage as fallback
+        async function saveSettings() {
             try {
-                localStorage.setItem('chronos_settings', JSON.stringify(settings));
-                setTimeout(() => {
-                    showToast('Erfolg', 'Einstellungen gespeichert!', 'success');
-                }, 500);
+                showToast('Info', 'Speichere Einstellungen...', 'info');
+
+                // Collect all settings from forms
+                const settings = {};
+                const forms = document.querySelectorAll('form[data-settings]');
+
+                forms.forEach(form => {
+                    const formData = new FormData(form);
+                    const category = form.dataset.settings;
+                    settings[category] = {};
+
+                    for (let [key, value] of formData.entries()) {
+                        settings[category][key] = value;
+                    }
+                });
+
+                // Save to backend first
+                const response = await fetch('/api/v1/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        settings: settings,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Settings API error: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Save to localStorage as backup
+                    localStorage.setItem('chronos_settings', JSON.stringify(settings));
+                    localStorage.setItem('chronos_settings_sync', new Date().toISOString());
+
+                    showToast('Erfolg', 'Einstellungen erfolgreich gespeichert!', 'success');
+
+                    // Apply settings immediately if needed
+                    if (settings.appearance) {
+                        applyTheme();
+                    }
+                } else {
+                    throw new Error(result.message || 'Einstellungen konnten nicht gespeichert werden');
+                }
+
             } catch (error) {
-                showToast('Fehler', 'Einstellungen konnten nicht gespeichert werden.', 'error');
+                console.error('Error saving settings:', error);
+
+                // Fallback to localStorage only
+                try {
+                    const settings = {};
+                    const forms = document.querySelectorAll('form[data-settings]');
+                    forms.forEach(form => {
+                        const formData = new FormData(form);
+                        const category = form.dataset.settings;
+                        settings[category] = {};
+                        for (let [key, value] of formData.entries()) {
+                            settings[category][key] = value;
+                        }
+                    });
+
+                    localStorage.setItem('chronos_settings', JSON.stringify(settings));
+                    showToast('Warnung', 'Einstellungen nur lokal gespeichert: ' + error.message, 'warning');
+                } catch (localError) {
+                    showToast('Fehler', 'Einstellungen konnten nicht gespeichert werden: ' + error.message, 'error');
+                }
             }
         }
 
-        function testCalDAVConnection() {
-            showToast('Info', 'Teste CalDAV-Verbindung...', 'info');
+        async function testCalDAVConnection() {
+            try {
+                showToast('Info', 'Teste CalDAV-Verbindung...', 'info');
 
-            // Test CalDAV connection
-            fetch('/api/v1/caldav/test-connection', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
-                    'Content-Type': 'application/json'
+                // Get CalDAV settings from form
+                const caldavForm = document.querySelector('form[data-settings="caldav"]');
+                if (!caldavForm) {
+                    throw new Error('CalDAV-Einstellungsformular nicht gefunden');
                 }
-            })
-            .then(response => response.json())
-            .then(result => {
+
+                const formData = new FormData(caldavForm);
+                const caldavSettings = {
+                    server_url: formData.get('server_url') || formData.get('caldav_server'),
+                    username: formData.get('username') || formData.get('caldav_username'),
+                    password: formData.get('password') || formData.get('caldav_password')
+                };
+
+                // Validate required fields
+                if (!caldavSettings.server_url) {
+                    throw new Error('Server-URL ist erforderlich');
+                }
+
+                // Test CalDAV connection with actual settings
+                const response = await fetch('/api/v1/caldav/test-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(caldavSettings)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const result = await response.json();
+
                 if (result.success) {
-                    showToast('Erfolg', 'CalDAV-Verbindung erfolgreich!', 'success');
+                    const details = result.details || {};
+                    const message = `CalDAV-Verbindung erfolgreich! ${
+                        details.calendar_count ? `${details.calendar_count} Kalender gefunden.` : ''
+                    }`;
+                    showToast('Erfolg', message, 'success');
+
+                    // Update connection status indicator
+                    const statusIndicator = document.querySelector('.caldav-status');
+                    if (statusIndicator) {
+                        statusIndicator.textContent = '✅ Verbunden';
+                        statusIndicator.className = 'caldav-status status-success';
+                    }
                 } else {
-                    showToast('Fehler', 'CalDAV-Verbindung fehlgeschlagen: ' + result.error, 'error');
+                    throw new Error(result.message || 'Verbindung fehlgeschlagen');
                 }
-            })
-            .catch(error => {
-                showToast('Fehler', 'Verbindungstest fehlgeschlagen: ' + error.message, 'error');
-            });
+
+            } catch (error) {
+                console.error('CalDAV connection test failed:', error);
+                showToast('Fehler', `CalDAV-Verbindungstest fehlgeschlagen: ${error.message}`, 'error');
+
+                // Update connection status indicator
+                const statusIndicator = document.querySelector('.caldav-status');
+                if (statusIndicator) {
+                    statusIndicator.textContent = '❌ Getrennt';
+                    statusIndicator.className = 'caldav-status status-error';
+                }
+            }
         }
 
         function regenerateApiKey() {
