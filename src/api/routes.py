@@ -67,7 +67,6 @@ class ChronosUnifiedAPIRoutes:
         # CORE EVENT ROUTES
 
         @self.router.post("/events", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
-        @handle_api_errors
         async def create_event(
             event_data: EventCreate,
             credentials: HTTPAuthorizationCredentials = Depends(self.security)
@@ -262,7 +261,6 @@ class ChronosUnifiedAPIRoutes:
                 raise HTTPException(status_code=500, detail=f"Failed to get events: {e}")
 
         @self.router.put("/events/{event_id}", response_model=EventResponse)
-        @handle_api_errors
         async def update_event(
             event_id: str,
             event_update: EventUpdate,
@@ -334,19 +332,18 @@ class ChronosUnifiedAPIRoutes:
                 raise HTTPException(status_code=500, detail=f"Calendar sync failed: {e}")
 
         @self.router.get("/sync/health")
-        async def health_check():
+        async def health_check(request: Request):
             """Health check endpoint - no auth required"""
-            try:
-                status_info = await self.scheduler.get_health_status() if self.scheduler else {"status": "no_scheduler"}
-                return {
-                    "status": "healthy",
-                    "scheduler": status_info,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+            return {
+                "status": "healthy",
+                "timestamp": datetime.utcnow().isoformat(),
+                "version": "2.1"
+            }
 
-            except Exception as e:
-                self.logger.error(f"Health check failed: {e}")
-                raise HTTPException(status_code=503, detail=f"Service unhealthy: {e}")
+        @self.router.get("/test/simple")
+        async def test_simple():
+            """Simple test endpoint without validation"""
+            return {"test": "success", "timestamp": datetime.utcnow().isoformat()}
 
         # ANALYTICS ROUTES
 

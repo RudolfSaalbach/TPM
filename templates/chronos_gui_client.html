@@ -16,9 +16,30 @@
     <style>
         .client-container {
             display: grid;
-            grid-template-columns: 320px 1fr;
+            grid-template-columns: minmax(280px, 20%) 1fr;
             height: 100vh;
+            gap: 0;
         }
+
+        /* Responsive sidebar width based on screen size */
+        @media (min-width: 1200px) {
+            .client-container {
+                grid-template-columns: minmax(320px, 18%) 1fr;
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .client-container {
+                grid-template-columns: minmax(360px, 15%) 1fr;
+            }
+        }
+
+        @media (min-width: 2000px) {
+            .client-container {
+                grid-template-columns: minmax(400px, 12%) 1fr;
+            }
+        }
+
         .client-main {
             padding: var(--space-6);
             display: flex;
@@ -26,13 +47,39 @@
             gap: var(--space-6);
             height: 100%;
             overflow: hidden;
+            width: 100%;
+            max-width: none;
         }
         .events-list-container {
             flex: 1;
             overflow-y: auto;
             display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
             grid-auto-rows: min-content;
             gap: var(--space-4);
+            width: 100%;
+        }
+
+        /* Single column for narrow containers */
+        @media (max-width: 900px) {
+            .events-list-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Multi-column for wide screens */
+        @media (min-width: 1400px) {
+            .events-list-container {
+                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+                gap: var(--space-5);
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .events-list-container {
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                gap: var(--space-6);
+            }
         }
         .template-list-item {
             cursor: pointer;
@@ -85,6 +132,7 @@
             </div>
             <div class="form-actions">
                 <button id="btn-new" class="btn btn-secondary">Neuer Termin</button>
+                <button id="btn-sync" class="btn btn-secondary">Kalender Sync</button>
                 <button id="btn-templates" class="btn btn-primary">Vorlage nutzen</button>
             </div>
         </div>
@@ -134,10 +182,132 @@
     </div>
 </dialog>
 
+<dialog id="createEventDialog" class="modal" aria-modal="true" aria-labelledby="createEventTitle">
+    <div class="modal-backdrop" data-ref="backdrop"></div>
+    <div class="modal-content modal-lg">
+        <header class="modal-header">
+            <h2 class="modal-title" id="createEventTitle">Neues Event erstellen</h2>
+            <button id="createEventClose" class="btn btn-icon modal-close" data-ref="close" aria-label="Schließen">✕</button>
+        </header>
+        <div class="modal-body">
+            <form id="createEventForm" data-ref="form" class="create-event-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventTitle" class="form-label required">Titel</label>
+                        <input id="eventTitle" name="title" type="text" class="form-input" data-ref="title"
+                               placeholder="Event-Titel eingeben..." required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventCalendar" class="form-label required">Zielkalender</label>
+                        <select id="eventCalendar" name="calendar_id" class="form-select" data-ref="calendar" required>
+                            <option value="">Kalender auswählen...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventTemplate" class="form-label">Vorlage verwenden</label>
+                        <div class="template-selection">
+                            <select id="eventTemplate" name="template_id" class="form-select" data-ref="template">
+                                <option value="">Keine Vorlage</option>
+                            </select>
+                            <button type="button" class="btn btn-secondary btn-sm" data-ref="use-template" disabled>
+                                Anwenden
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" name="all_day" data-ref="all-day" class="form-checkbox">
+                            Ganztägig
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-row time-inputs">
+                    <div class="form-group">
+                        <label for="eventStartTime" class="form-label">Startzeit</label>
+                        <input id="eventStartTime" name="start_time" type="datetime-local" class="form-input" data-ref="start-time">
+                    </div>
+                    <div class="form-group">
+                        <label for="eventEndTime" class="form-label">Endzeit</label>
+                        <input id="eventEndTime" name="end_time" type="datetime-local" class="form-input" data-ref="end-time">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventDescription" class="form-label">Beschreibung</label>
+                        <textarea id="eventDescription" name="description" class="form-textarea" data-ref="description"
+                                  rows="3" placeholder="Eventbeschreibung (optional)..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventLocation" class="form-label">Ort</label>
+                        <input id="eventLocation" name="location" type="text" class="form-input" data-ref="location"
+                               placeholder="Veranstaltungsort (optional)...">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventPriority" class="form-label">Priorität</label>
+                        <select id="eventPriority" name="priority" class="form-select" data-ref="priority">
+                            <option value="LOW">Niedrig</option>
+                            <option value="MEDIUM" selected>Mittel</option>
+                            <option value="HIGH">Hoch</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventType" class="form-label">Event-Typ</label>
+                        <select id="eventType" name="event_type" class="form-select" data-ref="event-type">
+                            <option value="TASK">Aufgabe</option>
+                            <option value="MEETING">Meeting</option>
+                            <option value="REMINDER">Erinnerung</option>
+                            <option value="DEADLINE">Deadline</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventTags" class="form-label">Tags</label>
+                        <input id="eventTags" name="tags" type="text" class="form-input" data-ref="tags"
+                               placeholder="Tag1, Tag2, Tag3...">
+                        <small class="form-help">Getrennt durch Kommas</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventAttendees" class="form-label">Teilnehmer</label>
+                        <input id="eventAttendees" name="attendees" type="text" class="form-input" data-ref="attendees"
+                               placeholder="email1@example.com, email2@example.com...">
+                        <small class="form-help">E-Mail-Adressen getrennt durch Kommas</small>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-ref="cancel">Abbrechen</button>
+            <button type="submit" form="createEventForm" class="btn btn-primary" data-ref="save">
+                <span class="btn-text">Event erstellen</span>
+                <span class="btn-spinner" style="display: none;">⟳</span>
+            </button>
+        </div>
+    </div>
+</dialog>
+
 <script>
 (function(){
   // CONFIG & HELPERS
-  const API_BASE = localStorage.getItem('chronos_api') || '/api/v1';
+  const API_BASE = localStorage.getItem('chronos_api') || 'http://localhost:8081/api/v1';
   const API_KEY  = localStorage.getItem('chronos_api_key') || '';
   const DEFAULT_CAL = localStorage.getItem('chronos_calendar') || 'primary';
   const TZ = 'Europe/Berlin';
@@ -210,8 +380,78 @@
   }
 
   async function useTemplate(id){
-    try{ await api(`/templates/${id}/use`, { method:'POST' }); }
-    catch(e){ console.warn('useTemplate fehlgeschlagen:', e); }
+    try{
+      // Record template usage
+      await api(`/templates/${id}/use`, { method:'POST' });
+
+      // Find the template data
+      const template = state.templates.find(t => t.id === id);
+      if (!template) {
+        console.error('Template not found:', id);
+        return;
+      }
+
+      // Open create event modal with template data pre-filled
+      if (!createEventModal) {
+        const dialogElement = $('#createEventDialog');
+        if (dialogElement) {
+          createEventModal = new CreateEventModalComponent(dialogElement, {
+            apiEndpoint: API_BASE + '/events',
+            calendarsEndpoint: API_BASE + '/caldav/calendars',
+            templatesEndpoint: API_BASE + '/templates'
+          });
+
+          createEventModal.addEventListener('createEvent:success', (event) => {
+            fetchEvents();
+          });
+        }
+      }
+
+      if (createEventModal) {
+        // Prepare template data for form
+        const formData = {
+          title: template.title || '',
+          description: template.description || '',
+          all_day: Boolean(template.all_day),
+          calendar_id: template.calendar_id || DEFAULT_CAL
+        };
+
+        // Handle duration for non-all-day events
+        if (template.duration_minutes && !template.all_day) {
+          const now = new Date();
+          let startTime = now;
+
+          // Apply default time if specified
+          if (template.default_time) {
+            const [hours, minutes] = template.default_time.split(':').map(Number);
+            startTime = new Date(now);
+            startTime.setHours(hours, minutes, 0, 0);
+
+            // If time is in the past today, schedule for tomorrow
+            if (startTime < now) {
+              startTime.setDate(startTime.getDate() + 1);
+            }
+          }
+
+          const endTime = new Date(startTime.getTime() + (template.duration_minutes * 60000));
+
+          formData.start_time = startTime.toISOString().slice(0, 16);
+          formData.end_time = endTime.toISOString().slice(0, 16);
+        }
+
+        // Handle tags
+        if (template.tags && template.tags.length > 0) {
+          formData.tags = template.tags;
+        }
+
+        // Open modal with pre-filled data
+        createEventModal.open({ formData });
+      }
+    }
+    catch(e){
+      console.error('useTemplate fehlgeschlagen:', e);
+      $('#status').textContent = `Fehler beim Anwenden der Vorlage: ${e.message}`;
+    }
   }
 
   // RENDER
@@ -306,6 +546,69 @@
     if (dlg.open) dlg.close();
   }
 
+  // CREATE EVENT FUNCTIONALITY
+  let createEventModal = null;
+
+  function createNewEvent(){
+    if (!createEventModal) {
+      const dialogElement = $('#createEventDialog');
+      if (dialogElement) {
+        createEventModal = new CreateEventModalComponent(dialogElement, {
+          apiEndpoint: API_BASE + '/events',
+          calendarsEndpoint: API_BASE + '/caldav/calendars',
+          templatesEndpoint: API_BASE + '/templates'
+        });
+
+        // Listen for events
+        createEventModal.addEventListener('createEvent:success', (event) => {
+          fetchEvents(); // Refresh events list
+        });
+      }
+    }
+
+    if (createEventModal) {
+      createEventModal.open();
+    }
+  }
+
+  // SYNC FUNCTIONALITY
+  async function syncCalendar(){
+    const syncBtn = $('#btn-sync');
+    const originalText = syncBtn.textContent;
+
+    try{
+      syncBtn.disabled = true;
+      syncBtn.textContent = 'Synchronisiere...';
+      $('#status').textContent = 'Kalender wird synchronisiert...';
+
+      // Trigger calendar sync
+      const syncData = await api('/sync/calendar', {
+        method: 'POST',
+        body: JSON.stringify({
+          days_ahead: parseInt(state.range) || 7,
+          force_refresh: true
+        })
+      });
+
+      if (syncData.success) {
+        $('#status').textContent = `Sync erfolgreich: ${syncData.events_processed || 0} Events verarbeitet`;
+
+        // Refresh events after sync
+        await fetchEvents();
+      } else {
+        throw new Error(syncData.error || 'Sync fehlgeschlagen');
+      }
+    }
+    catch(e){
+      console.error('Sync error:', e);
+      $('#status').textContent = `Sync-Fehler: ${e.message}`;
+    }
+    finally{
+      syncBtn.disabled = false;
+      syncBtn.textContent = originalText;
+    }
+  }
+
   // INIT
   function init(){
     const debouncedFetch = debounce(fetchEvents, 300);
@@ -314,6 +617,8 @@
     $$('input[name="direction"]').forEach(r => r.addEventListener('change', (e)=>{ state.direction = e.target.value; debouncedFetch(); }));
     $('#search-input').addEventListener('input', debounce((e)=>{ state.q = e.target.value; fetchEvents(); }, 300));
 
+    $('#btn-new').addEventListener('click', createNewEvent);
+    $('#btn-sync').addEventListener('click', syncCalendar);
     $('#btn-templates').addEventListener('click', openTemplates);
     $('#tplClose').addEventListener('click', closeTemplates);
     dlg.querySelector('.modal-backdrop').addEventListener('click', closeTemplates);
@@ -322,8 +627,211 @@
     fetchEvents();
   }
 
+  // Mock event bus for compatibility
+  window.ChronosEventBus = {
+    events: new Map(),
+
+    on(eventName, handler, context) {
+      if (!this.events.has(eventName)) {
+        this.events.set(eventName, new Set());
+      }
+
+      const boundHandler = context ? handler.bind(context) : handler;
+      this.events.get(eventName).add(boundHandler);
+
+      return () => this.off(eventName, boundHandler);
+    },
+
+    off(eventName, handler) {
+      if (this.events.has(eventName)) {
+        this.events.get(eventName).delete(handler);
+      }
+    },
+
+    emit(eventName, ...args) {
+      if (this.events.has(eventName)) {
+        for (const handler of this.events.get(eventName)) {
+          try {
+            handler(...args);
+          } catch (error) {
+            console.error('Error in event handler:', error);
+          }
+        }
+      }
+    }
+  };
+
+  // Global API helpers for components
+  window.ChronosAPI = {
+    getAuthHeaders: () => API_KEY ? { 'X-API-Key': API_KEY } : {}
+  };
+
   window.addEventListener('DOMContentLoaded', init);
 })();
 </script>
+
+<!-- Load component dependencies -->
+<script src="/static/js/core/ComponentBase.js"></script>
+<script src="/static/js/components/CreateEventModal.js"></script>
+
+<style>
+/* Create Event Modal Styles */
+.create-event-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+}
+
+.form-row:has(.form-group:only-child) {
+    grid-template-columns: 1fr;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.form-label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+}
+
+.form-label.required::after {
+    content: ' *';
+    color: var(--danger-500);
+}
+
+.form-input, .form-select, .form-textarea {
+    padding: var(--space-3);
+    border: 1px solid var(--border-base);
+    border-radius: var(--radius-md);
+    background: var(--surface-primary);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: 2px solid var(--state-focus-ring);
+    outline-offset: 2px;
+    border-color: var(--border-focus);
+}
+
+.form-field-error {
+    border-color: var(--danger-400) !important;
+    background-color: var(--status-danger-bg);
+}
+
+.form-checkbox {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--space-2);
+}
+
+.form-help {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    margin-top: var(--space-1);
+}
+
+.template-selection {
+    display: flex;
+    gap: var(--space-2);
+    align-items: end;
+}
+
+.template-selection .form-select {
+    flex: 1;
+}
+
+.time-inputs.hidden {
+    display: none;
+}
+
+.btn-spinner {
+    font-size: var(--font-size-sm);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 768px) {
+    .modal-content {
+        margin: var(--space-4);
+        width: calc(100vw - var(--space-8));
+        max-width: none;
+        height: calc(100vh - var(--space-8));
+        max-height: none;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+    }
+
+    .template-selection {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+    }
+
+    .modal-body {
+        padding: var(--space-4);
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+    }
+
+    .form-input, .form-select, .form-textarea {
+        font-size: 16px; /* Prevent zoom on iOS */
+        padding: var(--space-4);
+    }
+}
+
+/* Wide screen optimizations */
+@media (min-width: 1200px) {
+    .modal-content.modal-lg {
+        max-width: 800px;
+        width: 800px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-6);
+    }
+
+    .create-event-form {
+        gap: var(--space-5);
+    }
+}
+
+/* Ultra-wide screen improvements */
+@media (min-width: 1600px) {
+    .modal-content.modal-lg {
+        max-width: 900px;
+        width: 900px;
+    }
+
+    .form-row:has(.form-group:only-child) {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .form-row:has(.form-group:only-child) .form-group {
+        grid-column: 1 / 2;
+    }
+}
+</style>
+
 </body>
 </html>

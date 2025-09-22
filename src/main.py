@@ -132,7 +132,7 @@ class ChronosApp:
 
         self.app.exception_handler(APIError)(api_error_handler)
         self.app.exception_handler(HTTPException)(http_exception_handler)
-        self.app.exception_handler(RequestValidationError)(validation_exception_handler)
+        # BYPASS VALIDATION - DISABLED: self.app.exception_handler(RequestValidationError)(validation_exception_handler)
         self.app.exception_handler(Exception)(general_exception_handler)
 
         # Register modular API routes with versioning

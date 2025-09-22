@@ -195,6 +195,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     """Handle Pydantic validation errors"""
     request_id = str(uuid.uuid4())
 
+    # DEBUG: Log the raw exception details
+    logger.error(f"DEBUG: Raw validation error: {exc.errors()}")
+    logger.error(f"DEBUG: Request URL: {request.url}")
+    logger.error(f"DEBUG: Request method: {request.method}")
+
     # Convert Pydantic errors to our standard format
     field_errors = []
     for error in exc.errors():
