@@ -14,7 +14,7 @@ from .models import (
     PluginConfig
 )
 
-from .calendar_client import GoogleCalendarClient
+# GoogleCalendarClient removed - CalDAV is now primary backend
 from .event_parser import EventParser
 from .analytics_engine import AnalyticsEngine
 from .ai_optimizer import AIOptimizer, OptimizationSuggestion
@@ -50,7 +50,6 @@ __all__ = [
     'PluginConfig',
     
     # Core Components
-    'GoogleCalendarClient',
     'EventParser',
     'AnalyticsEngine',
     'AIOptimizer',
@@ -88,6 +87,6 @@ __all__ = [
 ]
 
 # Version info
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __author__ = "Chronos Team"
 __description__ = "Advanced Calendar Management System with AI-powered optimization"

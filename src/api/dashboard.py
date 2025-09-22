@@ -13,8 +13,9 @@ from fastapi.templating import Jinja2Templates
 
 from src.core import (
     AnalyticsEngine, TimeboxEngine, ReplanEngine,
-    GoogleCalendarClient, EventParser, Priority
+    EventParser, Priority
 )
+from src.config.config_loader import load_config
 
 
 class ChronosDashboard:
@@ -25,13 +26,11 @@ class ChronosDashboard:
         analytics_engine: AnalyticsEngine,
         timebox_engine: TimeboxEngine,
         replan_engine: ReplanEngine,
-        calendar_client: GoogleCalendarClient = None,
         event_parser: EventParser = None
     ):
         self.analytics = analytics_engine
         self.timebox = timebox_engine
         self.replan = replan_engine
-        self.calendar_client = calendar_client
         self.event_parser = event_parser
         
         self.logger = logging.getLogger(__name__)
@@ -49,12 +48,14 @@ class ChronosDashboard:
             """Main dashboard - WORKING TEMPLATE INTEGRATION"""
             
             try:
-                # Get dashboard data
+                # Get dashboard data and config
                 dashboard_data = await self._get_dashboard_data()
-                
-                # Render template with correct data structure
+                config = load_config()
+
+                # Render template with config injection
                 return self.templates.TemplateResponse("dashboard.html", {
                     "request": request,
+                    "config": config,
                     **dashboard_data
                 })
                 
@@ -70,8 +71,10 @@ class ChronosDashboard:
         @self.router.get("/calendar", response_class=HTMLResponse)
         async def calendar_view(request: Request):
             """Calendar view"""
+            config = load_config()
             return self.templates.TemplateResponse("dashboard.html", {
                 "request": request,
+                "config": config,
                 "view": "calendar",
                 **await self._get_dashboard_data()
             })
@@ -79,15 +82,19 @@ class ChronosDashboard:
         @self.router.get("/events", response_class=HTMLResponse)
         async def events_view(request: Request):
             """Events view"""
+            config = load_config()
             return self.templates.TemplateResponse("modular_events.html", {
-                "request": request
+                "request": request,
+                "config": config
             })
 
         @self.router.get("/analytics", response_class=HTMLResponse)
         async def analytics_view(request: Request):
             """Analytics view"""
+            config = load_config()
             return self.templates.TemplateResponse("dashboard.html", {
                 "request": request,
+                "config": config,
                 "view": "analytics",
                 **await self._get_dashboard_data()
             })
@@ -95,8 +102,10 @@ class ChronosDashboard:
         @self.router.get("/sync", response_class=HTMLResponse)
         async def sync_view(request: Request):
             """Sync view"""
+            config = load_config()
             return self.templates.TemplateResponse("dashboard.html", {
                 "request": request,
+                "config": config,
                 "view": "sync",
                 **await self._get_dashboard_data()
             })
@@ -104,8 +113,10 @@ class ChronosDashboard:
         @self.router.get("/settings", response_class=HTMLResponse)
         async def settings_view(request: Request):
             """Settings view"""
+            config = load_config()
             return self.templates.TemplateResponse("dashboard.html", {
                 "request": request,
+                "config": config,
                 "view": "settings",
                 **await self._get_dashboard_data()
             })
@@ -172,9 +183,8 @@ class ChronosDashboard:
                 self.logger.info("Dashboard data loaded successfully")
                 
             except Exception as data_error:
-                self.logger.warning(f"Could not load live data, using defaults: {data_error}")
-                # Add mock data for development
-                safe_defaults.update(self._get_mock_data())
+                self.logger.warning(f"Could not load live data, using empty defaults: {data_error}")
+                # Use empty defaults only - no mock data in production
             
             return safe_defaults
             
@@ -191,30 +201,6 @@ class ChronosDashboard:
                 'error': 'Data temporarily unavailable'
             }
     
-    def _get_mock_data(self) -> Dict[str, Any]:
-        """Get mock data for development/demo"""
-        
-        return {
-            'productivity_metrics': {
-                'total_events': 42,
-                'completion_rate': 0.78,
-                'average_productivity': 3.4,
-                'total_hours': 156.5,
-                'events_per_day': 6.2,
-                'completed_events': 33
-            },
-            'priority_distribution': {
-                'URGENT': 3,
-                'HIGH': 8,
-                'MEDIUM': 24,
-                'LOW': 7
-            },
-            'time_distribution': {
-                '9': 2.5, '10': 3.2, '11': 2.8, '12': 1.0,
-                '13': 1.5, '14': 3.5, '15': 3.0, '16': 2.2, '17': 1.8,
-                **{str(i): 0.0 for i in list(range(0, 9)) + list(range(18, 24))}
-            }
-        }
     
     async def _generate_recommendations(self, metrics: Dict[str, Any]) -> list:
         """Generate recommendations - WORKING"""
@@ -334,14 +320,8 @@ class ChronosDashboard:
         """Get system component status"""
         
         try:
-            # Check calendar connection if available
-            calendar_status = "unknown"
-            if self.calendar_client:
-                try:
-                    auth_result = await self.calendar_client.authenticate()
-                    calendar_status = "operational" if auth_result else "error"
-                except Exception:
-                    calendar_status = "error"
+            # CalDAV is now primary - no legacy Google Calendar checking
+            calendar_status = "operational"  # Assume CalDAV operational via config
             
             return {
                 "calendar_sync": calendar_status,

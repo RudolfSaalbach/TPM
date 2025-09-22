@@ -378,7 +378,7 @@
                 const response = await fetch('/api/v1/sync/incremental', {
                     method: 'POST',
                     headers: {
-                        'X-API-Key': 'super-secret-change-me',
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -403,7 +403,7 @@
                 const response = await fetch('/api/v1/sync/full', {
                     method: 'POST',
                     headers: {
-                        'X-API-Key': 'super-secret-change-me',
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -453,7 +453,7 @@
                 const today = new Date().toISOString().split('T')[0];
                 const response = await fetch(`/api/v1/events?date=${today}`, {
                     headers: {
-                        'X-API-Key': 'super-secret-change-me'
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                     }
                 });
 
@@ -518,7 +518,7 @@
             // Event-Details in Modal anzeigen
             fetch(`/api/v1/events/${eventId}`, {
                 headers: {
-                    'X-API-Key': 'super-secret-change-me'
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                 }
             })
             .then(response => response.json())
@@ -652,7 +652,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-API-Key': 'super-secret-change-me'
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                     },
                     body: JSON.stringify(eventData)
                 });

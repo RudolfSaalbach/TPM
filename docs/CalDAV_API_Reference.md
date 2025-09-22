@@ -9,7 +9,7 @@ This document describes the CalDAV-specific REST API endpoints added in Chronos 
 All CalDAV API endpoints require authentication via API key:
 
 ```bash
-curl -H "X-API-Key: your-api-key" http://localhost:8080/caldav/...
+curl -H "Authorization: Bearer your-api-key" http://localhost:8080/caldav/...
 ```
 
 ## Backend Management
@@ -398,7 +398,7 @@ All endpoints return standardized error responses:
 - **401 Unauthorized**: Invalid API key
   ```json
   {
-    "detail": "Invalid API key. Please ensure you're using the correct X-API-Key header."
+    "detail": "Invalid API key. Please ensure you're using the correct Authorization: Bearer header."
   }
   ```
 
@@ -443,11 +443,11 @@ All endpoints return standardized error responses:
 
 ```bash
 # 1. List available calendars
-curl -H "X-API-Key: your-api-key" \
+curl -H "Authorization: Bearer your-api-key" \
   http://localhost:8080/caldav/calendars
 
 # 2. Create a new event
-curl -X POST -H "X-API-Key: your-api-key" \
+curl -X POST -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "summary": "Team Meeting",
@@ -459,11 +459,11 @@ curl -X POST -H "X-API-Key: your-api-key" \
   http://localhost:8080/caldav/calendars/automation/events
 
 # 3. Get the created event
-curl -H "X-API-Key: your-api-key" \
+curl -H "Authorization: Bearer your-api-key" \
   http://localhost:8080/caldav/calendars/automation/events/new-event-123
 
 # 4. Update the event
-curl -X PATCH -H "X-API-Key: your-api-key" \
+curl -X PATCH -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -H "If-Match: \"etag-123\"" \
   -d '{
@@ -473,7 +473,7 @@ curl -X PATCH -H "X-API-Key: your-api-key" \
   http://localhost:8080/caldav/calendars/automation/events/new-event-123
 
 # 5. Delete the event
-curl -X DELETE -H "X-API-Key: your-api-key" \
+curl -X DELETE -H "Authorization: Bearer your-api-key" \
   http://localhost:8080/caldav/calendars/automation/events/new-event-123
 ```
 
@@ -481,7 +481,7 @@ curl -X DELETE -H "X-API-Key: your-api-key" \
 
 ```bash
 # Switch to Google Calendar
-curl -X POST -H "X-API-Key: your-api-key" \
+curl -X POST -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "backend_type": "google",
@@ -495,7 +495,7 @@ curl -X POST -H "X-API-Key: your-api-key" \
   http://localhost:8080/caldav/backend/switch
 
 # Switch back to CalDAV
-curl -X POST -H "X-API-Key: your-api-key" \
+curl -X POST -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "backend_type": "caldav"
@@ -513,7 +513,7 @@ CALENDARS=$(curl -s -H "X-API-Key: your-api-key" \
 # Sync each calendar
 for calendar in $CALENDARS; do
   echo "Syncing calendar: $calendar"
-  curl -X POST -H "X-API-Key: your-api-key" \
+  curl -X POST -H "Authorization: Bearer your-api-key" \
     "http://localhost:8080/caldav/calendars/$calendar/sync?days_ahead=30"
 done
 ```
@@ -566,7 +566,7 @@ import requests
 class CalDAVClient:
     def __init__(self, base_url, api_key):
         self.base_url = base_url
-        self.headers = {"X-API-Key": api_key}
+        self.headers = {"Authorization": f"Bearer {api_key}"}
 
     def list_calendars(self):
         response = requests.get(
@@ -595,7 +595,7 @@ print(f"Found {calendars['count']} calendars")
 class CalDAVClient {
     constructor(baseUrl, apiKey) {
         this.baseUrl = baseUrl;
-        this.headers = { 'X-API-Key': apiKey };
+        this.headers = { 'Authorization': `Bearer ${apiKey}` };
     }
 
     async listCalendars() {

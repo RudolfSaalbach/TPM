@@ -115,7 +115,7 @@
         try {
             const response = await fetch('/api/v1/events', {
                 headers: {
-                    'X-API-Key': 'super-secret-change-me'
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                 }
             });
 
@@ -244,17 +244,17 @@
 
             // Load today's events
             const todayResponse = await fetch(`/api/v1/events?date=${today}`, {
-                headers: { 'X-API-Key': 'super-secret-change-me' }
+                headers: { 'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}` }
             });
 
             // Load week's events
             const weekResponse = await fetch(`/api/v1/events?start=${weekStart.toISOString().split('T')[0]}&end=${weekEnd.toISOString().split('T')[0]}`, {
-                headers: { 'X-API-Key': 'super-secret-change-me' }
+                headers: { 'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}` }
             });
 
             // Load high priority events
             const highPriorityResponse = await fetch('/api/v1/events?priority=high', {
-                headers: { 'X-API-Key': 'super-secret-change-me' }
+                headers: { 'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}` }
             });
 
             if (todayResponse.ok) {
@@ -398,7 +398,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-API-Key': 'super-secret-change-me'
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                 },
                 body: JSON.stringify(eventData)
             });
@@ -420,7 +420,7 @@
     async function viewEventDetails(eventId) {
         try {
             const response = await fetch(`/api/v1/events/${eventId}`, {
-                headers: { 'X-API-Key': 'super-secret-change-me' }
+                headers: { 'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}` }
             });
 
             if (!response.ok) {
@@ -478,7 +478,7 @@
         try {
             const response = await fetch(`/api/v1/events/${eventId}`, {
                 method: 'DELETE',
-                headers: { 'X-API-Key': 'super-secret-change-me' }
+                headers: { 'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}` }
             });
 
             if (!response.ok) {

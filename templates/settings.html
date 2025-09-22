@@ -569,7 +569,7 @@
                                     <div class="setting-control">
                                         <div class="api-key-section">
                                             <div class="api-key-display">
-                                                <input type="password" id="api-key-display" class="text-input" value="super-secret-change-me" readonly>
+                                                <input type="password" id="api-key-display" class="text-input" readonly>
                                                 <button class="btn btn-ghost btn-sm" onclick="regenerateApiKey()">
                                                     <span aria-hidden="true">🔄</span>
                                                     Neu generieren
@@ -1526,6 +1526,15 @@
         function initializeSettings() {
             setupKeyboardShortcuts();
             loadDefaultSettings();
+            loadApiKey();
+        }
+
+        function loadApiKey() {
+            // Lade API-Key aus zentraler Config
+            const apiKeyDisplay = document.getElementById('api-key-display');
+            if (apiKeyDisplay && window.CHRONOS_CONFIG) {
+                apiKeyDisplay.value = window.CHRONOS_CONFIG.API_KEY;
+            }
         }
 
         function setupEventListeners() {

@@ -15,6 +15,16 @@
 
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
 
+    <!-- Zentrale Chronos Config Injection -->
+    <script>
+        window.CHRONOS_CONFIG = {
+            API_KEY: '{{ config.api.api_key if config else config.api.api_key|default("default-dev-key") }}',
+            API_BASE: 'http://{{ config.api.host if config else "localhost" }}:{{ config.api.port if config else "8080" }}',
+            VERSION: '{{ config.version if config else "2.2" }}',
+            ENVIRONMENT: '{{ config.environment if config else "development" }}'
+        };
+    </script>
+
     {% block extra_head %}{% endblock %}
 </head>
 <body>

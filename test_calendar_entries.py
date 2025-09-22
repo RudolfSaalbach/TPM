@@ -16,7 +16,7 @@ async def test_calendar_api():
     """Test calendar API and create test entries"""
 
     headers = {
-        "X-API-Key": API_KEY,
+        "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
 

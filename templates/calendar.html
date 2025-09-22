@@ -213,7 +213,7 @@
             const dateString = date.toISOString().split('T')[0];
             const response = await fetch(`/api/v1/events?date=${dateString}`, {
                 headers: {
-                    'X-API-Key': 'super-secret-change-me'
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                 }
             });
 
@@ -235,7 +235,7 @@
             const today = new Date().toISOString().split('T')[0];
             const response = await fetch(`/api/v1/events?date=${today}`, {
                 headers: {
-                    'X-API-Key': 'super-secret-change-me'
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                 }
             });
 
@@ -303,7 +303,7 @@
 
             const weekResponse = await fetch(`/api/v1/events?start=${weekStart.toISOString().split('T')[0]}&end=${weekEnd.toISOString().split('T')[0]}`, {
                 headers: {
-                    'X-API-Key': 'super-secret-change-me'
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                 }
             });
 
@@ -318,7 +318,7 @@
 
             const deadlinesResponse = await fetch(`/api/v1/events?start=${new Date().toISOString().split('T')[0]}&end=${nextWeek.toISOString().split('T')[0]}&priority=high`, {
                 headers: {
-                    'X-API-Key': 'super-secret-change-me'
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                 }
             });
 
@@ -397,7 +397,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-API-Key': 'super-secret-change-me'
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                 },
                 body: JSON.stringify(eventData)
             });
@@ -425,7 +425,7 @@
             const today = new Date().toISOString().split('T')[0];
             const response = await fetch(`/api/v1/events?date=${today}`, {
                 headers: {
-                    'X-API-Key': 'super-secret-change-me'
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
                 }
             });
 

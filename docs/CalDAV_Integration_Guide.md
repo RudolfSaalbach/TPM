@@ -85,22 +85,22 @@ caldav:
 python -m src.main
 
 # Check health status
-curl -H "X-API-Key: your-api-key" http://localhost:8080/health
+curl -H "Authorization: Bearer your-api-key" http://localhost:8080/health
 ```
 
 ### 3. Verify CalDAV Connection
 
 ```bash
 # Test CalDAV connection
-curl -X POST -H "X-API-Key: your-api-key" \
+curl -X POST -H "Authorization: Bearer your-api-key" \
   http://localhost:8080/caldav/connection/test
 
 # List available calendars
-curl -H "X-API-Key: your-api-key" \
+curl -H "Authorization: Bearer your-api-key" \
   http://localhost:8080/caldav/calendars
 
 # Get backend information
-curl -H "X-API-Key: your-api-key" \
+curl -H "Authorization: Bearer your-api-key" \
   http://localhost:8080/caldav/backend/info
 ```
 

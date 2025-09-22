@@ -3,14 +3,14 @@
  * Core functionality and utilities
  */
 
-// Global configuration
-const CHRONOS_CONFIG = {
+// Global configuration - Nutze Template-injizierte Config mit Fallback
+const CHRONOS_CONFIG = Object.assign({
     API_BASE: '/api/v1',
     SYNC_BASE: '/api/v1/sync',
-    API_KEY: 'development-key-change-in-production',
+    API_KEY: 'super-secret-change-me',
     REFRESH_INTERVAL: 300000, // 5 minutes
     TOAST_DURATION: 5000
-};
+}, window.CHRONOS_CONFIG || {});
 
 // Global state
 const ChronosApp = {
