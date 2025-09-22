@@ -716,9 +716,145 @@ function initializeChronosApp() {
 }
 
 // Event specific functions
-function editEvent(eventId) {
-    dashboardInstance.showToast('Event bearbeiten', `Event ${eventId} wird bearbeitet...`, 'info');
-    // Hier würde das Event-Edit Modal geöffnet werden
+async function editEvent(eventId) {
+    try {
+        // Fetch event details
+        const response = await fetch(`/api/v1/events/${eventId}`, {
+            headers: {
+                'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const event = await response.json();
+
+        // Parse start/end times
+        const startDate = new Date(event.start_time);
+        const endDate = new Date(event.end_time);
+
+        const formattedDate = startDate.toISOString().split('T')[0];
+        const startTime = startDate.toTimeString().slice(0, 5);
+        const endTime = endDate.toTimeString().slice(0, 5);
+
+        // Show edit modal with pre-filled data
+        showModal('edit-event-modal', 'Event bearbeiten', `
+            <form id="editEventForm">
+                <input type="hidden" name="eventId" value="${eventId}">
+                <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                    <div>
+                        <label for="editEventTitle" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Titel</label>
+                        <input type="text" id="editEventTitle" name="title" value="${event.summary || ''}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                    </div>
+                    <div>
+                        <label for="editEventDate" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Datum</label>
+                        <input type="date" id="editEventDate" name="date" value="${formattedDate}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+                        <div>
+                            <label for="editEventTime" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Startzeit</label>
+                            <input type="time" id="editEventTime" name="time" value="${startTime}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                        </div>
+                        <div>
+                            <label for="editEventEndTime" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Endzeit</label>
+                            <input type="time" id="editEventEndTime" name="endTime" value="${endTime}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="editEventDescription" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Beschreibung</label>
+                        <textarea id="editEventDescription" name="description" rows="3" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md); resize: vertical;">${event.description || ''}</textarea>
+                    </div>
+                    <div>
+                        <label for="editEventLocation" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Ort</label>
+                        <input type="text" id="editEventLocation" name="location" value="${event.location || ''}" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);">
+                    </div>
+                    <div>
+                        <label for="editEventPriority" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Priorität</label>
+                        <select id="editEventPriority" name="priority" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);">
+                            <option value="low" ${event.priority === 'low' ? 'selected' : ''}>Niedrig</option>
+                            <option value="medium" ${event.priority === 'medium' ? 'selected' : ''}>Mittel</option>
+                            <option value="high" ${event.priority === 'high' ? 'selected' : ''}>Hoch</option>
+                            <option value="urgent" ${event.priority === 'urgent' ? 'selected' : ''}>Dringend</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        `, '<button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button><button class="btn btn-danger" onclick="deleteEvent(\'' + eventId + '\')">Löschen</button><button class="btn btn-primary" onclick="updateEvent()">Aktualisieren</button>');
+
+    } catch (error) {
+        console.error('Error loading event for edit:', error);
+        dashboardInstance.showToast('Fehler', 'Event konnte nicht geladen werden: ' + error.message, 'error');
+    }
+}
+
+// Update and Delete functions
+async function updateEvent() {
+    const form = document.getElementById('editEventForm');
+    if (form && form.checkValidity()) {
+        const formData = new FormData(form);
+        const eventId = formData.get('eventId');
+
+        const eventData = {
+            summary: formData.get('title'),
+            start_time: formData.get('date') + 'T' + formData.get('time'),
+            end_time: formData.get('date') + 'T' + formData.get('endTime'),
+            description: formData.get('description') || '',
+            location: formData.get('location') || '',
+            priority: formData.get('priority')
+        };
+
+        try {
+            const response = await fetch(`/api/v1/events/${eventId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                },
+                body: JSON.stringify(eventData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            closeModal();
+            dashboardInstance.showToast('Erfolg', 'Event erfolgreich aktualisiert!', 'success');
+            setTimeout(() => dashboardInstance.refreshData(), 1000);
+
+        } catch (error) {
+            console.error('Error updating event:', error);
+            dashboardInstance.showToast('Fehler', 'Event konnte nicht aktualisiert werden: ' + error.message, 'error');
+        }
+    } else {
+        dashboardInstance.showToast('Fehler', 'Bitte füllen Sie alle Pflichtfelder aus.', 'error');
+    }
+}
+
+async function deleteEvent(eventId) {
+    if (confirm('Sind Sie sicher, dass Sie dieses Event löschen möchten?')) {
+        try {
+            const response = await fetch(`/api/v1/events/${eventId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            closeModal();
+            dashboardInstance.showToast('Erfolg', 'Event erfolgreich gelöscht!', 'success');
+            setTimeout(() => dashboardInstance.refreshData(), 1000);
+
+        } catch (error) {
+            console.error('Error deleting event:', error);
+            dashboardInstance.showToast('Fehler', 'Event konnte nicht gelöscht werden: ' + error.message, 'error');
+        }
+    }
 }
 
 // Theme toggle function

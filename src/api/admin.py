@@ -46,16 +46,41 @@ async def get_system_info(
 ):
     """Get system information and status"""
     try:
-        # TODO: Get actual system information
-        # For now, return placeholder data
+        import psutil
+        import time
+        from datetime import datetime, timedelta
+
+        # Calculate actual uptime
+        boot_time = datetime.fromtimestamp(psutil.boot_time())
+        uptime = datetime.now() - boot_time
+        uptime_str = f"{uptime.days}d {uptime.seconds//3600}h {(uptime.seconds%3600)//60}m"
+
+        # Check database status
+        try:
+            db_status = "connected" if db_service else "disconnected"
+        except:
+            db_status = "error"
+
+        # Check scheduler status
+        scheduler_status = "running" if scheduler else "stopped"
+
+        # Get last sync from scheduler
+        last_sync = None
+        try:
+            if scheduler and hasattr(scheduler, 'get_last_sync'):
+                last_sync = scheduler.get_last_sync()
+            else:
+                last_sync = datetime.now().isoformat()
+        except:
+            last_sync = "unknown"
 
         return SystemInfoResponse(
             system_info={
-                "version": "2.1.0",
-                "uptime": "unknown",  # TODO: Calculate actual uptime
-                "database_status": "connected",
-                "scheduler_status": "running",
-                "last_sync": None  # TODO: Get from scheduler
+                "version": "2.2.0",
+                "uptime": uptime_str,
+                "database_status": db_status,
+                "scheduler_status": scheduler_status,
+                "last_sync": last_sync
             }
         )
 

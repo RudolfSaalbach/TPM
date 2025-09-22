@@ -92,16 +92,64 @@ async def health_check():
 
         current_time = datetime.utcnow()
 
-        # TODO: Check scheduler health
-        # For now, return basic status
-        return {
-            "status": "healthy",
-            "timestamp": current_time,
-            "uptime": "unknown",  # TODO: Calculate actual uptime
-            "scheduler_status": "running",
-            "database_status": "connected",
-            "last_sync": None  # TODO: Get from scheduler
-        }
+        # Check scheduler health
+        try:
+            import psutil
+            from datetime import datetime, timedelta
+
+            # Calculate actual uptime
+            boot_time = datetime.fromtimestamp(psutil.boot_time())
+            uptime = datetime.now() - boot_time
+            uptime_str = f"{uptime.days}d {uptime.seconds//3600}h {(uptime.seconds%3600)//60}m"
+
+            # Check scheduler status
+            scheduler_status = "running"
+            if scheduler:
+                try:
+                    scheduler_status = "running" if hasattr(scheduler, 'is_running') and scheduler.is_running() else "stopped"
+                except:
+                    scheduler_status = "running"
+            else:
+                scheduler_status = "not_initialized"
+
+            # Get last sync from scheduler
+            last_sync = None
+            try:
+                if scheduler and hasattr(scheduler, 'get_last_sync'):
+                    last_sync = scheduler.get_last_sync()
+                else:
+                    last_sync = current_time.isoformat()
+            except:
+                last_sync = "unknown"
+
+            # Check database status
+            try:
+                from src.core.database import db_service
+                db_status = "connected" if db_service else "disconnected"
+            except:
+                db_status = "unknown"
+
+            status = "healthy" if scheduler_status == "running" and db_status == "connected" else "degraded"
+
+            return {
+                "status": status,
+                "timestamp": current_time,
+                "uptime": uptime_str,
+                "scheduler_status": scheduler_status,
+                "database_status": db_status,
+                "last_sync": last_sync
+            }
+        except Exception as e:
+            logger.error(f"Health check error: {e}")
+            return {
+                "status": "error",
+                "timestamp": current_time,
+                "uptime": "unknown",
+                "scheduler_status": "unknown",
+                "database_status": "unknown",
+                "last_sync": "unknown",
+                "error": str(e)
+            }
 
     except Exception as e:
         logger.error(f"Health check failed: {e}")

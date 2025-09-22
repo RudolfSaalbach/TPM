@@ -857,19 +857,6 @@
         }
     </script>
 
-    <!-- Service Worker Registration (optional) -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/static/js/sw.js')
-                    .then(function(registration) {
-                        console.log('ServiceWorker registriert:', registration.scope);
-                    })
-                    .catch(function(error) {
-                        console.log('ServiceWorker Registrierung fehlgeschlagen:', error);
-                    });
-            });
-        }
-    </script>
+    <!-- Service Worker Registration removed - not implemented yet -->
 </body>
 </html>
