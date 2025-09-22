@@ -630,6 +630,14 @@ body {
   container-type: inline-size;
 }
 
+/* Stats Grid Layout */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
 /* Header */
 .header {
   background: var(--surface-primary);

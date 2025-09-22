@@ -615,9 +615,23 @@
                             <label for="eventDate" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Datum</label>
                             <input type="date" id="eventDate" name="date" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
                         </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+                            <div>
+                                <label for="eventTime" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Startzeit</label>
+                                <input type="time" id="eventTime" name="time" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                            </div>
+                            <div>
+                                <label for="eventEndTime" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Endzeit</label>
+                                <input type="time" id="eventEndTime" name="endTime" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                            </div>
+                        </div>
                         <div>
-                            <label for="eventTime" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Zeit</label>
-                            <input type="time" id="eventTime" name="time" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);" required>
+                            <label for="eventDescription" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Beschreibung</label>
+                            <textarea id="eventDescription" name="description" rows="3" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md); resize: vertical;"></textarea>
+                        </div>
+                        <div>
+                            <label for="eventLocation" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Ort</label>
+                            <input type="text" id="eventLocation" name="location" style="width: 100%; padding: var(--space-3); border: 1px solid var(--border-base); border-radius: var(--radius-md);">
                         </div>
                         <div>
                             <label for="eventPriority" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-medium);">Priorität</label>
@@ -625,6 +639,7 @@
                                 <option value="low">Niedrig</option>
                                 <option value="medium" selected>Mittel</option>
                                 <option value="high">Hoch</option>
+                                <option value="urgent">Dringend</option>
                             </select>
                         </div>
                     </div>
@@ -749,6 +764,96 @@
                 const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
                 console.log(`Dashboard geladen in ${loadTime}ms`);
             });
+        }
+
+        // Modal System
+        function showModal(id, title, content, actions = '') {
+            // Remove existing modal if any
+            const existingModal = document.getElementById('modal-overlay');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'modal-overlay';
+            overlay.className = 'modal-overlay';
+            overlay.innerHTML = `
+                <div class="modal-dialog" role="dialog" aria-labelledby="modal-title">
+                    <div class="modal-header">
+                        <h3 id="modal-title">${title}</h3>
+                        <button class="modal-close" onclick="closeModal()" aria-label="Modal schließen">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        ${content}
+                    </div>
+                    <div class="modal-footer">
+                        ${actions || '<button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button><button class="btn btn-primary" onclick="submitEventForm()">Erstellen</button>'}
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            // Show modal with animation
+            setTimeout(() => {
+                overlay.classList.add('show');
+            }, 10);
+
+            // Focus management
+            const firstInput = overlay.querySelector('input, textarea, select, button');
+            if (firstInput) firstInput.focus();
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('modal-overlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+                setTimeout(() => {
+                    overlay.remove();
+                }, 200);
+            }
+        }
+
+        function submitEventForm() {
+            const form = document.getElementById('eventForm');
+            if (form && form.checkValidity()) {
+                const formData = new FormData(form);
+
+                // Convert form data to event object
+                const eventData = {
+                    summary: formData.get('title'),
+                    start_time: formData.get('date') + 'T' + formData.get('time'),
+                    end_time: formData.get('date') + 'T' + formData.get('endTime'),
+                    description: formData.get('description') || '',
+                    location: formData.get('location') || ''
+                };
+
+                // Send to API
+                fetch('/api/v1/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                    },
+                    body: JSON.stringify(eventData)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    closeModal();
+                    showToast('Erfolg', 'Event erfolgreich erstellt!', 'success');
+                    // Refresh dashboard data
+                    setTimeout(refreshDashboard, 1000);
+                })
+                .catch(error => {
+                    console.error('Error creating event:', error);
+                    showToast('Fehler', 'Event konnte nicht erstellt werden.', 'error');
+                });
+            } else {
+                showToast('Fehler', 'Bitte füllen Sie alle Pflichtfelder aus.', 'error');
+            }
         }
     </script>
 
