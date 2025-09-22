@@ -14,8 +14,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from src.core.mock_calendar import MockCalendarService, MockCredentials
-
 
 class GoogleCalendarClient:
     """Mockable Google Calendar client backed by an in-memory store."""
@@ -25,10 +23,9 @@ class GoogleCalendarClient:
         self.token_file = Path(token_file)
         self.logger = logging.getLogger(__name__)
 
-        # Reuse the existing mock calendar service to generate realistic data
-        mock_service = MockCalendarService(MockCredentials({}))
-        self._initial_events = deepcopy(mock_service.events_db)
-        self._events: List[Dict[str, Any]] = deepcopy(self._initial_events)
+        # Initialize with empty event store - no mock dependencies
+        self._initial_events = []
+        self._events: List[Dict[str, Any]] = []
 
         self._authenticated = False
 

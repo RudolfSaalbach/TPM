@@ -15,6 +15,7 @@ from .models import (
 )
 
 from .calendar_client import GoogleCalendarClient
+from .calendar_source_manager import CalendarSourceManager
 from .event_parser import EventParser
 from .analytics_engine import AnalyticsEngine
 from .ai_optimizer import AIOptimizer, OptimizationSuggestion
@@ -51,6 +52,7 @@ __all__ = [
     
     # Core Components
     'GoogleCalendarClient',
+    'CalendarSourceManager',
     'EventParser',
     'AnalyticsEngine',
     'AIOptimizer',
