@@ -158,6 +158,44 @@ class ChronosApp:
         if static_dir.exists():
             self.app.mount("/static", StaticFiles(directory="static"), name="static")
         
+        # Version endpoint
+        @self.app.get("/version")
+        async def version_info():
+            """Get version information from VERSION file"""
+            try:
+                version_file = Path("VERSION")
+                if version_file.exists():
+                    version_content = version_file.read_text(encoding='utf-8').strip()
+                    lines = [line.strip() for line in version_content.split('\n') if line.strip()]
+
+                    version_info = {
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "version": lines[0] if lines else "unknown",
+                        "build_info": {}
+                    }
+
+                    # Parse additional build info
+                    for line in lines[1:]:
+                        if '=' in line:
+                            key, value = line.split('=', 1)
+                            version_info["build_info"][key.lower()] = value
+
+                    return version_info
+                else:
+                    return {
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "version": "2.1.0-legacy",
+                        "build_info": {
+                            "note": "VERSION file not found - legacy installation"
+                        }
+                    }
+            except Exception as e:
+                return {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "version": "unknown",
+                    "error": str(e)
+                }
+
         # Health check endpoint
         @self.app.get("/health")
         async def health_check():
