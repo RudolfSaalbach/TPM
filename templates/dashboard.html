@@ -949,43 +949,175 @@
             }
         }
 
+        // Calendar Navigation State
+        let currentCalendarDate = new Date();
+        let currentCalendarView = 'month'; // month, week, day
+
         // Calendar Navigation Functions
         function refreshCalendar() {
-            showToast('Info', 'Kalender wird aktualisiert...', 'info');
-            // Trigger calendar refresh
-            if (typeof refreshDashboard === 'function') {
-                refreshDashboard();
-            } else {
-                location.reload();
-            }
+            loadCalendarEvents();
         }
 
         function navigateCalendar(direction) {
-            showToast('Info', `Navigiere ${direction === 'prev' ? 'zurück' : 'vorwärts'}...`, 'info');
-            // This would typically update calendar view
-            console.log(`Calendar navigation: ${direction}`);
-            // TODO: Implement actual calendar navigation logic
+            if (direction === 'prev') {
+                if (currentCalendarView === 'month') {
+                    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+                } else if (currentCalendarView === 'week') {
+                    currentCalendarDate.setDate(currentCalendarDate.getDate() - 7);
+                } else if (currentCalendarView === 'day') {
+                    currentCalendarDate.setDate(currentCalendarDate.getDate() - 1);
+                }
+            } else if (direction === 'next') {
+                if (currentCalendarView === 'month') {
+                    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+                } else if (currentCalendarView === 'week') {
+                    currentCalendarDate.setDate(currentCalendarDate.getDate() + 7);
+                } else if (currentCalendarView === 'day') {
+                    currentCalendarDate.setDate(currentCalendarDate.getDate() + 1);
+                }
+            }
+            updateCalendarDisplay();
+            loadCalendarEvents();
         }
 
         function goToToday() {
-            showToast('Info', 'Springe zu heute...', 'info');
-            // Navigate calendar to current date
-            console.log('Navigating to today');
-            // TODO: Implement actual "go to today" logic
+            currentCalendarDate = new Date();
+            updateCalendarDisplay();
+            loadCalendarEvents();
         }
 
         function switchView(view) {
-            showToast('Info', `Wechsle zu ${view}-Ansicht...`, 'info');
-            // Switch calendar view (month, week, day)
-            console.log(`Switching calendar view to: ${view}`);
-            // TODO: Implement actual view switching logic
+            if (['month', 'week', 'day'].includes(view)) {
+                currentCalendarView = view;
+                updateCalendarDisplay();
+                loadCalendarEvents();
+
+                // Update active button state
+                document.querySelectorAll('.view-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
+            }
+        }
+
+        function updateCalendarDisplay() {
+            const titleElement = document.querySelector('.calendar-title');
+            if (titleElement) {
+                const options = {
+                    year: 'numeric',
+                    month: 'long'
+                };
+                if (currentCalendarView === 'week') {
+                    const weekStart = new Date(currentCalendarDate);
+                    weekStart.setDate(currentCalendarDate.getDate() - currentCalendarDate.getDay());
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekStart.getDate() + 6);
+                    titleElement.textContent = `${weekStart.toLocaleDateString('de-DE')} - ${weekEnd.toLocaleDateString('de-DE')}`;
+                } else if (currentCalendarView === 'day') {
+                    titleElement.textContent = currentCalendarDate.toLocaleDateString('de-DE', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                } else {
+                    titleElement.textContent = currentCalendarDate.toLocaleDateString('de-DE', options);
+                }
+            }
+        }
+
+        async function loadCalendarEvents() {
+            try {
+                const startDate = getViewStartDate();
+                const endDate = getViewEndDate();
+
+                const response = await fetch(`/api/v1/events?start=${startDate}&end=${endDate}`, {
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                    }
+                });
+
+                if (response.ok) {
+                    const events = await response.json();
+                    renderCalendarEvents(events);
+                } else {
+                    console.error('Failed to load calendar events:', response.status);
+                }
+            } catch (error) {
+                console.error('Error loading calendar events:', error);
+            }
+        }
+
+        function getViewStartDate() {
+            const date = new Date(currentCalendarDate);
+            if (currentCalendarView === 'month') {
+                date.setDate(1);
+            } else if (currentCalendarView === 'week') {
+                date.setDate(date.getDate() - date.getDay());
+            }
+            return date.toISOString().split('T')[0];
+        }
+
+        function getViewEndDate() {
+            const date = new Date(currentCalendarDate);
+            if (currentCalendarView === 'month') {
+                date.setMonth(date.getMonth() + 1);
+                date.setDate(0);
+            } else if (currentCalendarView === 'week') {
+                date.setDate(date.getDate() - date.getDay() + 6);
+            }
+            return date.toISOString().split('T')[0];
+        }
+
+        function renderCalendarEvents(events) {
+            const calendarContainer = document.querySelector('.calendar-events');
+            if (!calendarContainer) return;
+
+            calendarContainer.innerHTML = '';
+
+            events.forEach(event => {
+                const eventElement = document.createElement('div');
+                eventElement.className = 'calendar-event';
+                eventElement.innerHTML = `
+                    <div class="event-time">${new Date(event.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div class="event-title">${event.summary}</div>
+                `;
+                eventElement.onclick = () => viewEventDetails(event.id);
+                calendarContainer.appendChild(eventElement);
+            });
         }
 
         function viewAllDayEvents() {
-            showToast('Info', 'Zeige Ganztags-Events...', 'info');
-            // Show all-day events
-            console.log('Showing all-day events');
-            // TODO: Implement all-day events view
+            const startDate = getViewStartDate();
+            const endDate = getViewEndDate();
+
+            fetch(`/api/v1/events?start=${startDate}&end=${endDate}&all_day=true`, {
+                headers: {
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                }
+            })
+            .then(response => response.json())
+            .then(events => {
+                const allDayEvents = events.filter(event => {
+                    const start = new Date(event.start_time);
+                    const end = new Date(event.end_time);
+                    return (end - start) >= 24 * 60 * 60 * 1000; // 24 hours or more
+                });
+
+                showModal('all-day-events', 'Ganztages-Events', `
+                    <div class="all-day-events-list">
+                        ${allDayEvents.map(event => `
+                            <div class="all-day-event" onclick="viewEventDetails('${event.id}')">
+                                <div class="event-title">${event.summary}</div>
+                                <div class="event-date">${new Date(event.start_time).toLocaleDateString('de-DE')}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `, '<button class="btn btn-secondary" onclick="closeModal()">Schließen</button>');
+            })
+            .catch(error => {
+                console.error('Error loading all-day events:', error);
+            });
         }
 
         // Analytics Functions
