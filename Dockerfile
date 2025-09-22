@@ -14,6 +14,9 @@ WORKDIR /app
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
+
+# Upgrade pip and then install packages
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
