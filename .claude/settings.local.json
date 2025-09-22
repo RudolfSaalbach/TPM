@@ -25,7 +25,8 @@
       "Bash(grep:*)",
       "Bash(xargs rm:*)",
       "WebSearch",
-      "Bash(del test_calendar_config.py)"
+      "Bash(del test_calendar_config.py)",
+      "Read(//c/Protected_Out/**)"
     ],
     "deny": [],
     "ask": []
