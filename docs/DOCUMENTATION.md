@@ -1,6 +1,6 @@
-# Chronos Engine v2.1 - Documentation Index
+# Chronos Engine v2.2 - Documentation Index
 
-This document provides a complete overview of all available documentation for Chronos Engine v2.1.
+This document provides a complete overview of all available documentation for Chronos Engine v2.2.
 
 ## 📚 Documentation Structure
 
@@ -14,13 +14,12 @@ This document provides a complete overview of all available documentation for Ch
 - **[docs/CalDAV_API_Reference.md](docs/CalDAV_API_Reference.md)** - Full API reference for CalDAV endpoints
 
 ### Configuration
-- **[config/chronos.yaml](config/chronos.yaml)** - Main configuration file
-- **[config/examples/](config/examples/)** - Configuration examples for different scenarios:
-  - `caldav_basic.yaml` - Basic local CalDAV setup
-  - `caldav_production.yaml` - Production deployment with authentication
-  - `caldav_multi_server.yaml` - Multiple CalDAV servers
-  - `hybrid_caldav_google.yaml` - CalDAV + Google Calendar hybrid
-  - `caldav_digest_auth.yaml` - Digest authentication example
+- **[config/chronos.yaml](config/chronos.yaml)** - Unified configuration file (UTF-8 encoded)
+- **[demo/README.md](demo/README.md)** - Demo scripts documentation
+- **[demo/create_test_events.py](demo/create_test_events.py)** - Calendar test event generation
+
+### Development & Testing
+- **[demo/](demo/)** - Demo scripts and examples for testing and development
 
 ### Requirements & Specifications
 - **[RadicaleSupport.md](RadicaleSupport.md)** - Original CalDAV implementation requirements
@@ -110,14 +109,23 @@ tests/
 
 ## 🌟 Features by Version
 
-### v2.1 (Current)
-- ✅ **CalDAV/Radicale Integration** - Primary backend
+### v2.2 (Current)
+- ✅ **Unified Configuration** - Single `config/chronos.yaml` file with UTF-8 support
+- ✅ **Enhanced Calendar Detection** - Improved CalDAV recognition and error handling
+- ✅ **Demo Framework** - Complete test event generation scripts
+- ✅ **Production Data Integration** - Real data throughout application
+- ✅ **CalDAV/Radicale Integration** - Primary backend with full feature support
 - ✅ **Unified Backend Architecture** - SourceAdapter interface
 - ✅ **Event Data Portability** - JSON export/import
 - ✅ **Backend-Agnostic Processing** - Unified calendar repair
 - ✅ **Comprehensive API** - CalDAV management endpoints
 - ✅ **Multi-Calendar Support** - Multiple CalDAV collections
 - ✅ **ETag Conflict Resolution** - Safe concurrent updates
+
+### v2.1
+- CalDAV/Radicale integration foundation
+- Backend switching capabilities
+- Advanced event processing
 
 ### Legacy (Pre-v2.1)
 - Google Calendar as primary backend
@@ -178,8 +186,8 @@ tests/
 
 ---
 
-**Documentation Version**: v2.1
-**Last Updated**: 2025-01-20
+**Documentation Version**: v2.2
+**Last Updated**: 2025-09-22
 **Maintainer**: Chronos Engine Team
 
 For questions or documentation issues, please refer to the project repository or submit an issue.

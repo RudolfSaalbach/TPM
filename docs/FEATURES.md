@@ -1,8 +1,16 @@
-# Chronos Engine v2.1 - Feature Overview
+# Chronos Engine v2.2 - Feature Overview
 
 ## Core Architecture
 
-Chronos Engine v2.1 is built around a **CalDAV-first architecture** with comprehensive calendar management capabilities, unified backend abstraction, and advanced event processing.
+Chronos Engine v2.2 is built around a **CalDAV-first architecture** with comprehensive calendar management capabilities, unified backend abstraction, and advanced event processing.
+
+## 🆕 v2.2 Enhancements
+- **Unified Configuration Management**: Single `config/chronos.yaml` file eliminates configuration confusion
+- **UTF-8 Encoding Support**: Proper handling of special characters in configuration files
+- **Enhanced Calendar Detection**: Improved CalDAV calendar recognition and error handling
+- **Demo & Testing Framework**: Complete test event generation scripts for all calendar types
+- **Production Data Integration**: Elimination of all mock/fake data throughout the application
+- **Improved Error Handling**: Better diagnostics for configuration and connection issues
 
 ### 🎯 Key Features
 

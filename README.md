@@ -1,7 +1,13 @@
-# Chronos Engine v2.1.0
+# Chronos Engine v2.2
 
 Chronos Engine is an async FastAPI service that keeps calendars, templates and command workflows in sync with a SQLite database.
 The project ships with a scheduler that can pull data from **CalDAV/Radicale servers** (primary) or Google Calendar (fallback), normalize it into the local store, run it through plugins (including the command handler), and expose the result through a modern API and dashboard.
+
+## ⚡ Latest v2.2 Features
+- **Unified Configuration**: Single `config/chronos.yaml` file (UTF-8 encoded) eliminates configuration confusion
+- **Enhanced Calendar Detection**: Improved CalDAV calendar recognition and error handling
+- **Demo Scripts**: Complete test event generation for all configured calendars (`demo/create_test_events.py`)
+- **Production Ready**: Real data integration eliminates all mock/fake data throughout the application
 
 ---
 
@@ -55,17 +61,19 @@ This builds the application image, mounts the project files and exposes the API 
 ---
 
 ## 🔐 Configuration & Secrets
-Configuration lives in `config/chronos.yaml`. Important sections:
-- `calendar_source.type` – choose between `"caldav"` (default) or `"google"` for the primary backend.
-- `caldav.calendars` – list of CalDAV calendar collections with URLs, authentication and sync settings.
-- `caldav.auth` – authentication mode: `"none"`, `"basic"`, or `"digest"` with credential references.
-- `api.api_key` – bearer token required for most endpoints (default: `development-key-change-in-production`).
-- `google.credentials_file` / `token_file` – Google OAuth/service-account credentials (when using Google backend).
-- `plugins` – enable/disable plugins and set the custom directory (defaults to `plugins/custom`).
+All configuration is consolidated in the single `config/chronos.yaml` file (UTF-8 encoded). Important sections:
+- **CalDAV Configuration** (`caldav.calendars`): List of Radicale/CalDAV calendar collections with URLs, authentication and sync settings
+- **Authentication** (`caldav.auth`): Basic authentication with `password_ref: "env:RADICALE_PASSWORD"` for secure credential management
+- **API Security** (`api.api_key`): Bearer token required for most endpoints (default: `super-secret-change-me`)
+- **Backend Selection**: CalDAV is automatically selected when `caldav.calendars` are configured
+- **Features Configuration**: Sub-tasks, event links, availability checking, action workflows, and more
 
-See `config/examples/` for CalDAV setup examples including production, multi-server and hybrid configurations.
+**Environment Variables:**
+- `RADICALE_PASSWORD` – CalDAV server password (referenced in config)
+- `CHRONOS_API_KEY` – Override API key for production
+- `LOG_LEVEL` – Control logging verbosity (INFO, DEBUG, WARNING, ERROR)
 
-Override values via environment variables when running in production (e.g. `export CHRONOS_API_KEY="super-secret"`).
+**No More Dual Configs**: Previous `config.yaml` has been merged into `chronos.yaml` to eliminate configuration confusion.
 
 ---
 
@@ -200,4 +208,14 @@ For CalDAV setup guidance, see `docs/CalDAV_Integration_Guide.md` and configurat
 
 ---
 
-**Chronos Engine v2.1** – Production-ready CalDAV-first calendar orchestration with unified backend architecture.
+## 🎯 Demo & Testing
+**Demo Scripts** are available in the `demo/` directory:
+- **`demo/create_test_events.py`** – Creates test events in all configured Radicale calendars
+  - Automation calendar: 🤖 System Check events
+  - Dates calendar: 📅 Important appointments
+  - Special calendar: ⭐ Special events
+- **`demo/README.md`** – Complete demo documentation
+
+---
+
+**Chronos Engine v2.2** – Production-ready CalDAV-first calendar orchestration with unified configuration and enhanced reliability.
