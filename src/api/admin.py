@@ -40,7 +40,6 @@ class CalendarRepairRequest(BaseModel):
 
 
 @router.get("/system/info", response_model=SystemInfoResponse)
-@handle_api_errors
 async def get_system_info(
     authenticated: bool = Depends(verify_api_key)
 ):
@@ -93,7 +92,6 @@ async def get_system_info(
 
 
 @router.get("/statistics", response_model=AdminStatisticsResponse)
-@handle_api_errors
 async def get_admin_statistics(
     authenticated: bool = Depends(verify_api_key)
 ):
@@ -142,7 +140,6 @@ async def get_admin_statistics(
 
 # Workflow management
 @router.post("/workflows", response_model=WorkflowResponse)
-@handle_api_errors
 async def create_workflow(
     workflow_data: WorkflowCreate,
     authenticated: bool = Depends(verify_api_key)
@@ -189,7 +186,6 @@ async def create_workflow(
 
 
 @router.get("/workflows", response_model=List[WorkflowResponse])
-@handle_api_errors
 async def list_workflows(
     authenticated: bool = Depends(verify_api_key),
     active_only: bool = False
@@ -230,7 +226,6 @@ async def list_workflows(
 
 
 @router.delete("/workflows/{workflow_id}", response_model=APISuccessResponse)
-@handle_api_errors
 async def delete_workflow(
     workflow_id: str,
     authenticated: bool = Depends(verify_api_key)
@@ -267,7 +262,6 @@ async def delete_workflow(
 
 # Calendar repair functionality
 @router.post("/calendar/repair", response_model=CalendarRepairResponse)
-@handle_api_errors
 async def repair_calendar_events(
     repair_request: CalendarRepairRequest,
     authenticated: bool = Depends(verify_api_key)
@@ -300,7 +294,6 @@ async def repair_calendar_events(
 
 
 @router.get("/calendar/repair/rules", response_model=RepairRulesResponse)
-@handle_api_errors
 async def get_repair_rules(
     authenticated: bool = Depends(verify_api_key)
 ):
@@ -342,7 +335,6 @@ async def get_repair_rules(
 
 
 @router.get("/calendar/repair/metrics", response_model=RepairMetricsResponse)
-@handle_api_errors
 async def get_repair_metrics(
     authenticated: bool = Depends(verify_api_key),
     days: int = 30
@@ -373,7 +365,6 @@ async def get_repair_metrics(
 
 
 @router.post("/regenerate-api-key", response_model=Dict[str, Any])
-@handle_api_errors
 async def regenerate_api_key(
     authenticated: bool = Depends(verify_api_key)
 ):
@@ -426,7 +417,6 @@ async def regenerate_api_key(
 
 
 @router.get("/current-api-key-info", response_model=Dict[str, Any])
-@handle_api_errors
 async def get_current_api_key_info(
     authenticated: bool = Depends(verify_api_key)
 ):

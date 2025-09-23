@@ -139,16 +139,461 @@
 </style>
 
 <script>
-function toggleWhitelist(id) {
-    if (confirm('Möchten Sie den Status dieser Whitelist ändern?')) {
-        // Hier würde die tatsächliche Toggle-Logik stehen
-        showToast('Whitelist', 'Status erfolgreich geändert', 'success');
-        setTimeout(() => location.reload(), 1000);
+const API_BASE = '/api/v1';
+
+// Global state
+let whitelists = [];
+
+// Load whitelists on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadWhitelists();
+});
+
+async function loadWhitelists() {
+    try {
+        const response = await fetch(`${API_BASE}/admin/whitelists/`);
+        const data = await response.json();
+
+        if (data.success) {
+            whitelists = data.whitelists;
+            renderWhitelists();
+        } else {
+            showError('Failed to load whitelists');
+        }
+    } catch (error) {
+        console.error('Error loading whitelists:', error);
+        showError('Failed to load whitelists');
     }
 }
 
+function renderWhitelists() {
+    const container = document.querySelector('.whitelists-list');
+    container.innerHTML = '';
+
+    if (whitelists.length === 0) {
+        container.innerHTML = `
+            <div class="placeholder">
+                <div class="placeholder-icon">🛡️</div>
+                <div class="placeholder-title">Keine Whitelists gefunden</div>
+                <div class="placeholder-text">Erstellen Sie Ihre erste Whitelist für externe Integrationen.</div>
+                <button onclick="createWhitelist()" class="btn btn-primary">Whitelist erstellen</button>
+            </div>
+        `;
+        return;
+    }
+
+    whitelists.forEach(whitelist => {
+        const card = createWhitelistCard(whitelist);
+        container.appendChild(card);
+    });
+}
+
+function createWhitelistCard(whitelist) {
+    const card = document.createElement('div');
+    card.className = 'card whitelist-card';
+
+    const statusClass = whitelist.enabled ? 'active' : 'inactive';
+    const statusText = whitelist.enabled ? 'Aktiv' : 'Inaktiv';
+    const toggleText = whitelist.enabled ? 'Deaktivieren' : 'Aktivieren';
+
+    const typeDisplayNames = {
+        'ip': 'IP-Adressen',
+        'domain': 'Domains',
+        'api_key': 'API-Schlüssel',
+        'action': 'Aktionen'
+    };
+
+    const lastUsed = whitelist.last_used
+        ? new Date(whitelist.last_used).toLocaleString('de-DE')
+        : 'Nie';
+
+    card.innerHTML = `
+        <div class="whitelist-header">
+            <h3 class="whitelist-title">${escapeHtml(whitelist.name)}</h3>
+            <div class="whitelist-status">
+                <span class="status-indicator ${statusClass}"></span>
+                <span>${statusText}</span>
+            </div>
+        </div>
+        <p class="whitelist-description">${escapeHtml(whitelist.description || 'Keine Beschreibung verfügbar')}</p>
+        <div class="whitelist-meta">
+            <span class="meta-item">
+                <span class="meta-label">Typ:</span>
+                <span class="meta-value">${typeDisplayNames[whitelist.type] || whitelist.type}</span>
+            </span>
+            <span class="meta-item">
+                <span class="meta-label">Einträge:</span>
+                <span class="meta-value">${whitelist.entries.length}</span>
+            </span>
+            <span class="meta-item">
+                <span class="meta-label">Verwendet:</span>
+                <span class="meta-value">${whitelist.usage_count} mal</span>
+            </span>
+            <span class="meta-item">
+                <span class="meta-label">Zuletzt:</span>
+                <span class="meta-value">${lastUsed}</span>
+            </span>
+            <span class="meta-item">
+                <span class="meta-label">Erstellt:</span>
+                <span class="meta-value">${new Date(whitelist.created_at).toLocaleDateString('de-DE')}</span>
+            </span>
+        </div>
+        <div class="whitelist-actions">
+            <button onclick="editWhitelist(${whitelist.id})" class="btn btn-secondary btn-sm">Bearbeiten</button>
+            <button onclick="viewLogs(${whitelist.id})" class="btn btn-ghost btn-sm">Logs</button>
+            <button onclick="toggleWhitelist(${whitelist.id})" class="btn btn-ghost btn-sm">
+                ${toggleText}
+            </button>
+            <button onclick="deleteWhitelist(${whitelist.id})" class="btn btn-danger btn-sm">Löschen</button>
+        </div>
+    `;
+
+    return card;
+}
+
+async function toggleWhitelist(id) {
+    const whitelist = whitelists.find(w => w.id === id);
+    if (!whitelist) return;
+
+    const action = whitelist.enabled ? 'deaktivieren' : 'aktivieren';
+    if (!confirm(`Möchten Sie die Whitelist "${whitelist.name}" wirklich ${action}?`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/whitelists/${id}/toggle`, {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('Whitelist', result.message, 'success');
+            await loadWhitelists();
+        } else {
+            showError('Failed to toggle whitelist');
+        }
+    } catch (error) {
+        console.error('Error toggling whitelist:', error);
+        showError('Failed to toggle whitelist');
+    }
+}
+
+async function deleteWhitelist(id) {
+    const whitelist = whitelists.find(w => w.id === id);
+    if (!whitelist) return;
+
+    if (!confirm(`Möchten Sie die Whitelist "${whitelist.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/whitelists/${id}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('Whitelist', result.message, 'success');
+            await loadWhitelists();
+        } else {
+            showError('Failed to delete whitelist');
+        }
+    } catch (error) {
+        console.error('Error deleting whitelist:', error);
+        showError('Failed to delete whitelist');
+    }
+}
+
+function editWhitelist(id) {
+    window.location.href = `/admin/whitelists/${id}/edit`;
+}
+
+function createWhitelist() {
+    window.location.href = '/admin/whitelists/new';
+}
+
+async function viewLogs(id) {
+    try {
+        const response = await fetch(`${API_BASE}/admin/whitelists/${id}/logs?limit=50`);
+        const logs = await response.json();
+
+        if (response.ok) {
+            showLogsModal(id, logs);
+        } else {
+            showError('Failed to load logs');
+        }
+    } catch (error) {
+        console.error('Error loading logs:', error);
+        showError('Failed to load logs');
+    }
+}
+
+function showLogsModal(whitelistId, logs) {
+    const whitelist = whitelists.find(w => w.id === whitelistId);
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-container modal-lg">
+            <div class="modal-header">
+                <h2 class="modal-title">Access Logs: ${escapeHtml(whitelist?.name || 'Unknown')}</h2>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="logs-container">
+                    ${logs.length === 0 ?
+                        '<p>Keine Access-Logs gefunden.</p>' :
+                        `<div class="logs-table">
+                            <div class="logs-header">
+                                <div>Zeit</div>
+                                <div>Wert</div>
+                                <div>Ergebnis</div>
+                                <div>IP</div>
+                            </div>
+                            ${logs.map(log => `
+                                <div class="log-row ${log.result}">
+                                    <div class="log-time">${new Date(log.accessed_at).toLocaleString('de-DE')}</div>
+                                    <div class="log-value" title="${escapeHtml(log.requested_value)}">${escapeHtml(truncate(log.requested_value, 30))}</div>
+                                    <div class="log-result">
+                                        <span class="result-badge ${log.result}">
+                                            ${log.result === 'allowed' ? '✅ Erlaubt' : '❌ Verweigert'}
+                                        </span>
+                                    </div>
+                                    <div class="log-ip">${escapeHtml(log.source_ip || 'Unknown')}</div>
+                                </div>
+                            `).join('')}
+                        </div>`
+                    }
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+}
+
+function truncate(str, length) {
+    return str.length > length ? str.substring(0, length) + '...' : str;
+}
+
 function showToast(title, message, type) {
-    console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-header">
+            <strong>${title}</strong>
+            <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+        <div class="toast-body">${message}</div>
+    `;
+
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+function showError(message) {
+    showToast('Error', message, 'error');
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Wire up create button if it exists
+const createBtn = document.querySelector('a[href="/admin/whitelists/new"]');
+if (createBtn) {
+    createBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        createWhitelist();
+    });
 }
 </script>
+
+<style>
+/* Toast styles */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 300px;
+    max-width: 500px;
+}
+
+.toast.success { border-left: 4px solid #10b981; }
+.toast.error { border-left: 4px solid #ef4444; }
+.toast.warning { border-left: 4px solid #f59e0b; }
+
+.toast-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.toast-body {
+    padding: 8px 16px 12px;
+    color: #6b7280;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #9ca3af;
+}
+
+/* Modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-container.modal-lg {
+    width: 1000px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #9ca3af;
+}
+
+/* Logs table styles */
+.logs-table {
+    display: grid;
+    grid-template-columns: 180px 1fr 120px 120px;
+    gap: 1px;
+    background: #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.logs-header {
+    display: contents;
+}
+
+.logs-header > div {
+    background: #f3f4f6;
+    padding: 12px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.log-row {
+    display: contents;
+}
+
+.log-row > div {
+    background: white;
+    padding: 12px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.log-row.denied > div {
+    background: #fef2f2;
+}
+
+.log-row.allowed > div {
+    background: #f0fdf4;
+}
+
+.log-time {
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+.log-value {
+    font-family: monospace;
+    font-size: 0.875rem;
+    word-break: break-all;
+}
+
+.result-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.result-badge.allowed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.result-badge.denied {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.log-ip {
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+</style>
 {% endblock %}

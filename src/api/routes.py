@@ -18,10 +18,9 @@ from sqlalchemy.orm import Session, selectinload
 
 from src.core.scheduler import ChronosScheduler
 from src.core.database import db_service, get_db_session
-from src.core.schema_extensions import EmailTemplateDB
 from src.core.models import (
     ChronosEvent, Priority, EventType, EventStatus,
-    ChronosEventDB, TemplateDB, TemplateUsageDB,
+    ChronosEventDB, TemplateDB, TemplateUsageDB, EmailTemplateDB,
     EventLinkDB, ActionWorkflowDB, ExternalCommandDB,
     Template, TemplateUsage, EventLink, ActionWorkflow, SubTask,
     CommandStatus

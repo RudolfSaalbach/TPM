@@ -318,4 +318,513 @@
         </div>
     </div>
 </div>
+
+<script>
+const API_BASE = '/api/v1';
+
+// Global state
+let templates = [];
+let categories = [];
+let stats = {};
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    await Promise.all([
+        loadTemplates(),
+        loadCategories(),
+        loadStats()
+    ]);
+});
+
+async function loadStats() {
+    try {
+        const response = await fetch(`${API_BASE}/admin/email-templates/stats`);
+        stats = await response.json();
+        updateStatsDisplay();
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch(`${API_BASE}/admin/email-templates/categories`);
+        const data = await response.json();
+
+        if (data.success) {
+            categories = data.categories;
+            renderCategories();
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error);
+    }
+}
+
+async function loadTemplates() {
+    try {
+        const response = await fetch(`${API_BASE}/admin/email-templates/`);
+        const data = await response.json();
+
+        if (data.success) {
+            templates = data.templates;
+            renderTemplates();
+        }
+    } catch (error) {
+        console.error('Error loading templates:', error);
+    }
+}
+
+function updateStatsDisplay() {
+    const statValues = document.querySelectorAll('.metric-value');
+    if (statValues.length >= 4) {
+        statValues[0].textContent = stats.total_categories || 0;
+        statValues[1].textContent = stats.active_templates || 0;
+        statValues[2].textContent = stats.total_sent || 0;
+        statValues[3].textContent = `${((stats.avg_open_rate || 0) * 100).toFixed(1)}%`;
+    }
+}
+
+function renderCategories() {
+    const container = document.querySelector('.template-categories');
+    container.innerHTML = '';
+
+    categories.forEach(category => {
+        const categoryElement = createCategoryElement(category);
+        container.appendChild(categoryElement);
+    });
+}
+
+function createCategoryElement(category) {
+    const element = document.createElement('div');
+    element.className = 'category-item';
+
+    element.innerHTML = `
+        <div class="category-icon">${escapeHtml(category.icon || '📧')}</div>
+        <div class="category-info">
+            <h3>${escapeHtml(category.name)}</h3>
+            <p>${category.template_count} Templates</p>
+        </div>
+        <div class="category-actions">
+            <button class="btn btn-secondary btn-sm" onclick="editCategory(${category.id})">Bearbeiten</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCategory(${category.id})">Löschen</button>
+        </div>
+    `;
+
+    return element;
+}
+
+function renderTemplates() {
+    const container = document.querySelector('.email-templates-list');
+    container.innerHTML = '';
+
+    templates.forEach(template => {
+        const templateElement = createTemplateElement(template);
+        container.appendChild(templateElement);
+    });
+}
+
+function createTemplateElement(template) {
+    const element = document.createElement('div');
+    element.className = `template-item ${template.is_active ? 'active' : ''}`;
+
+    const categoryIcon = template.category_icon || '📧';
+    const categoryName = template.category_name || 'Unbekannt';
+
+    element.innerHTML = `
+        <div class="template-icon">${categoryIcon}</div>
+        <div class="template-info">
+            <h3>${escapeHtml(template.name)}</h3>
+            <p>${escapeHtml(template.description || '')}</p>
+            <div class="template-meta">
+                <span class="template-category">${escapeHtml(categoryName)}</span>
+                <span class="template-usage">${template.usage_count} mal verwendet</span>
+            </div>
+        </div>
+        <div class="template-stats">
+            <div class="stat-item">
+                <span class="stat-label">Öffnungsrate</span>
+                <span class="stat-value">${(template.open_rate * 100).toFixed(0)}%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Klickrate</span>
+                <span class="stat-value">${(template.click_rate * 100).toFixed(0)}%</span>
+            </div>
+        </div>
+        <div class="template-actions">
+            <button class="btn btn-secondary btn-sm" onclick="editTemplate(${template.id})">Bearbeiten</button>
+            <button class="btn btn-primary btn-sm" onclick="previewTemplate(${template.id})">Vorschau</button>
+            <button class="btn ${template.is_active ? 'btn-success' : 'btn-outline'} btn-sm"
+                    onclick="toggleTemplate(${template.id})">
+                ${template.is_active ? 'Aktiviert' : 'Deaktiviert'}
+            </button>
+        </div>
+    `;
+
+    return element;
+}
+
+async function createTemplate() {
+    // For now, show a simple prompt - later this would open a proper editor
+    const name = prompt('Template Name:');
+    if (!name) return;
+
+    const subject = prompt('Email Subject:');
+    if (!subject) return;
+
+    const description = prompt('Description (optional):');
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/email-templates/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name,
+                subject: subject,
+                description: description,
+                html_content: '<p>Template content goes here...</p>',
+                is_active: true
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast('Success', 'Template created successfully', 'success');
+            await loadTemplates();
+            await loadStats();
+        } else {
+            showToast('Error', result.detail || 'Failed to create template', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating template:', error);
+        showToast('Error', 'Failed to create template', 'error');
+    }
+}
+
+async function editTemplate(id) {
+    // For now, redirect to template form
+    window.location.href = `/admin/email-templates/${id}/edit`;
+}
+
+async function previewTemplate(id) {
+    try {
+        const response = await fetch(`${API_BASE}/admin/email-templates/${id}`);
+        const template = await response.json();
+
+        if (response.ok) {
+            showTemplatePreview(template);
+        } else {
+            showToast('Error', 'Failed to load template', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading template:', error);
+        showToast('Error', 'Failed to load template', 'error');
+    }
+}
+
+function showTemplatePreview(template) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-container modal-lg">
+            <div class="modal-header">
+                <h2 class="modal-title">Template Vorschau: ${escapeHtml(template.name)}</h2>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="template-preview">
+                    <h3>Betreff:</h3>
+                    <p><strong>${escapeHtml(template.subject)}</strong></p>
+
+                    <h3>Inhalt:</h3>
+                    <div class="template-content">
+                        ${template.html_content || template.text_content || 'Kein Inhalt verfügbar'}
+                    </div>
+
+                    ${template.variables && template.variables.length > 0 ? `
+                        <h3>Verfügbare Variablen:</h3>
+                        <ul>
+                            ${template.variables.map(v => `<li><code>{{${escapeHtml(v)}}}</code></li>`).join('')}
+                        </ul>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+}
+
+async function toggleTemplate(id) {
+    try {
+        const response = await fetch(`${API_BASE}/admin/email-templates/${id}/toggle`, {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('Template', result.message, 'success');
+            await loadTemplates();
+            await loadStats();
+        } else {
+            showToast('Error', 'Failed to toggle template', 'error');
+        }
+    } catch (error) {
+        console.error('Error toggling template:', error);
+        showToast('Error', 'Failed to toggle template', 'error');
+    }
+}
+
+async function createCategory() {
+    const name = prompt('Category Name:');
+    if (!name) return;
+
+    const description = prompt('Description (optional):');
+    const icon = prompt('Icon (emoji, optional):');
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/email-templates/categories`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name,
+                description: description,
+                icon: icon
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast('Success', 'Category created successfully', 'success');
+            await loadCategories();
+            await loadStats();
+        } else {
+            showToast('Error', result.detail || 'Failed to create category', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating category:', error);
+        showToast('Error', 'Failed to create category', 'error');
+    }
+}
+
+async function editCategory(id) {
+    // Simple edit for now
+    const category = categories.find(c => c.id === id);
+    if (!category) return;
+
+    const name = prompt('Category Name:', category.name);
+    if (!name || name === category.name) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/email-templates/categories/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast('Success', 'Category updated successfully', 'success');
+            await loadCategories();
+        } else {
+            showToast('Error', result.detail || 'Failed to update category', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating category:', error);
+        showToast('Error', 'Failed to update category', 'error');
+    }
+}
+
+async function deleteCategory(id) {
+    const category = categories.find(c => c.id === id);
+    if (!category) return;
+
+    if (!confirm(`Are you sure you want to delete category "${category.name}"?`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/email-templates/categories/${id}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('Success', 'Category deleted successfully', 'success');
+            await loadCategories();
+            await loadStats();
+        } else {
+            showToast('Error', 'Failed to delete category', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting category:', error);
+        showToast('Error', 'Failed to delete category', 'error');
+    }
+}
+
+// Search functionality
+document.querySelector('.search-input').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const templateItems = document.querySelectorAll('.template-item');
+
+    templateItems.forEach(item => {
+        const name = item.querySelector('h3').textContent.toLowerCase();
+        const description = item.querySelector('p').textContent.toLowerCase();
+
+        if (name.includes(searchTerm) || description.includes(searchTerm)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+
+// Wire up buttons
+document.querySelector('.card-actions .btn-primary').addEventListener('click', createTemplate);
+document.querySelector('.card-header .btn-primary').addEventListener('click', createCategory);
+
+function showToast(title, message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-header">
+            <strong>${title}</strong>
+            <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+        <div class="toast-body">${message}</div>
+    `;
+
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+
+<style>
+/* Toast styles */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 300px;
+    max-width: 500px;
+}
+
+.toast.success { border-left: 4px solid #10b981; }
+.toast.error { border-left: 4px solid #ef4444; }
+.toast.warning { border-left: 4px solid #f59e0b; }
+
+.toast-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.toast-body {
+    padding: 8px 16px 12px;
+    color: #6b7280;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #9ca3af;
+}
+
+/* Modal overlay styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-container.modal-lg {
+    width: 800px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #9ca3af;
+}
+
+.template-preview h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: #374151;
+}
+
+.template-content {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    background: #f9fafb;
+    margin-bottom: 20px;
+}
+</style>
+
 {% endblock %}

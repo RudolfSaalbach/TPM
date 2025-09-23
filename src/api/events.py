@@ -4,6 +4,7 @@ Handles events, templates, and event-links endpoints
 """
 
 import uuid
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Union
@@ -29,12 +30,55 @@ from src.api.schemas import (
 from src.api.dependencies import verify_api_key, get_scheduler
 from src.api.error_handling import handle_api_errors
 
+def safe_enum_name(value, fallback="UNKNOWN"):
+    """Safely access enum name whether it's string or enum"""
+    if isinstance(value, str):
+        return value  # Already a string
+    elif hasattr(value, 'name'):
+        return value.name  # Enum object
+    elif hasattr(value, 'value'):
+        return value.value  # Some enums
+    else:
+        return fallback
+
+def safe_get_json_list(obj, field_name, fallback=None):
+    """Type-safe conversion: DB JSON string → Python List"""
+    raw_value = getattr(obj, field_name, None)
+    if not raw_value:
+        return fallback or []
+    try:
+        result = json.loads(raw_value)
+        return result if isinstance(result, list) else fallback or []
+    except (json.JSONDecodeError, TypeError):
+        return fallback or []
+
+def safe_get_bool(obj, field_name, fallback=False):
+    """Type-safe conversion: DB int → Python bool"""
+    raw_value = getattr(obj, field_name, None)
+    if raw_value is None:
+        return fallback
+    return bool(raw_value)
+
+def safe_get_enum(value, enum_class, fallback=None):
+    """Type-safe conversion: String/Enum → Enum"""
+    if isinstance(value, enum_class):
+        return value  # Already correct enum
+    elif isinstance(value, str):
+        # Try by value first (task -> TASK), then by name
+        for enum_member in enum_class:
+            if enum_member.value == value or enum_member.name == value.upper():
+                return enum_member
+        return fallback or list(enum_class)[0]
+    elif hasattr(value, 'value'):
+        return value  # Enum-like object
+    else:
+        return fallback or list(enum_class)[0]
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.post("/events", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
-@handle_api_errors
 async def create_event(
     event_data: EventCreate,
     authenticated: bool = Depends(verify_api_key),
@@ -43,6 +87,8 @@ async def create_event(
     """Create a new event with transactional consistency"""
     transaction_id = str(uuid.uuid4())
 
+    logger.info(f"create_event called with scheduler: {scheduler} (type: {type(scheduler)})")
+
     try:
         # Convert to ChronosEvent for scheduler
         chronos_event = ChronosEvent(
@@ -50,12 +96,14 @@ async def create_event(
             description=event_data.description,
             start_time=event_data.start_time,
             end_time=event_data.end_time,
-            priority=Priority[event_data.priority.value],
-            event_type=EventType[event_data.event_type.value],
-            status=EventStatus[event_data.status.value],
+            all_day=event_data.all_day,
+            priority=safe_get_enum(event_data.priority, Priority, Priority.MEDIUM),
+            event_type=safe_get_enum(event_data.event_type, EventType, EventType.TASK),
+            status=safe_get_enum(event_data.status, EventStatus, EventStatus.SCHEDULED),
             tags=event_data.tags,
             attendees=event_data.attendees,
-            location=event_data.location
+            location=event_data.location,
+            calendar_id=event_data.calendar_id
         )
 
         # Create through scheduler with transaction support
@@ -67,7 +115,8 @@ async def create_event(
             description=created_event.description,
             start_time=created_event.start_time,
             end_time=created_event.end_time,
-            priority=created_event.priority.name,
+            all_day=created_event.all_day,
+            priority=safe_enum_name(created_event.priority, "MEDIUM"),
             event_type=created_event.event_type.value,
             status=created_event.status.value,
             tags=created_event.tags,
@@ -87,7 +136,6 @@ async def create_event(
 
 
 @router.get("/events", response_model=EventsListResponse)
-@handle_api_errors
 async def get_events_advanced(
     authenticated: bool = Depends(verify_api_key),
     anchor: str = Query(default_factory=lambda: datetime.utcnow().strftime('%Y-%m-%d'),
@@ -165,9 +213,9 @@ async def get_events_advanced(
                     description=event.description,
                     start_time=event.start_time,
                     end_time=event.end_time,
-                    priority=event.priority.name if event.priority else "MEDIUM",
-                    event_type=event.event_type.name if event.event_type else "TASK",
-                    status=event.status.name if event.status else "PENDING",
+                    priority=safe_enum_name(event.priority, "MEDIUM"),
+                    event_type=safe_enum_name(event.event_type, "TASK"),
+                    status=safe_enum_name(event.status, "PENDING"),
                     tags=event.tags or [],
                     attendees=event.attendees or [],
                     location=event.location,
@@ -179,17 +227,10 @@ async def get_events_advanced(
             ]
 
             return EventsListResponse(
-                events=events,
+                items=events,
                 total_count=total_count,
                 page=page,
-                page_size=page_size,
-                filters={
-                    "anchor": anchor,
-                    "direction": direction.value,
-                    "days": days,
-                    "calendar": calendar,
-                    "q": q
-                }
+                page_size=page_size
             )
 
     except ValueError as e:
@@ -206,7 +247,6 @@ async def get_events_advanced(
 
 
 @router.put("/events/{event_id}", response_model=EventResponse)
-@handle_api_errors
 async def update_event(
     event_id: str,
     event_data: EventUpdate,
@@ -244,9 +284,9 @@ async def update_event(
                 description=event_db.description,
                 start_time=event_db.start_time,
                 end_time=event_db.end_time,
-                priority=event_db.priority.name if event_db.priority else "MEDIUM",
-                event_type=event_db.event_type.name if event_db.event_type else "TASK",
-                status=event_db.status.name if event_db.status else "PENDING",
+                priority=safe_enum_name(event_db.priority, "MEDIUM"),
+                event_type=safe_enum_name(event_db.event_type, "TASK"),
+                status=safe_enum_name(event_db.status, "PENDING"),
                 tags=event_db.tags or [],
                 attendees=event_db.attendees or [],
                 location=event_db.location,
@@ -267,7 +307,6 @@ async def update_event(
 
 # Templates endpoints
 @router.get("/templates", response_model=TemplatesListResponse)
-@handle_api_errors
 async def get_templates(
     authenticated: bool = Depends(verify_api_key),
     page: int = Query(1, ge=1, description="Page number"),
@@ -279,7 +318,7 @@ async def get_templates(
     try:
         async with db_service.get_session() as session:
             # Build query
-            query = select(TemplateDB).options(selectinload(TemplateDB.usage))
+            query = select(TemplateDB)
 
             # Category filter
             if category:
@@ -303,7 +342,7 @@ async def get_templates(
             # Pagination
             offset = (page - 1) * page_size
             query = query.offset(offset).limit(page_size)
-            query = query.order_by(TemplateDB.ranking.desc(), TemplateDB.name)
+            query = query.order_by(TemplateDB.usage_count.desc(), TemplateDB.title)
 
             # Execute
             result = await session.execute(query)
@@ -314,22 +353,21 @@ async def get_templates(
             for template in templates_db:
                 templates.append(TemplateResponse(
                     id=template.id,
-                    name=template.name,
+                    title=template.title,
                     description=template.description,
-                    category=template.category,
-                    template_data=template.template_data,
-                    default_duration_minutes=template.default_duration_minutes,
-                    default_priority=template.default_priority.name if template.default_priority else "MEDIUM",
-                    default_time=template.default_time,
-                    ranking=template.ranking,
-                    is_active=template.is_active,
-                    usage_count=len(template.usage) if template.usage else 0,
+                    all_day=safe_get_bool(template, 'all_day', False),
+                    default_time=getattr(template, 'default_time', None),
+                    duration_minutes=getattr(template, 'duration_minutes', None),
+                    calendar_id=getattr(template, 'calendar_id', None),
+                    tags=safe_get_json_list(template, 'tags_json', []),
+                    usage_count=template.usage_count or 0,
                     created_at=template.created_at,
-                    updated_at=template.updated_at
+                    updated_at=template.updated_at,
+                    author=getattr(template, 'author', None)
                 ))
 
             return TemplatesListResponse(
-                templates=templates,
+                items=templates,
                 total_count=total_count,
                 page=page,
                 page_size=page_size
@@ -344,7 +382,6 @@ async def get_templates(
 
 
 @router.post("/templates", response_model=TemplateResponse)
-@handle_api_errors
 async def create_template(
     template_data: TemplateCreate,
     authenticated: bool = Depends(verify_api_key)
@@ -356,14 +393,13 @@ async def create_template(
         async with db_service.get_session() as session:
             template_db = TemplateDB(
                 id=template_id,
-                name=template_data.name,
+                name=template_data.title,
                 description=template_data.description,
                 category=template_data.category,
                 template_data=template_data.template_data,
                 default_duration_minutes=template_data.default_duration_minutes,
                 default_priority=Priority[template_data.default_priority] if template_data.default_priority else Priority.MEDIUM,
                 default_time=template_data.default_time,
-                ranking=template_data.ranking,
                 is_active=template_data.is_active,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow()
@@ -375,15 +411,15 @@ async def create_template(
 
             return TemplateResponse(
                 id=template_db.id,
-                name=template_db.name,
+                name=template_db.title,
                 description=template_db.description,
                 category=template_db.category,
                 template_data=template_db.template_data,
                 default_duration_minutes=template_db.default_duration_minutes,
-                default_priority=template_db.default_priority.name,
-                default_time=template_db.default_time,
-                ranking=template_db.ranking,
-                is_active=template_db.is_active,
+                default_priority=safe_enum_name(getattr(template_db, 'default_priority', None), "MEDIUM"),
+                default_time=getattr(template_db, 'default_time', None),
+                ranking=getattr(template_db, 'ranking', 0),
+                is_active=getattr(template_db, 'is_active', True),
                 usage_count=0,
                 created_at=template_db.created_at,
                 updated_at=template_db.updated_at
@@ -398,7 +434,6 @@ async def create_template(
 
 
 @router.put("/templates/{template_id}", response_model=TemplateResponse)
-@handle_api_errors
 async def update_template(
     template_id: str,
     template_data: TemplateUpdate,
@@ -433,15 +468,15 @@ async def update_template(
 
             return TemplateResponse(
                 id=template_db.id,
-                name=template_db.name,
+                name=template_db.title,
                 description=template_db.description,
                 category=template_db.category,
                 template_data=template_db.template_data,
                 default_duration_minutes=template_db.default_duration_minutes,
-                default_priority=template_db.default_priority.name,
-                default_time=template_db.default_time,
-                ranking=template_db.ranking,
-                is_active=template_db.is_active,
+                default_priority=safe_enum_name(getattr(template_db, 'default_priority', None), "MEDIUM"),
+                default_time=getattr(template_db, 'default_time', None),
+                ranking=getattr(template_db, 'ranking', 0),
+                is_active=getattr(template_db, 'is_active', True),
                 usage_count=0,  # TODO: Calculate from usage table
                 created_at=template_db.created_at,
                 updated_at=template_db.updated_at
@@ -458,7 +493,6 @@ async def update_template(
 
 
 @router.delete("/templates/{template_id}")
-@handle_api_errors
 async def delete_template(
     template_id: str,
     authenticated: bool = Depends(verify_api_key)
@@ -493,7 +527,6 @@ async def delete_template(
 
 
 @router.post("/templates/{template_id}/use")
-@handle_api_errors
 async def use_template(
     template_id: str,
     authenticated: bool = Depends(verify_api_key)
@@ -544,7 +577,6 @@ async def use_template(
 
 # Event Links endpoints
 @router.post("/event-links", response_model=EventLinkResponse)
-@handle_api_errors
 async def create_event_link(
     link_data: EventLinkCreate,
     authenticated: bool = Depends(verify_api_key)
@@ -585,7 +617,6 @@ async def create_event_link(
 
 
 @router.get("/events/{event_id}", response_model=Dict[str, Any])
-@handle_api_errors
 async def get_event_details(
     event_id: str,
     authenticated: bool = Depends(verify_api_key),
@@ -658,7 +689,6 @@ async def get_event_details(
 
 
 @router.put("/events/{event_id}", response_model=Dict[str, Any])
-@handle_api_errors
 async def update_event(
     event_id: str,
     event_data: Dict[str, Any],
@@ -752,7 +782,6 @@ async def update_event(
 
 
 @router.delete("/events/{event_id}", response_model=Dict[str, Any])
-@handle_api_errors
 async def delete_event(
     event_id: str,
     authenticated: bool = Depends(verify_api_key),
@@ -806,7 +835,6 @@ async def delete_event(
 
 
 @router.get("/events/{event_id}/links", response_model=List[EventLinkResponse])
-@handle_api_errors
 async def get_event_links(
     event_id: str,
     authenticated: bool = Depends(verify_api_key)
@@ -846,7 +874,6 @@ async def get_event_links(
 
 
 @router.delete("/event-links/{link_id}")
-@handle_api_errors
 async def delete_event_link(
     link_id: str,
     authenticated: bool = Depends(verify_api_key)

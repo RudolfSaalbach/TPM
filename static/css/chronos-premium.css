@@ -301,35 +301,35 @@ body {
 /* 7. Layout System - Container & Grid */
 .container {
   width: 100%;
-  max-width: 65ch; /* Optimale Zeilenlänge für Lesbarkeit */
+  max-width: none; /* Geändert */
   margin-inline: auto;
   padding-inline: var(--space-4);
 }
 
 @media (min-width: 640px) {
   .container {
-    max-width: 640px;
+    max-width: none; /* Geändert */
     padding-inline: var(--space-5);
   }
 }
 
 @media (min-width: 768px) {
   .container {
-    max-width: 768px;
+    max-width: none; /* Geändert */
     padding-inline: var(--space-6);
   }
 }
 
 @media (min-width: 1024px) {
   .container {
-    max-width: 1024px;
+    max-width: none; /* Geändert */
     padding-inline: var(--space-8);
   }
 }
 
 @media (min-width: 1280px) {
   .container {
-    max-width: 1280px;
+    max-width: none; /* Geändert */
     padding-inline: var(--space-10);
   }
 }

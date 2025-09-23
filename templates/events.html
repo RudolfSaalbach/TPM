@@ -10,6 +10,10 @@
     <span aria-hidden="true">🔄</span>
     Aktualisieren
 </button>
+<button class="btn btn-secondary" onclick="exportEvents()" aria-label="Events exportieren">
+    <span aria-hidden="true">📥</span>
+    Exportieren
+</button>
 <button class="btn btn-primary" onclick="createNewEvent()" aria-label="Neues Event erstellen">
     <span aria-hidden="true">➕</span>
     Neues Event
@@ -498,6 +502,130 @@
     function editEvent(eventId) {
         // TODO: Implement edit functionality
         showToast('Bearbeiten', 'Event-Bearbeitung wird in Kürze verfügbar sein', 'info');
+    }
+
+    // Modal System
+    function showModal(id, title, content, actions = []) {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('modal-overlay');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Generate action buttons
+        let actionButtons = '';
+        if (actions.length > 0) {
+            actionButtons = actions.map(action =>
+                `<button class="btn ${action.class}" onclick="${action.action}()">${action.text}</button>`
+            ).join('');
+        } else {
+            actionButtons = '<button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>';
+        }
+
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'modal-overlay';
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `
+            <div class="modal-dialog" role="dialog" aria-labelledby="modal-title">
+                <div class="modal-header">
+                    <h3 id="modal-title">${title}</h3>
+                    <button class="modal-close" onclick="closeModal()" aria-label="Modal schließen">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    ${content}
+                </div>
+                <div class="modal-footer">
+                    ${actionButtons}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Show modal with animation
+        setTimeout(() => {
+            overlay.classList.add('show');
+        }, 10);
+
+        // Focus management
+        const firstInput = overlay.querySelector('input, textarea, select, button');
+        if (firstInput) {
+            firstInput.focus();
+        }
+    }
+
+    function closeModal() {
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay) {
+            overlay.classList.remove('show');
+            setTimeout(() => {
+                overlay.remove();
+            }, 200);
+        }
+    }
+
+    async function exportEvents() {
+        try {
+            showToast('Export gestartet', 'Events werden exportiert...', 'info');
+
+            // Fetch events from API
+            const response = await fetch('/api/v1/events', {
+                headers: {
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const eventsToExport = data.items || data;
+
+            if (!eventsToExport || eventsToExport.length === 0) {
+                showToast('Keine Daten', 'Keine Events zum Exportieren gefunden', 'warning');
+                return;
+            }
+
+            // Convert to CSV format
+            const csvHeader = 'Title,Start Time,End Time,Priority,Status,Location,Description,Tags\n';
+            const csvRows = eventsToExport.map(event => {
+                const title = (event.title || '').replace(/"/g, '""');
+                const startTime = event.start_time || '';
+                const endTime = event.end_time || '';
+                const priority = event.priority || '';
+                const status = event.status || '';
+                const location = (event.location || '').replace(/"/g, '""');
+                const description = (event.description || '').replace(/"/g, '""');
+                const tags = Array.isArray(event.tags) ? event.tags.join(';') : '';
+
+                return `"${title}","${startTime}","${endTime}","${priority}","${status}","${location}","${description}","${tags}"`;
+            }).join('\n');
+
+            const csvContent = csvHeader + csvRows;
+
+            // Create and download CSV file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `chronos-events-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast('Export erfolgreich', `${eventsToExport.length} Events als CSV exportiert`, 'success');
+
+        } catch (error) {
+            console.error('Export error:', error);
+            showToast('Export Fehler', 'Events konnten nicht exportiert werden: ' + error.message, 'error');
+        }
     }
 </script>
 

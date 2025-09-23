@@ -773,6 +773,138 @@ class ActionWorkflowDB(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class WorkflowDB(Base):
+    """Database model for general workflows (admin interface)"""
+    __tablename__ = 'workflows'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False, default='active', index=True)  # active, paused, error
+    triggers = Column(JSON, nullable=False)  # List of trigger conditions
+    actions = Column(JSON, nullable=False)   # List of actions to execute
+    execution_count = Column(Integer, default=0)
+    last_execution = Column(DateTime, nullable=True)
+    success_rate = Column(Float, default=0.0)
+    avg_runtime = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship to execution logs
+    executions = relationship("WorkflowExecutionDB", back_populates="workflow")
+
+
+class WorkflowExecutionDB(Base):
+    """Database model for workflow execution logs"""
+    __tablename__ = 'workflow_executions'
+
+    id = Column(Integer, primary_key=True, index=True)
+    workflow_id = Column(Integer, ForeignKey('workflows.id'), nullable=False, index=True)
+    status = Column(String(20), nullable=False, index=True)  # success, error, timeout
+    runtime_seconds = Column(Float, nullable=True)
+    error_message = Column(Text, nullable=True)
+    result_data = Column(JSON, nullable=True)
+    executed_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Relationship back to workflow
+    workflow = relationship("WorkflowDB", back_populates="executions")
+
+
+class EmailTemplateCategoryDB(Base):
+    """Database model for email template categories"""
+    __tablename__ = 'email_template_categories'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True, index=True)
+    description = Column(Text, nullable=True)
+    icon = Column(String(10), nullable=True)  # Emoji icon
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship to templates
+    templates = relationship("EmailTemplateDB", back_populates="category")
+
+
+class EmailTemplateDB(Base):
+    """Database model for email templates"""
+    __tablename__ = 'email_templates'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    subject = Column(String(300), nullable=False)
+    html_content = Column(Text, nullable=True)
+    text_content = Column(Text, nullable=True)
+    category_id = Column(Integer, ForeignKey('email_template_categories.id'), nullable=True, index=True)
+    is_active = Column(Boolean, default=True, index=True)
+    usage_count = Column(Integer, default=0)
+    open_rate = Column(Float, default=0.0)  # Percentage 0.0-1.0
+    click_rate = Column(Float, default=0.0)  # Percentage 0.0-1.0
+    variables = Column(JSON, nullable=True)  # Available template variables
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    category = relationship("EmailTemplateCategoryDB", back_populates="templates")
+    sent_emails = relationship("SentEmailDB", back_populates="template")
+
+
+class SentEmailDB(Base):
+    """Database model for tracking sent emails"""
+    __tablename__ = 'sent_emails'
+
+    id = Column(Integer, primary_key=True, index=True)
+    template_id = Column(Integer, ForeignKey('email_templates.id'), nullable=True, index=True)
+    recipient_email = Column(String(300), nullable=False, index=True)
+    subject = Column(String(300), nullable=False)
+    html_content = Column(Text, nullable=True)
+    text_content = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False, default='sent', index=True)  # sent, delivered, opened, clicked, failed
+    sent_at = Column(DateTime, default=datetime.utcnow, index=True)
+    opened_at = Column(DateTime, nullable=True)
+    clicked_at = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=True)
+
+    # Relationship back to template
+    template = relationship("EmailTemplateDB", back_populates="sent_emails")
+
+
+class WhitelistDB(Base):
+    """Database model for system whitelists"""
+    __tablename__ = 'whitelists'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False, unique=True, index=True)
+    description = Column(Text, nullable=True)
+    type = Column(String(50), nullable=False, index=True)  # ip, domain, api_key, action
+    entries = Column(JSON, nullable=False)  # List of allowed entries
+    enabled = Column(Boolean, default=True, index=True)
+    usage_count = Column(Integer, default=0)  # How often it's been checked
+    last_used = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    access_logs = relationship("WhitelistAccessLogDB", back_populates="whitelist")
+
+
+class WhitelistAccessLogDB(Base):
+    """Database model for whitelist access logging"""
+    __tablename__ = 'whitelist_access_logs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    whitelist_id = Column(Integer, ForeignKey('whitelists.id'), nullable=False, index=True)
+    requested_value = Column(String(500), nullable=False, index=True)  # What was being checked
+    result = Column(String(20), nullable=False, index=True)  # allowed, denied
+    source_ip = Column(String(50), nullable=True, index=True)
+    user_agent = Column(Text, nullable=True)
+    additional_data = Column(JSON, nullable=True)  # Extra context data
+    accessed_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Relationship back to whitelist
+    whitelist = relationship("WhitelistDB", back_populates="access_logs")
+
+
 # Domain Models for Command Layer
 
 @dataclass
@@ -854,6 +986,261 @@ class URLPayload:
 
 
 # v2.2 Domain Models
+
+@dataclass
+class Workflow:
+    """General workflow domain model for admin interface"""
+    id: Optional[int] = None
+    name: str = ""
+    description: Optional[str] = None
+    status: str = "active"  # active, paused, error
+    triggers: List[Dict[str, Any]] = field(default_factory=list)
+    actions: List[Dict[str, Any]] = field(default_factory=list)
+    execution_count: int = 0
+    last_execution: Optional[datetime] = None
+    success_rate: float = 0.0
+    avg_runtime: float = 0.0
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    def to_db_model(self) -> WorkflowDB:
+        """Convert to SQLAlchemy model"""
+        return WorkflowDB(
+            id=self.id,
+            name=self.name,
+            description=self.description,
+            status=self.status,
+            triggers=self.triggers,
+            actions=self.actions,
+            execution_count=self.execution_count,
+            last_execution=self.last_execution,
+            success_rate=self.success_rate,
+            avg_runtime=self.avg_runtime,
+            created_at=self.created_at,
+            updated_at=self.updated_at
+        )
+
+
+@dataclass
+class WorkflowExecution:
+    """Workflow execution log domain model"""
+    id: Optional[int] = None
+    workflow_id: int = 0
+    status: str = "success"  # success, error, timeout
+    runtime_seconds: Optional[float] = None
+    error_message: Optional[str] = None
+    result_data: Optional[Dict[str, Any]] = None
+    executed_at: datetime = field(default_factory=datetime.utcnow)
+
+    def to_db_model(self) -> WorkflowExecutionDB:
+        """Convert to SQLAlchemy model"""
+        return WorkflowExecutionDB(
+            id=self.id,
+            workflow_id=self.workflow_id,
+            status=self.status,
+            runtime_seconds=self.runtime_seconds,
+            error_message=self.error_message,
+            result_data=self.result_data,
+            executed_at=self.executed_at
+        )
+
+
+@dataclass
+class EmailTemplateCategory:
+    """Email template category domain model"""
+    id: Optional[int] = None
+    name: str = ""
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    def to_db_model(self) -> EmailTemplateCategoryDB:
+        """Convert to SQLAlchemy model"""
+        return EmailTemplateCategoryDB(
+            id=self.id,
+            name=self.name,
+            description=self.description,
+            icon=self.icon,
+            created_at=self.created_at,
+            updated_at=self.updated_at
+        )
+
+
+@dataclass
+class EmailTemplate:
+    """Email template domain model"""
+    id: Optional[int] = None
+    name: str = ""
+    description: Optional[str] = None
+    subject: str = ""
+    html_content: Optional[str] = None
+    text_content: Optional[str] = None
+    category_id: Optional[int] = None
+    is_active: bool = True
+    usage_count: int = 0
+    open_rate: float = 0.0
+    click_rate: float = 0.0
+    variables: Optional[List[str]] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    def to_db_model(self) -> EmailTemplateDB:
+        """Convert to SQLAlchemy model"""
+        return EmailTemplateDB(
+            id=self.id,
+            name=self.name,
+            description=self.description,
+            subject=self.subject,
+            html_content=self.html_content,
+            text_content=self.text_content,
+            category_id=self.category_id,
+            is_active=self.is_active,
+            usage_count=self.usage_count,
+            open_rate=self.open_rate,
+            click_rate=self.click_rate,
+            variables=self.variables,
+            created_at=self.created_at,
+            updated_at=self.updated_at
+        )
+
+
+@dataclass
+class SentEmail:
+    """Sent email tracking domain model"""
+    id: Optional[int] = None
+    template_id: Optional[int] = None
+    recipient_email: str = ""
+    subject: str = ""
+    html_content: Optional[str] = None
+    text_content: Optional[str] = None
+    status: str = "sent"  # sent, delivered, opened, clicked, failed
+    sent_at: datetime = field(default_factory=datetime.utcnow)
+    opened_at: Optional[datetime] = None
+    clicked_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+
+    def to_db_model(self) -> SentEmailDB:
+        """Convert to SQLAlchemy model"""
+        return SentEmailDB(
+            id=self.id,
+            template_id=self.template_id,
+            recipient_email=self.recipient_email,
+            subject=self.subject,
+            html_content=self.html_content,
+            text_content=self.text_content,
+            status=self.status,
+            sent_at=self.sent_at,
+            opened_at=self.opened_at,
+            clicked_at=self.clicked_at,
+            error_message=self.error_message
+        )
+
+
+@dataclass
+class Whitelist:
+    """Whitelist domain model"""
+    id: Optional[int] = None
+    name: str = ""
+    description: Optional[str] = None
+    type: str = ""  # ip, domain, api_key, action
+    entries: List[str] = field(default_factory=list)
+    enabled: bool = True
+    usage_count: int = 0
+    last_used: Optional[datetime] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    def to_db_model(self) -> WhitelistDB:
+        """Convert to SQLAlchemy model"""
+        return WhitelistDB(
+            id=self.id,
+            name=self.name,
+            description=self.description,
+            type=self.type,
+            entries=self.entries,
+            enabled=self.enabled,
+            usage_count=self.usage_count,
+            last_used=self.last_used,
+            created_at=self.created_at,
+            updated_at=self.updated_at
+        )
+
+    def is_allowed(self, value: str) -> bool:
+        """Check if a value is allowed by this whitelist"""
+        if not self.enabled:
+            return False
+
+        if self.type == "ip":
+            return self._check_ip(value)
+        elif self.type == "domain":
+            return self._check_domain(value)
+        elif self.type == "api_key":
+            return value in self.entries
+        elif self.type == "action":
+            return value in self.entries
+        else:
+            return False
+
+    def _check_ip(self, ip: str) -> bool:
+        """Check IP address against entries (supports CIDR)"""
+        import ipaddress
+        try:
+            check_ip = ipaddress.ip_address(ip)
+            for entry in self.entries:
+                try:
+                    if '/' in entry:  # CIDR notation
+                        network = ipaddress.ip_network(entry, strict=False)
+                        if check_ip in network:
+                            return True
+                    else:  # Exact IP match
+                        if check_ip == ipaddress.ip_address(entry):
+                            return True
+                except ValueError:
+                    continue
+            return False
+        except ValueError:
+            return False
+
+    def _check_domain(self, domain: str) -> bool:
+        """Check domain against entries (supports wildcards)"""
+        domain = domain.lower()
+        for entry in self.entries:
+            entry = entry.lower()
+            if entry.startswith('*.'):
+                # Wildcard subdomain match
+                if domain.endswith(entry[2:]) or domain == entry[2:]:
+                    return True
+            elif entry == domain:
+                return True
+        return False
+
+
+@dataclass
+class WhitelistAccessLog:
+    """Whitelist access log domain model"""
+    id: Optional[int] = None
+    whitelist_id: int = 0
+    requested_value: str = ""
+    result: str = "denied"  # allowed, denied
+    source_ip: Optional[str] = None
+    user_agent: Optional[str] = None
+    additional_data: Optional[Dict[str, Any]] = None
+    accessed_at: datetime = field(default_factory=datetime.utcnow)
+
+    def to_db_model(self) -> WhitelistAccessLogDB:
+        """Convert to SQLAlchemy model"""
+        return WhitelistAccessLogDB(
+            id=self.id,
+            whitelist_id=self.whitelist_id,
+            requested_value=self.requested_value,
+            result=self.result,
+            source_ip=self.source_ip,
+            user_agent=self.user_agent,
+            additional_data=self.additional_data,
+            accessed_at=self.accessed_at
+        )
+
 
 @dataclass
 class EventLink:

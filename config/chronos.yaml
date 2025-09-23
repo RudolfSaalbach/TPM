@@ -1,7 +1,7 @@
 # Chronos Engine v2.2 - Unified Configuration
 # Single source of truth for all Chronos Engine settings
 
-version: "2.2"
+version: "2.2.0"
 environment: "production"
 timezone: "Europe/Berlin"
 

@@ -482,33 +482,269 @@
 </style>
 
 <script>
-function createWorkflow() {
-    showToast('Workflow', 'Neuer Workflow-Editor wird geöffnet...', 'info');
-    // Implementation für Workflow-Erstellung
+const API_BASE = '/api/v1';
+
+// Global state
+let workflows = [];
+
+// Load workflows on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadWorkflows();
+});
+
+async function loadWorkflows() {
+    try {
+        const response = await fetch(`${API_BASE}/admin/workflows/`);
+        const data = await response.json();
+
+        if (data.success) {
+            workflows = data.workflows;
+            renderWorkflows();
+            updateStats();
+        } else {
+            showToast('Error', 'Failed to load workflows', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading workflows:', error);
+        showToast('Error', 'Failed to load workflows', 'error');
+    }
 }
 
-function editWorkflow(id) {
-    showToast('Workflow', `Workflow ${id} wird bearbeitet...`, 'info');
-    // Implementation für Workflow-Bearbeitung
+function renderWorkflows() {
+    const container = document.getElementById('workflowsGrid');
+    container.innerHTML = '';
+
+    workflows.forEach(workflow => {
+        const card = createWorkflowCard(workflow);
+        container.appendChild(card);
+    });
 }
 
-function pauseWorkflow(id) {
-    showToast('Workflow', `Workflow ${id} pausiert`, 'warning');
-    // Implementation für Workflow pausieren
+function createWorkflowCard(workflow) {
+    const card = document.createElement('div');
+    card.className = 'workflow-card';
+
+    const statusClass = workflow.status;
+    const statusText = {
+        'active': 'Aktiv',
+        'paused': 'Pausiert',
+        'error': 'Fehler'
+    }[workflow.status] || workflow.status;
+
+    const lastExecution = workflow.last_execution
+        ? new Date(workflow.last_execution).toLocaleString('de-DE')
+        : 'Nie';
+
+    card.innerHTML = `
+        <div class="workflow-header">
+            <div class="workflow-info">
+                <h4 class="workflow-name">${escapeHtml(workflow.name)}</h4>
+                <p class="workflow-description">${escapeHtml(workflow.description || '')}</p>
+            </div>
+            <div class="workflow-status">
+                <span class="status-indicator ${statusClass}"></span>
+                <span class="status-text">${statusText}</span>
+            </div>
+        </div>
+
+        <div class="workflow-metrics">
+            <div class="metric-item">
+                <span class="metric-label">Ausführungen:</span>
+                <span class="metric-value">${workflow.execution_count}</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Letzte Ausführung:</span>
+                <span class="metric-value">${lastExecution}</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Erfolgsrate:</span>
+                <span class="metric-value">${(workflow.success_rate * 100).toFixed(1)}%</span>
+            </div>
+        </div>
+
+        <div class="workflow-triggers">
+            ${(workflow.triggers || []).map(trigger =>
+                `<span class="trigger-badge">${escapeHtml(trigger.type || 'Unknown')}</span>`
+            ).join('')}
+        </div>
+
+        <div class="workflow-actions">
+            <button class="btn btn-ghost btn-sm" onclick="editWorkflow(${workflow.id})">
+                <span aria-hidden="true">✏️</span>
+                Bearbeiten
+            </button>
+            ${workflow.status === 'active' ?
+                `<button class="btn btn-ghost btn-sm" onclick="pauseWorkflow(${workflow.id})">
+                    <span aria-hidden="true">⏸️</span>
+                    Pausieren
+                </button>` :
+                `<button class="btn btn-primary btn-sm" onclick="resumeWorkflow(${workflow.id})">
+                    <span aria-hidden="true">▶️</span>
+                    Fortsetzen
+                </button>`
+            }
+            <button class="btn btn-ghost btn-sm" onclick="viewLogs(${workflow.id})">
+                <span aria-hidden="true">📊</span>
+                Logs
+            </button>
+        </div>
+    `;
+
+    return card;
 }
 
-function resumeWorkflow(id) {
-    showToast('Workflow', `Workflow ${id} fortgesetzt`, 'success');
-    // Implementation für Workflow fortsetzen
+function updateStats() {
+    const totalActive = workflows.filter(w => w.status === 'active').length;
+    const totalExecutions = workflows.reduce((sum, w) => sum + w.execution_count, 0);
+    const avgSuccessRate = workflows.length > 0
+        ? workflows.reduce((sum, w) => sum + w.success_rate, 0) / workflows.length
+        : 0;
+    const avgRuntime = workflows.length > 0
+        ? workflows.reduce((sum, w) => sum + w.avg_runtime, 0) / workflows.length
+        : 0;
+
+    // Update stats cards (if they have IDs)
+    const statsCards = document.querySelectorAll('.metric-value');
+    if (statsCards.length >= 4) {
+        statsCards[0].textContent = totalActive;
+        statsCards[1].textContent = totalExecutions;
+        statsCards[2].textContent = `${(avgSuccessRate * 100).toFixed(1)}%`;
+        statsCards[3].textContent = `${avgRuntime.toFixed(1)}s`;
+    }
 }
 
-function viewLogs(id) {
-    showToast('Logs', `Logs für Workflow ${id} werden geladen...`, 'info');
-    // Implementation für Log-Anzeige
+async function createWorkflow() {
+    // For now, redirect to workflow form
+    window.location.href = '/admin/workflows/new';
+}
+
+async function editWorkflow(id) {
+    // For now, redirect to workflow form
+    window.location.href = `/admin/workflows/${id}/edit`;
+}
+
+async function pauseWorkflow(id) {
+    try {
+        const response = await fetch(`${API_BASE}/admin/workflows/${id}/pause`, {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('Workflow', result.message, 'warning');
+            await loadWorkflows();
+        } else {
+            showToast('Error', 'Failed to pause workflow', 'error');
+        }
+    } catch (error) {
+        console.error('Error pausing workflow:', error);
+        showToast('Error', 'Failed to pause workflow', 'error');
+    }
+}
+
+async function resumeWorkflow(id) {
+    try {
+        const response = await fetch(`${API_BASE}/admin/workflows/${id}/resume`, {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('Workflow', result.message, 'success');
+            await loadWorkflows();
+        } else {
+            showToast('Error', 'Failed to resume workflow', 'error');
+        }
+    } catch (error) {
+        console.error('Error resuming workflow:', error);
+        showToast('Error', 'Failed to resume workflow', 'error');
+    }
+}
+
+async function viewLogs(id) {
+    try {
+        const response = await fetch(`${API_BASE}/admin/workflows/${id}/executions`);
+        const executions = await response.json();
+
+        showWorkflowLogs(id, executions);
+    } catch (error) {
+        console.error('Error loading workflow logs:', error);
+        showToast('Error', 'Failed to load workflow logs', 'error');
+    }
+}
+
+function showWorkflowLogs(workflowId, executions) {
+    // Create modal dialog for logs
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 class="modal-title">Workflow Logs</h2>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="logs-list">
+                    ${executions.length === 0 ?
+                        '<p>Keine Ausführungen gefunden.</p>' :
+                        executions.map(exec => `
+                            <div class="log-item ${exec.status}">
+                                <div class="log-status ${exec.status}">
+                                    ${exec.status === 'success' ? '✅' : exec.status === 'error' ? '❌' : '⏳'}
+                                </div>
+                                <div class="log-content">
+                                    <div class="log-time">${new Date(exec.executed_at).toLocaleString('de-DE')}</div>
+                                    <div class="log-runtime">${exec.runtime_seconds ? `${exec.runtime_seconds.toFixed(2)}s` : 'N/A'}</div>
+                                    ${exec.error_message ? `<div class="log-error">${escapeHtml(exec.error_message)}</div>` : ''}
+                                </div>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
 }
 
 function showToast(title, message, type) {
-    console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+    // Simple toast implementation
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-header">
+            <strong>${title}</strong>
+            <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+        <div class="toast-body">${message}</div>
+    `;
+
+    // Add to page (create container if needed)
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    container.appendChild(toast);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Search functionality

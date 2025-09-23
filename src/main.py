@@ -1,5 +1,5 @@
 ﻿"""
-Main entry point for Chronos Engine v2.1 - Database Integration
+Main entry point for Chronos Engine v2.2 - Database Integration
 Initializes database and starts all services
 """
 
@@ -28,7 +28,7 @@ from src.core.database import db_service
 from src.core.scheduler import ChronosScheduler
 
 # Import API routes (new modular structure)
-from src.api import events, caldav, sync, commands, admin
+from src.api import events, caldav, sync, commands, admin, admin_workflows, email_templates, whitelists
 from src.api.dependencies import init_api_dependencies
 from src.api.error_handling import (
     api_error_handler, http_exception_handler, validation_exception_handler,
@@ -53,6 +53,7 @@ _scheduler_instance = None
 
 def get_scheduler_instance():
     """Get the global scheduler instance for dependency injection"""
+    logger.info(f"get_scheduler_instance() called, returning: {_scheduler_instance} (type: {type(_scheduler_instance)})")
     return _scheduler_instance
 
 def setup_file_logging():
@@ -80,16 +81,16 @@ async def lifespan(app: FastAPI):
     global app_instance
 
     # Startup
-    logger.info("Starting Chronos Engine v2.1...")
+    logger.info("Starting Chronos Engine v2.2...")
     await app_instance.startup()
-    logger.info("Chronos Engine v2.1 started successfully")
+    logger.info("Chronos Engine v2.2 started successfully")
 
     yield
 
     # Shutdown
-    logger.info("Shutting down Chronos Engine v2.1...")
+    logger.info("Shutting down Chronos Engine v2.2...")
     await app_instance.shutdown()
-    logger.info("Chronos Engine v2.1 shutdown complete")
+    logger.info("Chronos Engine v2.2 shutdown complete")
 
 
 class ChronosApp:
@@ -104,9 +105,9 @@ class ChronosApp:
         
         # Create FastAPI app with lifespan
         self.app = FastAPI(
-            title="Chronos Engine v2.1",
-            description="Advanced Calendar Management with AI-powered optimization and Database Persistence",
-            version="2.1.0",
+            title="Chronos Engine v2.2",
+            description="Advanced Calendar Management with AI-powered optimization and Complete GUI Integration",
+            version="2.2.0",
             lifespan=lifespan
         )
         
@@ -122,17 +123,19 @@ class ChronosApp:
         # Store scheduler instance globally for dependency injection
         global _scheduler_instance
         _scheduler_instance = self.scheduler
+        logger.info(f"Set _scheduler_instance to: {_scheduler_instance} (type: {type(_scheduler_instance)})")
 
         # Initialize API dependencies
-        api_key = config.get('api', {}).get('api_key', 'development-key')
-        init_api_dependencies(api_key)
+        # Check legacy field first, then nested api.api_key
+        api_key = config.get('api_key') or config.get('api', {}).get('api_key', 'development-key')
+        init_api_dependencies(api_key, self.scheduler)
 
         # Add enhanced error handlers
         from fastapi.exceptions import RequestValidationError
 
         self.app.exception_handler(APIError)(api_error_handler)
         self.app.exception_handler(HTTPException)(http_exception_handler)
-        # BYPASS VALIDATION - DISABLED: self.app.exception_handler(RequestValidationError)(validation_exception_handler)
+        self.app.exception_handler(RequestValidationError)(validation_exception_handler)
         self.app.exception_handler(Exception)(general_exception_handler)
 
         # Register modular API routes with versioning
@@ -141,6 +144,9 @@ class ChronosApp:
         self.app.include_router(sync.router, prefix="/api/v1/sync", tags=["Synchronization"])
         self.app.include_router(commands.router, prefix="/api/v1/commands", tags=["Command Queue"])
         self.app.include_router(admin.router, prefix="/api/v1/admin", tags=["Administration"])
+        self.app.include_router(admin_workflows.router, prefix="/api/v1", tags=["Admin Workflows"])
+        self.app.include_router(email_templates.router, prefix="/api/v1", tags=["Email Templates"])
+        self.app.include_router(whitelists.router, prefix="/api/v1", tags=["Whitelists"])
 
         # Initialize dashboard
         dashboard = ChronosDashboard(
@@ -184,7 +190,7 @@ class ChronosApp:
                 else:
                     return {
                         "timestamp": datetime.utcnow().isoformat(),
-                        "version": "2.1.0-legacy",
+                        "version": "2.2.0-legacy",
                         "build_info": {
                             "note": "VERSION file not found - legacy installation"
                         }
@@ -203,7 +209,7 @@ class ChronosApp:
             try:
                 health_status = {
                     "status": "healthy",
-                    "version": "2.1.0",
+                    "version": "2.2.0",
                     "timestamp": datetime.utcnow().isoformat()
                 }
 
@@ -323,7 +329,7 @@ class ChronosApp:
     
     async def startup(self):
         """Application startup"""
-        logger.info("Starting Chronos Engine v2.1...")
+        logger.info("Starting Chronos Engine v2.2...")
 
         # Create necessary directories first
         Path("logs").mkdir(exist_ok=True)
@@ -341,7 +347,7 @@ class ChronosApp:
         await self.scheduler.start()
         logger.info("Scheduler started")
         
-        logger.info("Chronos Engine v2.1 started successfully")
+        logger.info("Chronos Engine v2.2 started successfully")
     
     async def shutdown(self):
         """Application shutdown"""
@@ -388,7 +394,7 @@ def main():
         host = api_config.get('host', '0.0.0.0')
         port = api_config.get('port', 8080)
         
-        logger.info(f"Starting Chronos Engine v2.1 on {host}:{port}")
+        logger.info(f"Starting Chronos Engine v2.2 on {host}:{port}")
         
         # Run server
         uvicorn.run(

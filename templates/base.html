@@ -18,9 +18,9 @@
     <!-- Zentrale Chronos Config Injection -->
     <script>
         window.CHRONOS_CONFIG = {
-            API_KEY: '{{ config.api.api_key if config else config.api.api_key|default("default-dev-key") }}',
+            API_KEY: 'super-secret-change-me',
             API_BASE: 'http://{{ config.api.host if config else "localhost" }}:{{ config.api.port if config else "8080" }}',
-            VERSION: '{{ config.version if config else "2.2" }}',
+            VERSION: '{{ config.version if config else "2.2.0" }}',
             ENVIRONMENT: '{{ config.environment if config else "development" }}'
         };
     </script>

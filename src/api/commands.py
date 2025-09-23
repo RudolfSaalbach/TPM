@@ -47,7 +47,6 @@ class CommandFailureRequest(BaseModel):
 
 
 @router.get("/{system_id}", response_model=Dict[str, Any])
-@handle_api_errors
 @deprecate_parameter(
     "limit",
     level=DeprecationLevel.WARNING,
@@ -139,7 +138,6 @@ async def get_pending_commands(
 
 
 @router.post("/{command_id}/complete", response_model=CommandOperationResponse)
-@handle_api_errors
 async def complete_command(
     command_id: str,
     completion_data: CommandCompletionRequest,
@@ -205,7 +203,6 @@ async def complete_command(
 
 
 @router.post("/{command_id}/fail", response_model=CommandOperationResponse)
-@handle_api_errors
 async def fail_command(
     command_id: str,
     failure_data: CommandFailureRequest,
@@ -283,7 +280,6 @@ async def fail_command(
 
 
 @router.get("/{system_id}/status", response_model=Dict[str, Any])
-@handle_api_errors
 async def get_command_status(
     system_id: str,
     authenticated: bool = Depends(verify_api_key)
@@ -334,7 +330,6 @@ async def get_command_status(
 
 
 @router.delete("/{command_id}", response_model=CommandOperationResponse)
-@handle_api_errors
 async def delete_command(
     command_id: str,
     authenticated: bool = Depends(verify_api_key)

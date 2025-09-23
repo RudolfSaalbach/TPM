@@ -267,7 +267,7 @@
                     <div class="form-group">
                         <label for="eventType" class="form-label">Event-Typ</label>
                         <select id="eventType" name="event_type" class="form-select" data-ref="event-type">
-                            <option value="TASK">Aufgabe</option>
+                            <option value="TASK" selected>Aufgabe</option>
                             <option value="MEETING">Meeting</option>
                             <option value="REMINDER">Erinnerung</option>
                             <option value="DEADLINE">Deadline</option>
@@ -517,7 +517,7 @@
             </div>
             <div class="info-item">
                 <span class="info-label">Tags</span>
-                <span class="info-value">${(t.tags||[]).map(escapeHtml).join(', ') || '—'}</span>
+                <span class="info-value">${Array.isArray(t.tags) ? t.tags.map(escapeHtml).join(', ') : (t.tags || '—')}</span>
             </div>
              <div class="info-item">
                 <span class="info-label">Verwendet</span>

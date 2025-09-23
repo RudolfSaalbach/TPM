@@ -43,12 +43,16 @@ class APIAuthenticator:
 
 # Global authenticator instance (will be set during app initialization)
 _authenticator: Optional[APIAuthenticator] = None
+_scheduler_instance: Optional[ChronosScheduler] = None
 
 
-def init_api_dependencies(api_key: str):
+def init_api_dependencies(api_key: str, scheduler_instance: ChronosScheduler = None):
     """Initialize API dependencies with configuration"""
-    global _authenticator
+    global _authenticator, _scheduler_instance
     _authenticator = APIAuthenticator(api_key)
+    if scheduler_instance:
+        _scheduler_instance = scheduler_instance
+        logger.info(f"Dependencies module received scheduler: {_scheduler_instance} (type: {type(_scheduler_instance)})")
 
 
 async def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -> bool:
@@ -70,11 +74,14 @@ async def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(sec
 
 async def get_scheduler() -> ChronosScheduler:
     """FastAPI dependency to get scheduler instance"""
-    # This will be injected during router registration
-    # For now, we'll access it from the global state
-    # In a production app, this would come from dependency injection
-    from src.main import get_scheduler_instance
-    return get_scheduler_instance()
+    global _scheduler_instance
+
+    if _scheduler_instance is None:
+        logger.error("Scheduler instance not initialized in dependencies - please check init_api_dependencies")
+        raise RuntimeError("Scheduler instance not available - please check initialization")
+
+    logger.info(f"get_scheduler() returning: {_scheduler_instance} (type: {type(_scheduler_instance)})")
+    return _scheduler_instance
 
 
 async def get_db_session():

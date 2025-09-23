@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 
 from src.api.dependencies import verify_api_key, get_scheduler
+from src.core.scheduler import ChronosScheduler
 from src.api.error_handling import handle_api_errors
 from src.api.schemas import SyncRequest, SyncResponse, AnalyticsRequest, AnalyticsResponse
 from src.api.standard_schemas import (
@@ -30,11 +31,10 @@ class SyncStatus(BaseModel):
 
 
 @router.post("/calendar", response_model=SyncResponse)
-@handle_api_errors
 async def sync_calendar(
     sync_request: Optional[SyncRequest] = None,
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Trigger manual calendar synchronization"""
     try:
@@ -83,7 +83,6 @@ async def sync_calendar(
 
 
 @router.get("/health", response_model=Dict[str, Any])
-@handle_api_errors
 async def health_check():
     """Lightweight scheduler health check (no auth required)"""
     try:
@@ -161,10 +160,9 @@ async def health_check():
 
 
 @router.get("/status", response_model=SyncStatusResponse)
-@handle_api_errors
 async def get_sync_status(
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Get detailed synchronization status"""
     try:
@@ -191,10 +189,9 @@ async def get_sync_status(
 
 
 @router.post("/incremental")
-@handle_api_errors
 async def sync_incremental(
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Trigger incremental synchronization"""
     try:
@@ -219,10 +216,9 @@ async def sync_incremental(
 
 
 @router.post("/full")
-@handle_api_errors
 async def sync_full(
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Trigger full synchronization"""
     try:
@@ -248,7 +244,6 @@ async def sync_full(
 
 # Analytics endpoints
 @router.get("/analytics/productivity", response_model=ProductivityMetricsResponse)
-@handle_api_errors
 async def get_productivity_metrics(
     authenticated: bool = Depends(verify_api_key),
     days: int = 30
@@ -287,7 +282,6 @@ async def get_productivity_metrics(
 
 
 @router.post("/ai/optimize", response_model=ScheduleOptimizationResponse)
-@handle_api_errors
 async def optimize_schedule(
     authenticated: bool = Depends(verify_api_key),
     request_data: Optional[Dict[str, Any]] = None
@@ -328,10 +322,9 @@ async def optimize_schedule(
 
 
 @router.post("/detect-conflicts", response_model=Dict[str, Any])
-@handle_api_errors
 async def detect_conflicts(
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Detect scheduling conflicts in calendar events"""
     try:
@@ -364,10 +357,9 @@ async def detect_conflicts(
 
 
 @router.get("/analytics/report", response_model=Dict[str, Any])
-@handle_api_errors
 async def generate_analytics_report(
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Generate comprehensive analytics report"""
     try:

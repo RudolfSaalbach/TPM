@@ -7,65 +7,9 @@ from sqlalchemy import Column, String, DateTime, Integer, Text, Boolean, JSON, I
 from src.core.models import Base
 
 
-# Whitelist Management Tables
-class WhitelistDB(Base):
-    """Database model for system and action whitelists"""
-    __tablename__ = 'whitelists'
+# Note: WhitelistDB is defined in models.py to avoid duplication
 
-    id = Column(Integer, primary_key=True, index=True)
-    system_name = Column(String(100), nullable=False, index=True)
-    action_name = Column(String(100), nullable=False, index=True)
-    allowed_params = Column(JSON, nullable=True)  # {"param": "type"} mapping
-    enabled = Column(Boolean, default=True, index=True)
-    created_at = Column(DateTime, default=lambda: __import__('datetime').datetime.utcnow())
-    updated_at = Column(DateTime, default=lambda: __import__('datetime').datetime.utcnow(),
-                      onupdate=lambda: __import__('datetime').datetime.utcnow())
-    created_by = Column(String(100), nullable=True)
-
-    # Unique constraint on system + action
-    __table_args__ = (
-        Index('idx_whitelist_system_action', 'system_name', 'action_name', unique=True),
-    )
-
-
-# Workflow Management Tables
-class WorkflowDB(Base):
-    """Database model for simple if-this-then-that workflows"""
-    __tablename__ = 'workflows'
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(200), nullable=False)
-    trigger_action = Column(String(100), nullable=False, index=True)
-    trigger_system = Column(String(100), nullable=False, index=True)
-    trigger_status = Column(String(50), default='COMPLETED')  # Which status triggers this
-    follow_action = Column(String(100), nullable=False)
-    follow_system = Column(String(100), nullable=False)
-    follow_params_template = Column(JSON, nullable=True)  # Template with placeholders
-    enabled = Column(Boolean, default=True, index=True)
-    created_at = Column(DateTime, default=lambda: __import__('datetime').datetime.utcnow())
-    updated_at = Column(DateTime, default=lambda: __import__('datetime').datetime.utcnow(),
-                      onupdate=lambda: __import__('datetime').datetime.utcnow())
-    created_by = Column(String(100), nullable=True)
-
-
-# Template Management Tables (Enhanced)
-class EmailTemplateDB(Base):
-    """Database model for email templates"""
-    __tablename__ = 'email_templates'
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(200), nullable=False, index=True)
-    subject_template = Column(String(500), nullable=False)
-    html_body_template = Column(Text, nullable=True)
-    text_body_template = Column(Text, nullable=True)
-    variables = Column(JSON, nullable=True)  # List of available variables
-    category = Column(String(100), default='general', index=True)
-    enabled = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=lambda: __import__('datetime').datetime.utcnow())
-    updated_at = Column(DateTime, default=lambda: __import__('datetime').datetime.utcnow(),
-                      onupdate=lambda: __import__('datetime').datetime.utcnow())
-    created_by = Column(String(100), nullable=True)
-
+# Note: WorkflowDB and EmailTemplateDB are defined in models.py to avoid duplication
 
 class WebhookTemplateDB(Base):
     """Database model for webhook payload templates"""

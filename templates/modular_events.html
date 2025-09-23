@@ -1408,9 +1408,68 @@
             showToast('Neues Event', 'Event-Editor wird geöffnet...', 'info');
         }
 
-        function exportEvents() {
-            showToast('Export gestartet', 'Events werden exportiert...', 'info');
-            // In real app, trigger export functionality
+        async function exportEvents() {
+            try {
+                showToast('Export gestartet', 'Events werden exportiert...', 'info');
+
+                // Try to get events from API first, fall back to filtered events
+                let eventsToExport = filteredEvents;
+
+                try {
+                    const response = await fetch('/api/v1/events', {
+                        headers: {
+                            'Authorization': `Bearer ${window.CHRONOS_CONFIG?.API_KEY || 'development-key'}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const apiData = await response.json();
+                        eventsToExport = apiData.items || apiData;
+                    }
+                } catch (apiError) {
+                    console.warn('API fetch failed, using local data:', apiError);
+                }
+
+                if (!eventsToExport || eventsToExport.length === 0) {
+                    showToast('Keine Daten', 'Keine Events zum Exportieren gefunden', 'warning');
+                    return;
+                }
+
+                // Convert to CSV format
+                const csvHeader = 'Title,Start Time,End Time,Priority,Status,Location,Description\n';
+                const csvRows = eventsToExport.map(event => {
+                    const title = (event.title || '').replace(/"/g, '""');
+                    const startTime = event.start_time || event.startTime || '';
+                    const endTime = event.end_time || event.endTime || '';
+                    const priority = event.priority || '';
+                    const status = event.status || '';
+                    const location = (event.location || '').replace(/"/g, '""');
+                    const description = (event.description || '').replace(/"/g, '""');
+
+                    return `"${title}","${startTime}","${endTime}","${priority}","${status}","${location}","${description}"`;
+                }).join('\n');
+
+                const csvContent = csvHeader + csvRows;
+
+                // Create and download CSV file
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+
+                link.setAttribute('href', url);
+                link.setAttribute('download', `chronos-events-${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showToast('Export erfolgreich', `${eventsToExport.length} Events als CSV exportiert`, 'success');
+
+            } catch (error) {
+                console.error('Export error:', error);
+                showToast('Export Fehler', 'Events konnten nicht exportiert werden: ' + error.message, 'error');
+            }
         }
 
         function loadMoreEvents() {

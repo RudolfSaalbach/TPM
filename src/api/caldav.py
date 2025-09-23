@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 
 from src.api.dependencies import verify_api_key, get_scheduler
+from src.core.scheduler import ChronosScheduler
 from src.api.error_handling import handle_api_errors
 from src.api.standard_schemas import (
     APISuccessResponse, CalDAVConnectionTestResponse, CalDAVBackendSwitchResponse,
@@ -45,10 +46,9 @@ class CalDAVEventCreate(BaseModel):
 
 
 @router.get("/backend/info", response_model=CalDAVBackendInfo)
-@handle_api_errors
 async def get_backend_info(
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Get current CalDAV backend information and capabilities"""
     try:
@@ -89,7 +89,6 @@ async def get_backend_info(
 
 
 @router.post("/test-connection", response_model=CalDAVConnectionTestResponse)
-@handle_api_errors
 async def test_caldav_connection(
     connection_data: CalDAVConnectionTest,
     authenticated: bool = Depends(verify_api_key)
@@ -164,11 +163,10 @@ async def test_caldav_connection(
 
 
 @router.post("/backend/switch", response_model=CalDAVBackendSwitchResponse)
-@handle_api_errors
 async def switch_backend(
     switch_data: CalDAVBackendSwitch,
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Switch between CalDAV and Google Calendar backends"""
     try:
@@ -201,10 +199,9 @@ async def switch_backend(
 
 
 @router.get("/calendars", response_model=CalDAVCalendarListResponse)
-@handle_api_errors
 async def list_calendars(
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """List all available CalDAV calendars"""
     try:
@@ -236,11 +233,10 @@ async def list_calendars(
 
 
 @router.post("/calendars/{calendar_id}/sync", response_model=CalDAVSyncResponse)
-@handle_api_errors
 async def sync_calendar(
     calendar_id: str,
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Manually sync a specific calendar"""
     try:
@@ -291,12 +287,11 @@ async def sync_calendar(
 
 
 @router.post("/calendars/{calendar_id}/events", response_model=CalDAVEventResponse)
-@handle_api_errors
 async def create_caldav_event(
     calendar_id: str,
     event_data: CalDAVEventCreate,
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Create event directly in CalDAV calendar"""
     try:
@@ -354,12 +349,11 @@ async def create_caldav_event(
 
 
 @router.get("/calendars/{calendar_id}/events/{event_id}", response_model=Dict[str, Any])
-@handle_api_errors
 async def get_caldav_event(
     calendar_id: str,
     event_id: str,
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Get specific event from CalDAV calendar"""
     try:
@@ -405,13 +399,12 @@ async def get_caldav_event(
 
 
 @router.patch("/calendars/{calendar_id}/events/{event_id}", response_model=CalDAVEventResponse)
-@handle_api_errors
 async def update_caldav_event(
     calendar_id: str,
     event_id: str,
     patch_data: Dict[str, Any],
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Update specific event in CalDAV calendar"""
     try:
@@ -460,12 +453,11 @@ async def update_caldav_event(
 
 
 @router.delete("/calendars/{calendar_id}/events/{event_id}", response_model=CalDAVEventResponse)
-@handle_api_errors
 async def delete_caldav_event(
     calendar_id: str,
     event_id: str,
     authenticated: bool = Depends(verify_api_key),
-    scheduler = Depends(get_scheduler)
+    scheduler: ChronosScheduler = Depends(get_scheduler)
 ):
     """Delete specific event from CalDAV calendar"""
     try:

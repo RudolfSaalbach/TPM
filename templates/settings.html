@@ -12,6 +12,16 @@
 
     <!-- Premium CSS -->
     <link rel="stylesheet" href="/static/css/chronos-premium.css">
+
+    <!-- Zentrale Chronos Config Injection -->
+    <script>
+        window.CHRONOS_CONFIG = {
+            API_KEY: 'super-secret-change-me',
+            API_BASE: 'http://localhost:8080',
+            VERSION: '2.2.0',
+            ENVIRONMENT: 'development'
+        };
+    </script>
 </head>
 <body>
     <!-- Skip Link für Barrierefreiheit -->

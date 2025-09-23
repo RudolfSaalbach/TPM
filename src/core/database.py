@@ -199,10 +199,13 @@ class DatabaseService:
                 from src.database.models import PendingSync
                 from src.core.security import APIKeyDB, AuditLogDB
                 from src.core.outbox import OutboxEntryDB
+                from src.core.models import (
+                    WhitelistDB, WorkflowDB, EmailTemplateDB, WhitelistAccessLogDB,
+                    WorkflowExecutionDB, EmailTemplateCategoryDB, SentEmailDB
+                )
                 from src.core.schema_extensions import (
-                    WhitelistDB, WorkflowDB, EmailTemplateDB, WebhookTemplateDB,
-                    EmailLogDB, BackupJobDB, BackupHistoryDB, EventModeDB,
-                    IntegrationConfigDB, CommandExecutionDB, SystemMetricsDB
+                    WebhookTemplateDB, EmailLogDB, BackupJobDB, BackupHistoryDB,
+                    EventModeDB, IntegrationConfigDB, CommandExecutionDB, SystemMetricsDB
                 )
 
                 # Enable WAL mode and other SQLite optimizations
