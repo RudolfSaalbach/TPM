@@ -58,6 +58,26 @@ docker-compose up --build
 ```
 This builds the application image, mounts the project files and exposes the API on port `8080`.
 
+#### Port Configuration
+If port 8080 is already in use on your host system, you can configure a different port:
+
+1. Copy the environment template:
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` and set your desired host port:
+```bash
+CHRONOS_HOST_PORT=8085  # Use port 8085 instead of 8080
+```
+
+3. Run with your custom configuration:
+```bash
+docker-compose up --build
+```
+
+The application will then be available at `http://localhost:8085` (or your chosen port).
+
 ---
 
 ## 🔐 Configuration & Secrets
