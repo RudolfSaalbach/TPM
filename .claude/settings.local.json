@@ -34,7 +34,10 @@
       "Bash(findstr:*)",
       "Bash(cmd /c:*)",
       "Bash(cd:*)",
-      "Bash(set PYTHONPATH=.)"
+      "Bash(set PYTHONPATH=.)",
+      "Bash(for i in {1..10})",
+      "Bash(do echo:*)",
+      "Bash(time curl:*)"
     ],
     "deny": [],
     "ask": []

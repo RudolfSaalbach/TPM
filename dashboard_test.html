@@ -105,7 +105,7 @@
                                 <span class="metric-label">Gesamte Events</span>
                                 <div class="metric-icon" aria-hidden="true">📅</div>
                             </div>
-                            <div class="metric-value" id="totalEvents">{{ productivity_metrics.total_events or 0 }}</div>
+                            <div class="metric-value" id="totalEvents">8</div>
                             <div class="metric-change positive" id="eventsChange">
                                 <span aria-label="Anstieg">↗</span>
                                 <span>+18% diese Woche</span>
@@ -117,7 +117,7 @@
                                 <span class="metric-label">Produktivitätsrate</span>
                                 <div class="metric-icon" aria-hidden="true">🎯</div>
                             </div>
-                            <div class="metric-value" id="productivityRate">{{ "%.1f" | format((productivity_metrics.completion_rate or 0.873) * 100) }}%</div>
+                            <div class="metric-value" id="productivityRate">87.3%</div>
                             <div class="metric-change positive" id="productivityChange">
                                 <span aria-label="Anstieg">↗</span>
                                 <span>+5.2% vs. letzten Monat</span>
@@ -129,7 +129,7 @@
                                 <span class="metric-label">Focus Time</span>
                                 <div class="metric-icon" aria-hidden="true">⏱️</div>
                             </div>
-                            <div class="metric-value" id="timeSaved">{{ "%.1f" | format(productivity_metrics.total_hours or 4.5) }}h</div>
+                            <div class="metric-value" id="timeSaved">11.8h</div>
                             <div class="metric-change positive" id="timeSavedChange">
                                 <span aria-label="Anstieg">↗</span>
                                 <span>+30min heute</span>
@@ -141,7 +141,7 @@
                                 <span class="metric-label">Abgeschlossene Tasks</span>
                                 <div class="metric-icon" aria-hidden="true">✅</div>
                             </div>
-                            <div class="metric-value" id="completedTasks">{{ productivity_metrics.completed_tasks or 0 }}</div>
+                            <div class="metric-value" id="completedTasks">0</div>
                             <div class="metric-change negative" id="tasksChange">
                                 <span aria-label="Rückgang">↓</span>
                                 <span>-3 vs. gestern</span>
@@ -167,7 +167,7 @@
                                 <span class="metric-label">CalDAV Events</span>
                                 <div class="metric-icon" aria-hidden="true">📊</div>
                             </div>
-                            <div class="metric-value" id="caldavEvents">{{ caldav_events or 0 }}</div>
+                            <div class="metric-value" id="caldavEvents">0</div>
                             <div class="metric-change positive" id="caldavChange">
                                 <span aria-label="Anstieg">↗</span>
                                 <span>+7 neue Events</span>

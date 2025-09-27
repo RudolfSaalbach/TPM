@@ -126,16 +126,73 @@ class ChronosDashboard {
         try {
             this.showLoading();
 
-            const [metricsResponse, eventsResponse, syncResponse] = await Promise.all([
-                fetch(`/api/v1/dashboard-data`),
-                fetch(`${this.config.apiBaseUrl}/events?limit=10`),
-                fetch(`${this.config.apiBaseUrl}/sync/status`)
-            ]);
+            // Use consistent API base URL for all requests
+            const apiBase = this.config.apiBaseUrl || '';
 
-            const metrics = await metricsResponse.json();
-            const events = await eventsResponse.json();
-            const syncStatus = await syncResponse.json();
+            // Load data sequentially to avoid overwhelming the server with many menu entries
+            let metrics = {};
+            let events = { events: [] };
+            let syncStatus = {};
 
+            // Load dashboard data first (most critical)
+            try {
+                const metricsResponse = await fetch(`${apiBase}/api/v1/dashboard-data`, {
+                    timeout: 10000,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (metricsResponse.ok) {
+                    metrics = await metricsResponse.json();
+                } else {
+                    console.warn(`Dashboard data request failed: ${metricsResponse.status}`);
+                    metrics = this.getDefaultMetrics();
+                }
+            } catch (error) {
+                console.warn('Dashboard data unavailable, using defaults:', error.message);
+                metrics = this.getDefaultMetrics();
+            }
+
+            // Load events with pagination and timeout
+            try {
+                const eventsResponse = await fetch(`${apiBase}/api/v1/events?limit=20&page=1`, {
+                    timeout: 8000,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (eventsResponse.ok) {
+                    events = await eventsResponse.json();
+                } else {
+                    console.warn(`Events request failed: ${eventsResponse.status}`);
+                }
+            } catch (error) {
+                console.warn('Events data unavailable:', error.message);
+            }
+
+            // Load sync status last (least critical)
+            try {
+                const syncResponse = await fetch(`${apiBase}/api/v1/sync/status`, {
+                    timeout: 5000,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (syncResponse.ok) {
+                    syncStatus = await syncResponse.json();
+                } else {
+                    console.warn(`Sync status request failed: ${syncResponse.status}`);
+                    syncStatus = { status: 'unknown', last_sync: null };
+                }
+            } catch (error) {
+                console.warn('Sync status unavailable:', error.message);
+                syncStatus = { status: 'unknown', last_sync: null };
+            }
+
+            // Update state and UI
             this.state.metrics = metrics;
             this.state.events = events.events || [];
             this.state.syncStatus = syncStatus;
@@ -146,12 +203,47 @@ class ChronosDashboard {
             this.updateSyncStatus(syncStatus);
             this.updateLastUpdateTime();
 
+            console.log('Dashboard data loaded successfully');
+
         } catch (error) {
-            console.error('Error loading dashboard data:', error);
-            this.showToast('Fehler', 'Dashboard-Daten konnten nicht geladen werden', 'error');
+            console.error('Critical error loading dashboard data:', error);
+            this.showToast('Fehler', 'Dashboard-Daten konnten nicht vollständig geladen werden. Wird mit Standardwerten fortgesetzt.', 'warning');
+
+            // Fallback to default state
+            this.state.metrics = this.getDefaultMetrics();
+            this.state.events = [];
+            this.state.syncStatus = { status: 'unknown', last_sync: null };
+            this.state.lastUpdate = new Date();
+
+            this.updateMetrics(this.state.metrics);
+            this.updateEventsList([]);
+            this.updateSyncStatus(this.state.syncStatus);
+            this.updateLastUpdateTime();
         } finally {
             this.hideLoading();
         }
+    }
+
+    getDefaultMetrics() {
+        return {
+            productivity_metrics: {
+                total_events: 0,
+                completion_rate: 0.0,
+                average_productivity: 0.0,
+                total_hours: 0.0,
+                events_per_day: 0.0,
+                completed_events: 0
+            },
+            priority_distribution: {
+                URGENT: 0,
+                HIGH: 0,
+                MEDIUM: 0,
+                LOW: 0
+            },
+            time_distribution: {},
+            recommendations: [],
+            generated_at: new Date().toISOString()
+        };
     }
 
     updateMetrics(metrics) {

@@ -156,31 +156,71 @@ class ChronosDashboard:
                 },
                 'time_distribution': {str(i): 0.0 for i in range(24)},
                 'recommendations': [],
-                'generated_at': datetime.utcnow().isoformat()
+                'generated_at': datetime.utcnow().isoformat(),
+                'cache_info': {
+                    'loaded_at': datetime.utcnow().isoformat(),
+                    'version': '2.2.0'
+                }
             }
             
             # Try to get real data, fall back to defaults
             try:
-                # Get productivity metrics (30 days)
-                productivity_metrics = await self.analytics.get_productivity_metrics(days_back=30)
-                if productivity_metrics:
-                    safe_defaults['productivity_metrics'] = productivity_metrics
-                    
-                # Get priority distribution (7 days)
-                priority_distribution = await self.analytics.get_priority_distribution(days_back=7)
-                if priority_distribution:
-                    safe_defaults['priority_distribution'] = priority_distribution
-                
-                # Get time distribution (7 days)
-                time_distribution = await self.analytics.get_time_distribution(days_back=7)
-                if time_distribution:
-                    # Convert hour keys to strings for JSON compatibility
-                    safe_defaults['time_distribution'] = {str(k): v for k, v in time_distribution.items()}
-                
-                # Generate recommendations based on real data
-                safe_defaults['recommendations'] = await self._generate_recommendations(
-                    safe_defaults['productivity_metrics']
-                )
+                # Use shorter timeouts for high-volume scenarios
+                import asyncio
+                data_timeout = 5.0  # seconds
+
+                # Get productivity metrics (30 days) with timeout
+                try:
+                    productivity_metrics = await asyncio.wait_for(
+                        self.analytics.get_productivity_metrics(days_back=30),
+                        timeout=data_timeout
+                    )
+                    if productivity_metrics and isinstance(productivity_metrics, dict):
+                        safe_defaults['productivity_metrics'] = productivity_metrics
+                        self.logger.debug("Productivity metrics loaded successfully")
+                except asyncio.TimeoutError:
+                    self.logger.warning("Productivity metrics loading timed out, using defaults")
+                except Exception as e:
+                    self.logger.warning(f"Productivity metrics loading failed: {e}")
+
+                # Get priority distribution (7 days) with timeout
+                try:
+                    priority_distribution = await asyncio.wait_for(
+                        self.analytics.get_priority_distribution(days_back=7),
+                        timeout=data_timeout
+                    )
+                    if priority_distribution and isinstance(priority_distribution, dict):
+                        safe_defaults['priority_distribution'] = priority_distribution
+                        self.logger.debug("Priority distribution loaded successfully")
+                except asyncio.TimeoutError:
+                    self.logger.warning("Priority distribution loading timed out, using defaults")
+                except Exception as e:
+                    self.logger.warning(f"Priority distribution loading failed: {e}")
+
+                # Get time distribution (7 days) with timeout
+                try:
+                    time_distribution = await asyncio.wait_for(
+                        self.analytics.get_time_distribution(days_back=7),
+                        timeout=data_timeout
+                    )
+                    if time_distribution and isinstance(time_distribution, dict):
+                        # Convert hour keys to strings for JSON compatibility
+                        safe_defaults['time_distribution'] = {str(k): v for k, v in time_distribution.items()}
+                        self.logger.debug("Time distribution loaded successfully")
+                except asyncio.TimeoutError:
+                    self.logger.warning("Time distribution loading timed out, using defaults")
+                except Exception as e:
+                    self.logger.warning(f"Time distribution loading failed: {e}")
+
+                # Generate recommendations based on available data (lightweight operation)
+                try:
+                    recommendations = await self._generate_recommendations(
+                        safe_defaults['productivity_metrics']
+                    )
+                    if recommendations and isinstance(recommendations, list):
+                        safe_defaults['recommendations'] = recommendations[:5]  # Limit to 5 recommendations
+                except Exception as e:
+                    self.logger.warning(f"Recommendations generation failed: {e}")
                 
                 self.logger.info("Dashboard data loaded successfully")
                 
