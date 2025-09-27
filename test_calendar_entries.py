@@ -7,11 +7,13 @@ import asyncio
 import aiohttp
 import json
 from datetime import datetime, timedelta
+import pytest
 
 # Configuration
 API_BASE = "http://localhost:8080"
 API_KEY = "super-secret-change-me"
 
+@pytest.mark.asyncio
 async def test_calendar_api():
     """Test calendar API and create test entries"""
 

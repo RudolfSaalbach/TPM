@@ -8,6 +8,7 @@ import asyncio
 import json
 import uuid
 from datetime import datetime, timedelta
+import pytest
 
 from sqlalchemy import select, or_, func
 
@@ -18,6 +19,7 @@ from src.core.scheduler import ChronosScheduler
 from src.config.config_loader import load_config
 
 
+@pytest.mark.asyncio
 async def test_export_import_integration():
     """Test the complete export → import roundtrip functionality"""
 
@@ -129,8 +131,8 @@ async def test_export_import_integration():
             event = event_result.scalar_one()
 
             # Get related event links
-            links_stmt = db_service.select(EventLinkDB).where(
-                db_service.or_(
+            links_stmt = select(EventLinkDB).where(
+                or_(
                     EventLinkDB.source_event_id == test_event_id,
                     EventLinkDB.target_event_id == test_event_id
                 )
@@ -200,7 +202,7 @@ async def test_export_import_integration():
         # Import with new IDs (FR-2.5)
         original_count = 0
         async with db_service.get_session() as session:
-            count_result = await session.execute(db_service.select(db_service.func.count(ChronosEventDB.id)))
+            count_result = await session.execute(select(func.count(ChronosEventDB.id)))
             original_count = count_result.scalar()
 
         print(f">>> Events before import: {original_count}")
@@ -289,7 +291,7 @@ async def test_export_import_integration():
 
         # Verify import results
         async with db_service.get_session() as session:
-            count_result = await session.execute(db_service.select(db_service.func.count(ChronosEventDB.id)))
+            count_result = await session.execute(select(func.count(ChronosEventDB.id)))
             final_count = count_result.scalar()
 
         print(f">>> Events after import: {final_count}")
@@ -302,7 +304,7 @@ async def test_export_import_integration():
         new_event_id = list(old_to_new_id_mapping.values())[0]
 
         async with db_service.get_session() as session:
-            imported_event_stmt = db_service.select(ChronosEventDB).where(ChronosEventDB.id == new_event_id)
+            imported_event_stmt = select(ChronosEventDB).where(ChronosEventDB.id == new_event_id)
             imported_event_result = await session.execute(imported_event_stmt)
             imported_event = imported_event_result.scalar_one()
 

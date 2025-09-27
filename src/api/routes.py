@@ -54,11 +54,13 @@ class ChronosUnifiedAPIRoutes:
         self.email_service = email_service
         self.logger = logging.getLogger(__name__)
         self.router = APIRouter()
+        self.v2_router = APIRouter(prefix="/api/v2", tags=["v2"])
         self.security = HTTPBearer(auto_error=False)
         self.templates = Jinja2Templates(directory="templates")
 
         # Register all routes
         self._register_routes()
+        self._register_v2_routes()
 
     def _register_routes(self):
         """Register all consolidated API routes"""
@@ -2096,6 +2098,243 @@ class ChronosUnifiedAPIRoutes:
                 headers={"WWW-Authenticate": "Bearer"}
             )
 
+    def _register_v2_routes(self):
+        """Register consolidated v2 API routes with consistent /api/v2/ prefix"""
+
+        # Core Events API v2
+        @self.v2_router.post("/events", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
+        async def create_event_v2(
+            event_data: EventCreate,
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Create a new event (v2)"""
+            return await self._create_event_implementation(event_data, credentials)
+
+        @self.v2_router.get("/events", response_model=EventsListResponse)
+        async def get_events_v2(
+            calendar: Optional[str] = Query(None, description="Filter by calendar ID"),
+            start: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+            end: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+            status_filter: Optional[str] = Query(None, description="Filter by status"),
+            priority_filter: Optional[str] = Query(None, description="Filter by priority"),
+            tags: Optional[str] = Query(None, description="Filter by tags (comma-separated)"),
+            limit: int = Query(100, le=1000, description="Maximum number of events to return"),
+            offset: int = Query(0, ge=0, description="Number of events to skip"),
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Get events with advanced filtering (v2)"""
+            return await self._get_events_implementation(calendar, start, end, status_filter, priority_filter, tags, limit, offset, credentials)
+
+        # Health Check v2
+        @self.v2_router.get("/health/system")
+        async def system_health_v2():
+            """System health check (v2) - no auth required"""
+            return await self._system_health_implementation()
+
+        @self.v2_router.get("/health/scheduler")
+        async def scheduler_health_v2(
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Scheduler health check (v2)"""
+            return await self._scheduler_health_implementation(credentials)
+
+        # Calendar Management v2
+        @self.v2_router.get("/calendars")
+        async def list_calendars_v2(
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """List calendars (v2)"""
+            return await self._list_calendars_implementation(credentials)
+
+        @self.v2_router.post("/calendars/{calendar_id}/sync")
+        async def sync_calendar_specific_v2(
+            calendar_id: str,
+            days_ahead: int = Query(7, description="Number of days ahead to sync"),
+            force_refresh: bool = Query(False, description="Force full refresh instead of incremental sync"),
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Sync specific calendar (v2)"""
+            return await self._sync_single_calendar_implementation(calendar_id, days_ahead, force_refresh, credentials)
+
+        # Backend Management v2
+        @self.v2_router.get("/backend/info")
+        async def get_backend_info_v2(
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Get backend info (v2)"""
+            return await self._get_backend_info_implementation(credentials)
+
+        @self.v2_router.post("/backend/switch")
+        async def switch_backend_v2(
+            switch_data: dict,
+            credentials: HTTPAuthorizationCredentials = Depends(self.security)
+        ):
+            """Switch backend (v2)"""
+            return await self._switch_backend_implementation(switch_data, credentials)
+
+    # Implementation methods (extract from existing routes)
+    async def _create_event_implementation(self, event_data: EventCreate, credentials: HTTPAuthorizationCredentials):
+        """Shared event creation logic"""
+        self._verify_api_key(credentials)
+
+        try:
+            chronos_event = ChronosEvent(
+                title=event_data.title,
+                description=event_data.description,
+                start_time=event_data.start_time,
+                end_time=event_data.end_time,
+                priority=Priority[event_data.priority.value],
+                event_type=EventType[event_data.event_type.value],
+                status=EventStatus[event_data.status.value],
+                tags=event_data.tags,
+                attendees=event_data.attendees,
+                location=event_data.location
+            )
+
+            created_event = await self.scheduler.create_event(chronos_event)
+
+            return EventResponse(
+                id=created_event.id,
+                title=created_event.title,
+                description=created_event.description,
+                start_time=created_event.start_time,
+                end_time=created_event.end_time,
+                priority=created_event.priority.value,
+                event_type=created_event.event_type.value,
+                status=created_event.status.value,
+                tags=created_event.tags,
+                attendees=created_event.attendees,
+                location=created_event.location,
+                created_at=created_event.created_at,
+                updated_at=created_event.updated_at
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error creating event: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to create event: {e}")
+
+    async def _system_health_implementation(self):
+        """System health check implementation"""
+        return {
+            "status": "healthy",
+            "version": "2.2.0",
+            "timestamp": datetime.utcnow().isoformat(),
+            "components": {
+                "database": "operational",
+                "scheduler": "operational"
+            }
+        }
+
+    async def _scheduler_health_implementation(self, credentials: HTTPAuthorizationCredentials):
+        """Scheduler health check implementation"""
+        self._verify_api_key(credentials)
+
+        if not self.scheduler:
+            return {"status": "unavailable", "message": "Scheduler not initialized"}
+
+        try:
+            is_running = await self.scheduler.is_running()
+            return {
+                "status": "healthy" if is_running else "idle",
+                "running": is_running,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    async def _get_backend_info_implementation(self, credentials: HTTPAuthorizationCredentials):
+        """Get backend info implementation - delegate to existing caldav endpoint"""
+        self._verify_api_key(credentials)
+
+        try:
+            if hasattr(self.scheduler, 'source_manager'):
+                backend_info = await self.scheduler.source_manager.get_backend_info()
+                return {
+                    "backend_type": backend_info.get("type", "caldav"),
+                    "status": "connected" if backend_info.get("connection_valid", False) else "disconnected",
+                    "calendars_count": len(backend_info.get("calendars", [])),
+                    "last_sync": backend_info.get("last_sync"),
+                    "capabilities": backend_info.get("capabilities", [])
+                }
+            else:
+                return {"backend_type": "unknown", "status": "unavailable"}
+        except Exception as e:
+            self.logger.error(f"Error getting backend info: {e}")
+            return {"backend_type": "unknown", "status": "error", "error": str(e)}
+
+    async def _switch_backend_implementation(self, switch_data: dict, credentials: HTTPAuthorizationCredentials):
+        """Switch backend implementation"""
+        self._verify_api_key(credentials)
+
+        try:
+            if hasattr(self.scheduler, 'source_manager'):
+                success = await self.scheduler.source_manager.switch_backend(
+                    switch_data.get("backend_type"),
+                    preserve_data=switch_data.get("preserve_data", True)
+                )
+                return {
+                    "success": success,
+                    "backend_type": switch_data.get("backend_type"),
+                    "message": "Backend switch successful" if success else "Backend switch failed"
+                }
+            else:
+                raise HTTPException(status_code=503, detail="Source manager not available")
+        except Exception as e:
+            self.logger.error(f"Error switching backend: {e}")
+            raise HTTPException(status_code=500, detail=f"Backend switch failed: {e}")
+
+    async def _list_calendars_implementation(self, credentials: HTTPAuthorizationCredentials):
+        """List calendars implementation"""
+        self._verify_api_key(credentials)
+
+        try:
+            if hasattr(self.scheduler, 'source_manager'):
+                calendars = await self.scheduler.source_manager.list_calendars()
+                return {
+                    "calendars": [
+                        {
+                            "id": cal.id,
+                            "name": cal.name,
+                            "display_name": cal.display_name,
+                            "read_only": cal.read_only,
+                            "color": getattr(cal, 'color', '#3498db')
+                        }
+                        for cal in calendars
+                    ]
+                }
+            else:
+                return {"calendars": []}
+        except Exception as e:
+            self.logger.error(f"Error listing calendars: {e}")
+            return {"calendars": [], "error": str(e)}
+
+    async def _sync_single_calendar_implementation(self, calendar_id: str, days_ahead: int, force_refresh: bool, credentials: HTTPAuthorizationCredentials):
+        """Sync single calendar implementation"""
+        self._verify_api_key(credentials)
+
+        try:
+            if hasattr(self.scheduler, 'source_manager'):
+                calendar = await self.scheduler.source_manager.get_calendar_by_id(calendar_id)
+                if not calendar:
+                    raise HTTPException(status_code=404, detail="Calendar not found")
+
+                adapter = self.scheduler.source_manager.get_adapter(calendar.adapter_type)
+                sync_result = await adapter.list_events(calendar, days_ahead=days_ahead)
+
+                return {
+                    "success": True,
+                    "calendar_id": calendar_id,
+                    "events_processed": len(sync_result.events),
+                    "message": f"Synchronized {len(sync_result.events)} events"
+                }
+            else:
+                raise HTTPException(status_code=503, detail="Source manager not available")
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.error(f"Error syncing calendar {calendar_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Calendar sync failed: {e}")
+
 
 # Factory functions for backward compatibility
 
@@ -2103,6 +2342,11 @@ def create_api_routes(scheduler: ChronosScheduler, api_key: str) -> APIRouter:
     """Create unified API routes (replaces ChronosAPIRoutes)"""
     routes = ChronosUnifiedAPIRoutes(scheduler, api_key)
     return routes.router
+
+def create_v2_api_routes(scheduler: ChronosScheduler, api_key: str) -> APIRouter:
+    """Create v2 API routes with /api/v2 prefix"""
+    routes = ChronosUnifiedAPIRoutes(scheduler, api_key)
+    return routes.v2_router
 
 def create_enhanced_routes(scheduler: ChronosScheduler, api_key: str) -> APIRouter:
     """Create enhanced routes (now part of unified routes)"""

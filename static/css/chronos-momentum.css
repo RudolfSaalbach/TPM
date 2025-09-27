@@ -1,0 +1,479 @@
+/*
+ * Chronos Momentum - v1.0
+ * The complete, production-ready stylesheet for the Chronos Engine UI.
+ * This file contains all necessary styles for the entire application.
+*/
+
+/* === 1. FONT IMPORTS === */
+@import url('https://fonts.googleapis.com/css2?family=General+Sans:wght@500;600;700&family=Satoshi:wght@400;500&display=swap');
+
+/* === 2. ROOT & THEME VARIABLES === */
+:root {
+    /* Base Palette (Morning/Default) */
+    --bg-color: #F9F9FB;
+    --sidebar-bg: #FFFFFF;
+    --card-bg: #FFFFFF;
+    --text-primary: #111827;
+    --text-secondary: #6B7280;
+    --border-color: #E5E7EB;
+    --accent-primary: #007AFF;
+    --accent-text: #FFFFFF;
+    --red-line: #EF4444;
+    --success-color: #34C759;
+    --error-color: #FF3B30;
+
+    --font-display: 'General Sans', sans-serif;
+    --font-body: 'Satoshi', sans-serif;
+}
+
+/* === KORREKTUR: Vollständige Definitionen für die temporalen Themes === */
+
+/* Thema: Morgen (Standard, bereits in :root definiert) */
+body.theme-morning {
+    --bg-color: #F9F9FB;
+    --sidebar-bg: #FFFFFF;
+    --card-bg: #FFFFFF;
+    --text-primary: #111827;
+    --text-secondary: #6B7280;
+    --border-color: #E5E7EB;
+    --accent-primary: #007AFF;
+}
+
+/* Thema: Tag */
+body.theme-day {
+    --bg-color: #FFFFFF;
+    --sidebar-bg: #F8F9FA;
+    --card-bg: #FFFFFF;
+    --text-primary: #212529;
+    --text-secondary: #6C757D;
+    --border-color: #E9ECEF;
+    --accent-primary: #4263EB;
+}
+
+/* Thema: Abend */
+body.theme-evening {
+    --bg-color: #343A40;
+    --sidebar-bg: #212529;
+    --card-bg: #2B3035;
+    --text-primary: #F8F9FA;
+    --text-secondary: #ADB5BD;
+    --border-color: #495057;
+    --accent-primary: #FF6B6B;
+}
+
+/* Thema: Nacht */
+body.theme-night {
+    --bg-color: #101116;
+    --sidebar-bg: #1A1B26;
+    --card-bg: #1F202E;
+    --text-primary: #A9B1D6;
+    --text-secondary: #565F89;
+    --border-color: #2A2F4A;
+    --accent-primary: #9D7CD8;
+}
+
+
+/* === 3. BASE & RESET === */
+body {
+    font-family: var(--font-body);
+    margin: 0;
+    display: flex;
+    height: 100vh;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* === 4. CORE LAYOUT === */
+.sidebar {
+    width: 230px;
+    background-color: var(--sidebar-bg);
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.main-content {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+    min-width: 0;
+}
+
+/* === 5. HEADER (STABLE 2-ROW ARCHITECTURE) === */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+header h2 {
+    font-family: var(--font-display);
+    font-size: 1.875rem;
+    margin: 0;
+    font-weight: 600;
+}
+
+.filter-panel {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.search-bar {
+    position: relative;
+    flex-grow: 1;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 11px 15px 11px 45px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+}
+
+.search-bar svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: var(--text-secondary);
+}
+
+/* === 6. NAVIGATION & SIDEBAR === */
+.sidebar h1 {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    color: var(--text-primary);
+    margin: 0 0 40px 0;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.sidebar nav a {
+    display: block;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar nav a.active, .sidebar nav a:hover {
+    background-color: #F3F4F6;
+    color: var(--text-primary);
+}
+
+/* === 7. TIMELINE & EVENTS (Dashboard) === */
+.timeline-container {
+    display: flex;
+}
+
+.timeline-axis {
+    width: 70px;
+    padding-right: 20px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    position: relative;
+}
+
+.timeline-hour {
+    height: 80px;
+    text-align: right;
+    position: relative;
+}
+
+.timeline-hour::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: 0;
+    width: 10px;
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+.now-indicator {
+    position: absolute;
+    width: calc(100% + 20px);
+    left: 0;
+    height: 2px;
+    background-color: var(--red-line);
+    z-index: 10;
+}
+
+.now-indicator::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--red-line);
+}
+
+.event-list {
+    flex: 1;
+}
+
+.event-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-bottom: 15px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.event-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 5px;
+    height: 100%;
+    background-color: var(--cal-color, var(--accent-primary));
+}
+
+.event-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin: 0 0 8px 0;
+}
+
+.event-meta {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 5px 15px;
+}
+
+.event-meta-item {
+    display: flex;
+    align-items: center;
+}
+
+.event-meta-item svg {
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+}
+
+.event-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+
+/* === 8. GENERAL COMPONENTS (Buttons, Forms, Modals, etc.) === */
+
+/* Buttons */
+.btn, button {
+    background-color: var(--accent-primary);
+    color: var(--accent-text);
+    border: none;
+    padding: 12px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+button.secondary, .btn.secondary {
+    background-color: #E5E7EB;
+    color: var(--text-primary);
+}
+
+button:disabled, .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Forms & Inputs */
+select, input[type="text"], input[type="password"], input[type="email"], textarea {
+    padding: 11px 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    width: 100%;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-family: var(--font-display);
+}
+
+/* Cards (für Settings, Admin etc.) */
+.content-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(17, 24, 39, 0.5);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-container {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    padding: 30px;
+    width: 90%;
+    max-width: 500px;
+    z-index: 101;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Toasts / Notifications */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.toast {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-left: 5px solid var(--accent-primary);
+    border-radius: 8px;
+    padding: 15px;
+    min-width: 300px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+.toast.fade-out {
+    opacity: 0;
+}
+.toast.success { border-left-color: var(--success-color); }
+.toast.error { border-left-color: var(--error-color); }
+
+.toast-header { display: flex; justify-content: space-between; align-items: center; }
+.toast-title { font-family: var(--font-display); font-weight: 600; margin: 0; }
+.toast-close { background: none; border: none; font-size: 1.2rem; color: var(--text-secondary); cursor: pointer; }
+.toast-body { margin-top: 8px; }
+
+
+/* === 9. RESPONSIVE ADJUSTMENTS === */
+@media (max-width: 768px) {
+    .sidebar {
+        display: none; /* Hide by default on mobile */
+    }
+    .main-content {
+        padding: 20px;
+    }
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .filter-panel {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

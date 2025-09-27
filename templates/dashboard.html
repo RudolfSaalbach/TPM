@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Premium CSS -->
-    <link rel="stylesheet" href="/static/css/chronos-premium.css">
+    <link rel="stylesheet" href="/static/css/chronos-momentum.css">
 
     <!-- Zentrale Chronos Config Injection -->
     <script>
@@ -414,30 +414,124 @@
             }
         }
 
-        async function syncCalendar() {
-            showToast('Synchronisation gestartet', 'Kalender wird synchronisiert...', 'info');
+        async function syncCalendar(calendarId = null, showProgress = true) {
+            const syncButton = document.querySelector('[onclick="syncCalendar()"]');
 
             try {
-                const response = await fetch('/api/v1/sync/incremental', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                if (syncButton) {
+                    syncButton.disabled = true;
+                    syncButton.innerHTML = '<span aria-hidden="true">⏳</span> Synchronisiere...';
                 }
 
-                const data = await response.json();
-                showToast('Sync erfolgreich', data.message || 'Kalender wurde erfolgreich synchronisiert', 'success');
+                if (showProgress) {
+                    showToast('Synchronisation gestartet',
+                        calendarId ? `Kalender ${calendarId} wird synchronisiert...` : 'Alle Kalender werden synchronisiert...',
+                        'info');
+                }
+
+                let syncResults = [];
+
+                if (calendarId) {
+                    // Sync specific calendar
+                    const result = await syncSingleCalendar(calendarId);
+                    syncResults = [result];
+                } else {
+                    // Get all calendars and sync them
+                    const calendarsResponse = await fetch('/caldav/calendars', {
+                        headers: {
+                            'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (calendarsResponse.ok) {
+                        const calendarsData = await calendarsResponse.json();
+                        const calendars = calendarsData.calendars || [];
+
+                        for (const calendar of calendars) {
+                            try {
+                                const result = await syncSingleCalendar(calendar.id);
+                                syncResults.push(result);
+                            } catch (error) {
+                                console.warn(`Failed to sync calendar ${calendar.id}:`, error);
+                                syncResults.push({
+                                    calendar_id: calendar.id,
+                                    success: false,
+                                    error: error.message
+                                });
+                            }
+                        }
+                    } else {
+                        // Fallback to legacy sync
+                        const response = await fetch('/api/v1/sync/incremental', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+
+                        const data = await response.json();
+                        syncResults = [{ success: true, message: data.message }];
+                    }
+                }
+
+                // Show results
+                const successCount = syncResults.filter(r => r.success).length;
+                const totalCount = syncResults.length;
+
+                if (successCount === totalCount) {
+                    showToast('Sync erfolgreich',
+                        `${successCount} Kalender erfolgreich synchronisiert`,
+                        'success');
+                } else {
+                    showToast('Sync teilweise erfolgreich',
+                        `${successCount}/${totalCount} Kalender synchronisiert`,
+                        'warning');
+                }
+
                 await refreshDashboard();
 
             } catch (error) {
                 console.error('Sync error:', error);
                 showToast('Sync Fehler', 'Synchronisation fehlgeschlagen: ' + error.message, 'error');
+            } finally {
+                if (syncButton) {
+                    syncButton.disabled = false;
+                    syncButton.innerHTML = '<span aria-hidden="true">⚡</span> Sync starten';
+                }
             }
+        }
+
+        async function syncSingleCalendar(calendarId) {
+            const response = await fetch(`/caldav/calendars/${calendarId}/sync`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    days_ahead: 7,
+                    force_refresh: false
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            return {
+                calendar_id: calendarId,
+                success: true,
+                events_synced: result.events_processed || 0,
+                message: result.message || 'Synchronisation erfolgreich'
+            };
         }
 
         async function triggerFullSync() {

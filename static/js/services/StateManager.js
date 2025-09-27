@@ -34,10 +34,29 @@ class ChronosStateManager {
         // Event bus
         this.eventBus = window.ChronosEventBus;
 
+        // API integration
+        this.apiService = window.ChronosAPIService;
+        this.pendingRequests = new Map();
+        this.requestQueue = [];
+
+        // UI bindings
+        this.domBindings = new Map();
+        this.formBindings = new Map();
+
+        // Sync management
+        this.syncInterval = null;
+        this.lastServerSync = null;
+
         // Debounced persistence
         this.debouncedPersist = this.debounce(
             this.persistState.bind(this),
             this.options.debounceDelay
+        );
+
+        // Debounced sync
+        this.debouncedSync = this.debounce(
+            this.syncWithServer.bind(this),
+            1000
         );
 
         this.initialize();
@@ -63,6 +82,14 @@ class ChronosStateManager {
         this.addToHistory(this.state, 'INIT');
 
         this.debug('StateManager initialized', this.state);
+
+        // Start automatic sync if enabled
+        if (this.get('user.settings.autoSync')) {
+            this.startAutoSync();
+        }
+
+        // Set up UI bindings observer
+        this.setupUIObserver();
     }
 
     /**
@@ -538,6 +565,449 @@ class ChronosStateManager {
         } catch (error) {
             console.error('Failed to load persisted state:', error);
             this.state = this.getDefaultState();
+        }
+    }
+
+    // UI Binding Methods
+
+    /**
+     * Bind DOM element to state path
+     */
+    bindElement(element, statePath, options = {}) {
+        const binding = {
+            element,
+            statePath,
+            type: options.type || 'text',
+            transform: options.transform || (value => value),
+            events: options.events || ['input', 'change'],
+            id: this.generateId()
+        };
+
+        this.domBindings.set(binding.id, binding);
+
+        // Set initial value
+        this.updateDOMElement(binding);
+
+        // Subscribe to state changes
+        const unsubscribe = this.subscribe(statePath, (newValue) => {
+            this.updateDOMElement(binding, newValue);
+        });
+
+        // Listen for DOM events
+        const handleDOMChange = (event) => {
+            let value = event.target.value;
+
+            if (binding.type === 'checkbox') {
+                value = event.target.checked;
+            } else if (binding.type === 'number') {
+                value = parseFloat(value) || 0;
+            }
+
+            this.set(statePath, value, { source: 'dom', element: element.id });
+        };
+
+        binding.events.forEach(eventType => {
+            element.addEventListener(eventType, handleDOMChange);
+        });
+
+        // Return cleanup function
+        return () => {
+            unsubscribe();
+            this.domBindings.delete(binding.id);
+            binding.events.forEach(eventType => {
+                element.removeEventListener(eventType, handleDOMChange);
+            });
+        };
+    }
+
+    /**
+     * Bind form to state object
+     */
+    bindForm(form, statePath, options = {}) {
+        const binding = {
+            form,
+            statePath,
+            fields: new Map(),
+            id: this.generateId(),
+            autoSubmit: options.autoSubmit || false,
+            submitEndpoint: options.submitEndpoint
+        };
+
+        // Bind each form field
+        const formElements = form.querySelectorAll('input, select, textarea');
+        formElements.forEach(element => {
+            const fieldPath = `${statePath}.${element.name || element.id}`;
+            if (fieldPath && element.name) {
+                const fieldBinding = this.bindElement(element, fieldPath, {
+                    type: element.type,
+                    events: ['input', 'change', 'blur']
+                });
+                binding.fields.set(element.name, fieldBinding);
+            }
+        });
+
+        this.formBindings.set(binding.id, binding);
+
+        // Handle form submission
+        const handleSubmit = (event) => {
+            event.preventDefault();
+            this.submitForm(binding);
+        };
+
+        form.addEventListener('submit', handleSubmit);
+
+        return () => {
+            binding.fields.forEach(cleanup => cleanup());
+            this.formBindings.delete(binding.id);
+            form.removeEventListener('submit', handleSubmit);
+        };
+    }
+
+    /**
+     * Update DOM element with state value
+     */
+    updateDOMElement(binding, value = null) {
+        const currentValue = value !== null ? value : this.get(binding.statePath);
+        const transformedValue = binding.transform(currentValue);
+
+        switch (binding.type) {
+            case 'text':
+            case 'email':
+            case 'password':
+            case 'number':
+                if (binding.element.value !== transformedValue) {
+                    binding.element.value = transformedValue || '';
+                }
+                break;
+            case 'checkbox':
+                binding.element.checked = Boolean(transformedValue);
+                break;
+            case 'radio':
+                binding.element.checked = binding.element.value === transformedValue;
+                break;
+            case 'select':
+                binding.element.value = transformedValue || '';
+                break;
+            case 'innerHTML':
+                binding.element.innerHTML = transformedValue || '';
+                break;
+            case 'textContent':
+                binding.element.textContent = transformedValue || '';
+                break;
+            case 'class':
+                if (transformedValue) {
+                    binding.element.classList.add(transformedValue);
+                } else {
+                    binding.element.classList.remove(binding.element.dataset.boundClass);
+                }
+                binding.element.dataset.boundClass = transformedValue;
+                break;
+        }
+    }
+
+    /**
+     * Submit form data to API
+     */
+    async submitForm(binding) {
+        if (!this.apiService || !binding.submitEndpoint) return;
+
+        const formData = this.get(binding.statePath);
+
+        try {
+            this.set('ui.loading', true);
+            this.set('ui.error', null);
+
+            const response = await this.apiService.request(
+                binding.submitEndpoint.method || 'POST',
+                binding.submitEndpoint.url,
+                formData
+            );
+
+            if (response.success) {
+                this.set('ui.notifications', [
+                    ...this.get('ui.notifications'),
+                    {
+                        id: this.generateId(),
+                        type: 'success',
+                        message: 'Daten erfolgreich gespeichert',
+                        timestamp: Date.now()
+                    }
+                ]);
+
+                // Clear form if specified
+                if (binding.submitEndpoint.clearAfterSubmit) {
+                    this.reset(binding.statePath);
+                }
+            }
+
+        } catch (error) {
+            this.set('ui.error', error.message);
+            this.set('ui.notifications', [
+                ...this.get('ui.notifications'),
+                {
+                    id: this.generateId(),
+                    type: 'error',
+                    message: `Fehler beim Speichern: ${error.message}`,
+                    timestamp: Date.now()
+                }
+            ]);
+        } finally {
+            this.set('ui.loading', false);
+        }
+    }
+
+    /**
+     * Set up mutation observer for automatic UI binding
+     */
+    setupUIObserver() {
+        if (typeof MutationObserver === 'undefined') return;
+
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        this.autoBindElements(node);
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Initial binding
+        this.autoBindElements(document.body);
+    }
+
+    /**
+     * Automatically bind elements with data attributes
+     */
+    autoBindElements(root) {
+        // Bind elements with data-bind attribute
+        const bindElements = root.querySelectorAll('[data-bind]');
+        bindElements.forEach(element => {
+            const statePath = element.dataset.bind;
+            const bindType = element.dataset.bindType || 'text';
+
+            if (statePath && !element.dataset.boundByState) {
+                element.dataset.boundByState = 'true';
+                this.bindElement(element, statePath, { type: bindType });
+            }
+        });
+
+        // Bind forms with data-bind-form attribute
+        const bindForms = root.querySelectorAll('form[data-bind-form]');
+        bindForms.forEach(form => {
+            const statePath = form.dataset.bindForm;
+
+            if (statePath && !form.dataset.boundByState) {
+                form.dataset.boundByState = 'true';
+                this.bindForm(form, statePath, {
+                    autoSubmit: form.dataset.autoSubmit === 'true',
+                    submitEndpoint: form.dataset.submitEndpoint ? JSON.parse(form.dataset.submitEndpoint) : null
+                });
+            }
+        });
+    }
+
+    // API Synchronization Methods
+
+    /**
+     * Start automatic synchronization with server
+     */
+    startAutoSync() {
+        if (this.syncInterval) return;
+
+        const interval = this.get('user.settings.syncInterval') || 300000; // 5 minutes default
+
+        this.syncInterval = setInterval(() => {
+            this.syncWithServer();
+        }, interval);
+
+        // Initial sync
+        this.syncWithServer();
+    }
+
+    /**
+     * Stop automatic synchronization
+     */
+    stopAutoSync() {
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+            this.syncInterval = null;
+        }
+    }
+
+    /**
+     * Synchronize state with server
+     */
+    async syncWithServer() {
+        if (!this.apiService) return;
+
+        try {
+            this.set('system.syncStatus', 'syncing');
+
+            // Sync events
+            await this.syncEvents();
+
+            // Sync templates
+            await this.syncTemplates();
+
+            // Sync calendars
+            await this.syncCalendars();
+
+            // Sync user settings
+            await this.syncUserSettings();
+
+            this.set('system.lastSync', Date.now());
+            this.set('system.syncStatus', 'idle');
+            this.lastServerSync = Date.now();
+
+            this.debug('Server sync completed');
+
+        } catch (error) {
+            this.set('system.syncStatus', 'error');
+            console.error('Server sync failed:', error);
+
+            // Retry after delay
+            setTimeout(() => {
+                if (this.get('user.settings.autoSync')) {
+                    this.syncWithServer();
+                }
+            }, 30000); // Retry after 30 seconds
+        }
+    }
+
+    /**
+     * Sync events with server
+     */
+    async syncEvents() {
+        try {
+            const response = await this.apiService.request('GET', '/api/v2/events', {
+                limit: 1000,
+                start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 7 days
+                end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Next 30 days
+            });
+
+            if (response.success && response.events) {
+                this.set('data.events', response.events);
+            }
+        } catch (error) {
+            console.error('Failed to sync events:', error);
+        }
+    }
+
+    /**
+     * Sync templates with server
+     */
+    async syncTemplates() {
+        try {
+            const response = await this.apiService.request('GET', '/api/v1/templates');
+
+            if (response.success && response.templates) {
+                this.set('data.templates', response.templates);
+            }
+        } catch (error) {
+            console.error('Failed to sync templates:', error);
+        }
+    }
+
+    /**
+     * Sync calendars with server
+     */
+    async syncCalendars() {
+        try {
+            const response = await this.apiService.request('GET', '/api/v2/calendars');
+
+            if (response.success && response.calendars) {
+                const calendarIds = response.calendars.map(cal => cal.id);
+                this.set('data.calendars', calendarIds);
+            }
+        } catch (error) {
+            console.error('Failed to sync calendars:', error);
+        }
+    }
+
+    /**
+     * Sync user settings to server
+     */
+    async syncUserSettings() {
+        // This would typically send user preferences to server
+        // For now, just update local sync timestamp
+        const settings = this.get('user.settings');
+
+        try {
+            // Example API call to save settings
+            // await this.apiService.request('PUT', '/api/v1/user/settings', settings);
+        } catch (error) {
+            console.error('Failed to sync user settings:', error);
+        }
+    }
+
+    /**
+     * Make API request with state integration
+     */
+    async apiRequest(method, endpoint, data = null, options = {}) {
+        if (!this.apiService) {
+            throw new Error('API service not available');
+        }
+
+        const requestId = this.generateId();
+
+        try {
+            // Track pending request
+            this.pendingRequests.set(requestId, { method, endpoint, timestamp: Date.now() });
+            this.set('system.activeRequests', this.pendingRequests.size);
+
+            const response = await this.apiService.request(method, endpoint, data);
+
+            // Handle response
+            if (response.success) {
+                // Auto-update state based on response
+                this.handleAPIResponse(method, endpoint, response, options);
+            }
+
+            return response;
+
+        } catch (error) {
+            this.set('ui.error', error.message);
+            throw error;
+        } finally {
+            // Remove from pending requests
+            this.pendingRequests.delete(requestId);
+            this.set('system.activeRequests', this.pendingRequests.size);
+        }
+    }
+
+    /**
+     * Handle API response and update state
+     */
+    handleAPIResponse(method, endpoint, response, options) {
+        // Auto-update patterns based on endpoint
+        if (endpoint.includes('/events')) {
+            if (method === 'GET' && response.events) {
+                this.set('data.events', response.events);
+            } else if (method === 'POST' && response.event) {
+                this.push('data.events', response.event);
+            }
+        } else if (endpoint.includes('/templates')) {
+            if (method === 'GET' && response.templates) {
+                this.set('data.templates', response.templates);
+            } else if (method === 'POST' && response.template) {
+                this.push('data.templates', response.template);
+            }
+        }
+
+        // Custom update logic
+        if (options.updatePath) {
+            this.set(options.updatePath, response.data || response);
+        }
+
+        // Trigger sync if specified
+        if (options.triggerSync) {
+            this.debouncedSync();
         }
     }
 

@@ -79,10 +79,10 @@ class CalendarRepairer:
         # Store full config for later reference
         self.config = config
 
-        # Extract nested config from repair_and_enrich section
-        repair_config = config.get('repair_and_enrich', {})
-        self.parsing_config = repair_config.get('parsing', {})
-        self.rules_config = repair_config.get('rules', [])
+        # Extract nested config from calendar_repairer section (fallback to repair_and_enrich for backward compatibility)
+        repair_config = config.get('calendar_repairer', config.get('repair_and_enrich', {}))
+        self.parsing_config = repair_config.get('parsing', config.get('parsing', {}))
+        self.rules_config = repair_config.get('rules', config.get('rules', []))
         self.idempotency_config = repair_config.get('idempotency', {})
         self.series_policy_config = repair_config.get('series_policy', {})
 
@@ -547,12 +547,20 @@ class CalendarRepairer:
 
         # Add backend-agnostic idempotency markers
         marker_keys = self.idempotency_config.get('marker_keys', {})
+
+        # Serialize payload with datetime support
+        payload_dict = asdict(payload)
+        # Convert datetime objects to ISO strings for JSON serialization
+        for key, value in payload_dict.items():
+            if isinstance(value, datetime):
+                payload_dict[key] = value.isoformat()
+
         chronos_markers = {
             'cleaned': marker_keys.get('cleaned', 'true'),
             'rule_id': rule_id,
             'signature': self.calculate_signature(event),
             'original_summary': event.get('summary', ''),
-            'payload': json.dumps(asdict(payload))
+            'payload': json.dumps(payload_dict)
         }
 
         patch_data['chronos_markers'] = chronos_markers

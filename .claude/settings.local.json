@@ -32,7 +32,9 @@
       "Bash(tasklist:*)",
       "Bash(git log:*)",
       "Bash(findstr:*)",
-      "Bash(cmd /c:*)"
+      "Bash(cmd /c:*)",
+      "Bash(cd:*)",
+      "Bash(set PYTHONPATH=.)"
     ],
     "deny": [],
     "ask": []

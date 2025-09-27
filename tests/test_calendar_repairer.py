@@ -16,7 +16,7 @@ class TestCalendarRepairer:
     @pytest.fixture
     def test_config(self):
         """Load test configuration from YAML"""
-        with open('config/calendar_repairer.yaml', 'r') as f:
+        with open('config/calendar_repairer.yaml', 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
 
     @pytest.fixture

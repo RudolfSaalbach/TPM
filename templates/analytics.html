@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Premium CSS -->
-    <link rel="stylesheet" href="/static/css/chronos-premium.css">
+    <link rel="stylesheet" href="/static/css/chronos-momentum.css">
 </head>
 <body>
     <!-- Skip Link für Barrierefreiheit -->
@@ -139,26 +139,6 @@
                             </div>
                         </article>
 
-                        <article class="analytics-metric-card">
-                            <div class="metric-icon-large" aria-hidden="true">🎯</div>
-                            <div class="metric-content">
-                                <span class="metric-label">Produktivitätsrate</span>
-                                <span class="metric-value" id="productivityRate">87.3%</span>
-                                <div class="metric-change positive">
-                                    <span aria-label="Anstieg">↗</span>
-                                    <span>+5.2% vs. letzter Periode</span>
-                                </div>
-                            </div>
-                            <div class="metric-progress" aria-hidden="true">
-                                <div class="progress-ring">
-                                    <svg width="60" height="60">
-                                        <circle cx="30" cy="30" r="25" stroke="var(--border-subtle)" stroke-width="4" fill="none"/>
-                                        <circle cx="30" cy="30" r="25" stroke="var(--success-500)" stroke-width="4" fill="none"
-                                                stroke-dasharray="157" stroke-dashoffset="20" stroke-linecap="round"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </article>
 
                         <article class="analytics-metric-card">
                             <div class="metric-icon-large" aria-hidden="true">📅</div>
@@ -197,25 +177,25 @@
 
                 <!-- Charts Section -->
                 <div class="analytics-grid">
-                    <!-- Productivity Trend Chart -->
-                    <section class="chart-section" aria-labelledby="productivity-chart-title">
+                    <!-- Event Completion Chart -->
+                    <section class="chart-section" aria-labelledby="completion-chart-title">
                         <div class="chart-header">
                             <div>
-                                <h3 id="productivity-chart-title" class="chart-title">Produktivitätstrend</h3>
-                                <p class="chart-subtitle">Tägliche Produktivität über die Zeit</p>
+                                <h3 id="completion-chart-title" class="chart-title">Event-Abschlussrate</h3>
+                                <p class="chart-subtitle">Tägliche Event-Abschlüsse über die Zeit</p>
                             </div>
                             <div class="chart-controls">
-                                <button class="chart-control-btn active" onclick="switchChartType('productivity', 'line')">
+                                <button class="chart-control-btn active" onclick="switchChartType('completion', 'line')">
                                     Linie
                                 </button>
-                                <button class="chart-control-btn" onclick="switchChartType('productivity', 'bar')">
+                                <button class="chart-control-btn" onclick="switchChartType('completion', 'bar')">
                                     Balken
                                 </button>
                             </div>
                         </div>
-                        <div class="chart-container" role="img" aria-labelledby="productivity-chart-title" aria-describedby="productivity-chart-desc">
-                            <div id="productivity-chart-desc" class="sr-only">
-                                Liniendiagramm zeigt Produktivitätstrend über die letzten 7 Tage mit einem Durchschnitt von 87.3%
+                        <div class="chart-container" role="img" aria-labelledby="completion-chart-title" aria-describedby="completion-chart-desc">
+                            <div id="completion-chart-desc" class="sr-only">
+                                Liniendiagramm zeigt Event-Abschlussrate über die letzten 7 Tage
                             </div>
                             <div class="chart-placeholder trend-chart">
                                 <div class="chart-y-axis">
@@ -1405,7 +1385,6 @@
             // Mock data - in real app, this comes from API
             return {
                 focusTime: 4.2,
-                productivity: 87.3,
                 completedEvents: 127,
                 efficiency: 92,
                 timeDistribution: {
@@ -1426,7 +1405,6 @@
         function updateAnalyticsUI() {
             // Update metric values
             document.getElementById('avgFocusTime').textContent = analyticsData.focusTime + 'h';
-            document.getElementById('productivityRate').textContent = analyticsData.productivity + '%';
             document.getElementById('completedEvents').textContent = analyticsData.completedEvents;
             document.getElementById('efficiencyScore').textContent = analyticsData.efficiency;
 
@@ -1435,20 +1413,12 @@
         }
 
         function animateMetrics() {
-            // Animate progress ring
-            const progressRing = document.querySelector('.progress-ring circle:last-child');
-            if (progressRing) {
-                const percentage = analyticsData.productivity;
-                const circumference = 2 * Math.PI * 25;
-                const offset = circumference - (percentage / 100) * circumference;
-                progressRing.style.strokeDashoffset = offset;
-            }
-
             // Animate completion bar
             const completionFill = document.querySelector('.completion-fill');
             if (completionFill) {
                 setTimeout(() => {
-                    completionFill.style.width = analyticsData.productivity + '%';
+                    const completionRate = (analyticsData.completedEvents / (analyticsData.completedEvents + 30)) * 100; // Mock calculation
+                    completionFill.style.width = completionRate + '%';
                 }, 500);
             }
 

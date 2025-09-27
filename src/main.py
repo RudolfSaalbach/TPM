@@ -148,6 +148,13 @@ class ChronosApp:
         self.app.include_router(email_templates.router, prefix="/api/v1", tags=["Email Templates"])
         self.app.include_router(whitelists.router, prefix="/api/v1", tags=["Whitelists"])
 
+        # Add v2 API routes
+        from src.api.routes import create_v2_api_routes
+        # Use same pattern as api_key lookup above
+        api_key_v2 = config.get('api_key') or config.get('api', {}).get('key', 'development-key')
+        v2_router = create_v2_api_routes(self.scheduler, api_key_v2)
+        self.app.include_router(v2_router, tags=["API v2"])
+
         # Initialize dashboard
         dashboard = ChronosDashboard(
             analytics_engine=self.scheduler.analytics,

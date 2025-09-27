@@ -14,57 +14,58 @@ from src.core.caldav_adapter import CalDAVAdapter
 from src.core.source_adapter import CalendarRef, AdapterCapabilities, EventListResult, ConflictError, PermissionError
 
 
-class TestCalDAVAdapterCore:
-    """Core CalDAVAdapter functionality tests"""
-
-    @pytest.fixture
-    def minimal_config(self):
-        """Minimal configuration for CalDAV adapter"""
-        return {
-            'calendar_source': {'type': 'caldav'},
-            'caldav': {
-                'calendars': [
-                    {
-                        'id': 'test-cal',
-                        'alias': 'Test Calendar',
-                        'url': 'http://radicale.test:5232/user/collection/',
-                        'read_only': False,
-                        'timezone': 'Europe/Berlin'
-                    }
-                ],
-                'auth': {
-                    'mode': 'basic',
-                    'username': 'testuser',
-                    'password_ref': 'env:TEST_PASSWORD'
-                },
-                'transport': {
-                    'verify_tls': False,
-                    'connect_timeout_s': 5,
-                    'read_timeout_s': 15
-                },
-                'sync': {
-                    'use_sync_collection': True,
-                    'window_days': 400,
-                    'parallel_requests': 3
-                },
-                'write': {
-                    'if_match': True,
-                    'retry_conflict': 1,
-                    'include_vtimezone': True
+@pytest.fixture
+def minimal_config():
+    """Minimal configuration for CalDAV adapter"""
+    return {
+        'calendar_source': {'type': 'caldav'},
+        'caldav': {
+            'calendars': [
+                {
+                    'id': 'test-cal',
+                    'alias': 'Test Calendar',
+                    'url': 'http://radicale.test:5232/user/collection/',
+                    'read_only': False,
+                    'timezone': 'Europe/Berlin'
                 }
+            ],
+            'auth': {
+                'mode': 'basic',
+                'username': 'testuser',
+                'password_ref': 'env:TEST_PASSWORD'
             },
-            'repair_and_enrich': {
-                'idempotency': {
-                    'marker_keys': {
-                        'cleaned': 'X-CHRONOS-CLEANED',
-                        'rule_id': 'X-CHRONOS-RULE-ID',
-                        'signature': 'X-CHRONOS-SIGNATURE',
-                        'original_summary': 'X-CHRONOS-ORIGINAL-SUMMARY',
-                        'payload': 'X-CHRONOS-PAYLOAD'
-                    }
+            'transport': {
+                'verify_tls': False,
+                'connect_timeout_s': 5,
+                'read_timeout_s': 15
+            },
+            'sync': {
+                'use_sync_collection': True,
+                'window_days': 400,
+                'parallel_requests': 3
+            },
+            'write': {
+                'if_match': True,
+                'retry_conflict': 1,
+                'include_vtimezone': True
+            }
+        },
+        'repair_and_enrich': {
+            'idempotency': {
+                'marker_keys': {
+                    'cleaned': 'X-CHRONOS-CLEANED',
+                    'rule_id': 'X-CHRONOS-RULE-ID',
+                    'signature': 'X-CHRONOS-SIGNATURE',
+                    'original_summary': 'X-CHRONOS-ORIGINAL-SUMMARY',
+                    'payload': 'X-CHRONOS-PAYLOAD'
                 }
             }
         }
+    }
+
+
+class TestCalDAVAdapterCore:
+    """Core CalDAVAdapter functionality tests"""
 
     @pytest.fixture
     def caldav_adapter(self, minimal_config):
@@ -174,12 +175,13 @@ class TestCalDAVEventNormalization:
 
     def test_normalize_all_day_event(self, caldav_adapter, test_calendar_ref):
         """Test normalization of all-day event"""
+        from datetime import date
         mock_vevent = Mock()
         mock_vevent.get.side_effect = lambda key, default=None: {
             'UID': 'allday-event-456',
             'SUMMARY': 'All Day Event',
-            'DTSTART': Mock(dt=datetime(2025, 1, 15)),
-            'DTEND': Mock(dt=datetime(2025, 1, 16))
+            'DTSTART': Mock(dt=date(2025, 1, 15)),
+            'DTEND': Mock(dt=date(2025, 1, 16))
         }.get(key, default)
 
         mock_vevent.has_key = lambda key: key in ['UID', 'SUMMARY', 'DTSTART', 'DTEND']

@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Premium CSS -->
-    <link rel="stylesheet" href="/static/css/chronos-premium.css">
+    <link rel="stylesheet" href="/static/css/chronos-momentum.css">
 
     <!-- Zentrale Chronos Config Injection -->
     <script>
@@ -126,6 +126,10 @@
                             <a href="#backup" class="settings-nav-item" onclick="showSettingsSection('backup', this)">
                                 <span class="nav-icon" aria-hidden="true">💾</span>
                                 <span>Backup</span>
+                            </a>
+                            <a href="#events" class="settings-nav-item" onclick="showSettingsSection('events', this)">
+                                <span class="nav-icon" aria-hidden="true">📋</span>
+                                <span>Event-Verwaltung</span>
                             </a>
                             <a href="#about" class="settings-nav-item" onclick="showSettingsSection('about', this)">
                                 <span class="nav-icon" aria-hidden="true">ℹ️</span>
@@ -329,6 +333,33 @@
                                                         <span>Bidirektionale Synchronisation</span>
                                                     </label>
                                                 </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Backend-Verwaltung</span>
+                                        <p class="setting-description">Aktueller Kalender-Backend und Wechseloptionen</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="backend-management">
+                                            <div class="backend-status" id="backend-status-display">
+                                                <div class="status-indicator idle">
+                                                    <span class="status-icon">⏳</span>
+                                                    <span class="status-text">Backend-Info wird geladen...</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="backend-switch">
+                                                <label for="backend-select">Backend wechseln:</label>
+                                                <select id="backend-select" class="select-input" onchange="handleBackendSwitch(this.value)">
+                                                    <option value="">Backend auswählen...</option>
+                                                    <option value="caldav">CalDAV Server</option>
+                                                    <option value="google">Google Calendar</option>
+                                                    <option value="outlook">Outlook Calendar</option>
+                                                </select>
                                             </div>
                                         </div>
                                     </div>
@@ -760,6 +791,82 @@
                                                     <button class="btn btn-ghost btn-sm">Download</button>
                                                     <button class="btn btn-ghost btn-sm">Wiederherstellen</button>
                                                 </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Event Management Section -->
+                        <section id="events-section" class="settings-section" aria-labelledby="events-heading" style="display: none;">
+                            <div class="section-header">
+                                <h2 id="events-heading" class="section-title">Event-Verwaltung</h2>
+                                <p class="section-subtitle">Event-Daten exportieren und importieren</p>
+                            </div>
+
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Event-Export</span>
+                                        <p class="setting-description">Exportiere alle Events zur Sicherung oder Migration</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="export-controls">
+                                            <button class="btn btn-primary" onclick="exportAllEvents()" id="export-events-btn">
+                                                <span aria-hidden="true">📤</span>
+                                                Alle Events exportieren
+                                            </button>
+                                            <div class="export-options">
+                                                <label class="checkbox-label">
+                                                    <input type="checkbox" id="include-links" checked>
+                                                    Event-Links einschließen
+                                                </label>
+                                                <label class="checkbox-label">
+                                                    <input type="checkbox" id="include-templates" checked>
+                                                    Templates einschließen
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Event-Import</span>
+                                        <p class="setting-description">Importiere Events aus einer JSON-Datei</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="import-controls">
+                                            <input type="file" id="event-import-file" accept=".json" style="display: none;" onchange="handleEventImport(this.files[0])">
+                                            <button class="btn btn-secondary" onclick="document.getElementById('event-import-file').click()">
+                                                <span aria-hidden="true">📂</span>
+                                                JSON-Datei auswählen
+                                            </button>
+                                            <div class="import-options">
+                                                <label class="checkbox-label">
+                                                    <input type="checkbox" id="overwrite-existing">
+                                                    Bestehende Events überschreiben
+                                                </label>
+                                                <label class="checkbox-label">
+                                                    <input type="checkbox" id="validate-before-import" checked>
+                                                    Vor Import validieren
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="setting-item">
+                                    <div class="setting-label">
+                                        <span>Import-Status</span>
+                                        <p class="setting-description">Status des letzten Import-Vorgangs</p>
+                                    </div>
+                                    <div class="setting-control">
+                                        <div class="import-status" id="import-status-display">
+                                            <div class="status-indicator idle">
+                                                <span class="status-icon">⏸️</span>
+                                                <span class="status-text">Bereit für Import</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1517,6 +1624,100 @@
                 justify-content: center;
             }
         }
+
+        /* Event Export/Import Styles */
+        .export-controls,
+        .import-controls {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .export-options,
+        .import-options {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            margin-top: var(--space-3);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .import-status {
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-3);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .status-indicator.idle {
+            background: var(--neutral-100);
+            color: var(--text-muted);
+        }
+
+        .status-indicator.processing {
+            background: var(--primary-100);
+            color: var(--primary-700);
+        }
+
+        .status-indicator.success {
+            background: var(--success-100);
+            color: var(--success-700);
+        }
+
+        .status-indicator.error {
+            background: var(--danger-100);
+            color: var(--danger-700);
+        }
+
+        .status-icon {
+            font-size: var(--font-size-base);
+        }
+
+        /* Backend Management Styles */
+        .backend-management {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .backend-status {
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+        }
+
+        .backend-switch {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .backend-switch label {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+        }
     </style>
 
     <!-- JavaScript -->
@@ -1613,6 +1814,11 @@
             navItem.classList.add('active');
 
             currentSection = sectionId;
+
+            // Load section-specific data
+            if (sectionId === 'caldav') {
+                loadBackendInfo();
+            }
 
             // Update URL hash
             window.history.replaceState(null, null, '#' + sectionId);
@@ -2074,6 +2280,276 @@
             if (toast && toast.parentElement) {
                 toast.classList.add('fade-out');
                 setTimeout(() => toast.remove(), 400);
+            }
+        }
+
+        // Event Export/Import Functions
+        async function exportAllEvents() {
+            const exportBtn = document.getElementById('export-events-btn');
+            const includeLinks = document.getElementById('include-links').checked;
+            const includeTemplates = document.getElementById('include-templates').checked;
+
+            try {
+                exportBtn.disabled = true;
+                exportBtn.innerHTML = '<span aria-hidden="true">⏳</span> Exportiere...';
+
+                // Get all events first
+                const eventsResponse = await fetch('/api/v1/events', {
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!eventsResponse.ok) {
+                    throw new Error(`Failed to fetch events: ${eventsResponse.status}`);
+                }
+
+                const eventsData = await eventsResponse.json();
+                const allExports = {
+                    format_version: "1.0",
+                    export_timestamp: new Date().toISOString(),
+                    events: [],
+                    event_links: [],
+                    templates: []
+                };
+
+                // Export each event individually
+                for (const event of eventsData.events || []) {
+                    try {
+                        const exportResponse = await fetch(`/api/v1/events/${event.id}/export`, {
+                            headers: {
+                                'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (exportResponse.ok) {
+                            const eventExport = await exportResponse.json();
+                            allExports.events.push(...eventExport.events);
+                            if (includeLinks && eventExport.event_links) {
+                                allExports.event_links.push(...eventExport.event_links);
+                            }
+                        }
+                    } catch (err) {
+                        console.warn(`Failed to export event ${event.id}:`, err);
+                    }
+                }
+
+                // Export templates if requested
+                if (includeTemplates) {
+                    try {
+                        const templatesResponse = await fetch('/api/v1/templates', {
+                            headers: {
+                                'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (templatesResponse.ok) {
+                            const templatesData = await templatesResponse.json();
+                            allExports.templates = templatesData.templates || [];
+                        }
+                    } catch (err) {
+                        console.warn('Failed to export templates:', err);
+                    }
+                }
+
+                // Download as JSON file
+                const blob = new Blob([JSON.stringify(allExports, null, 2)], {
+                    type: 'application/json'
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `chronos-events-export-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('Export erfolgreich', `${allExports.events.length} Events exportiert`, 'success');
+
+            } catch (error) {
+                console.error('Export failed:', error);
+                showToast('Export fehlgeschlagen', error.message, 'error');
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = '<span aria-hidden="true">📤</span> Alle Events exportieren';
+            }
+        }
+
+        async function handleEventImport(file) {
+            if (!file) return;
+
+            const statusDisplay = document.getElementById('import-status-display');
+            const validateFirst = document.getElementById('validate-before-import').checked;
+            const overwriteExisting = document.getElementById('overwrite-existing').checked;
+
+            try {
+                statusDisplay.innerHTML = '<div class="status-indicator processing"><span class="status-icon">⏳</span><span class="status-text">Lese Datei...</span></div>';
+
+                const text = await file.text();
+                const importData = JSON.parse(text);
+
+                // Validate format
+                if (validateFirst) {
+                    statusDisplay.innerHTML = '<div class="status-indicator processing"><span class="status-icon">🔍</span><span class="status-text">Validiere Daten...</span></div>';
+
+                    if (!importData.events || !Array.isArray(importData.events)) {
+                        throw new Error('Ungültiges Format: "events" Array fehlt');
+                    }
+
+                    if (importData.events.length === 0) {
+                        throw new Error('Keine Events in der Datei gefunden');
+                    }
+                }
+
+                statusDisplay.innerHTML = '<div class="status-indicator processing"><span class="status-icon">📥</span><span class="status-text">Importiere Events...</span></div>';
+
+                // Import events
+                const response = await fetch('/api/v1/events/import', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ...importData,
+                        overwrite_existing: overwriteExisting
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `Import fehlgeschlagen: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                statusDisplay.innerHTML = '<div class="status-indicator success"><span class="status-icon">✅</span><span class="status-text">Import erfolgreich</span></div>';
+                showToast('Import erfolgreich', `${result.imported_count || 'Unbekannte Anzahl'} Events importiert`, 'success');
+
+                // Reset file input
+                document.getElementById('event-import-file').value = '';
+
+            } catch (error) {
+                console.error('Import failed:', error);
+                statusDisplay.innerHTML = '<div class="status-indicator error"><span class="status-icon">❌</span><span class="status-text">Import fehlgeschlagen</span></div>';
+                showToast('Import fehlgeschlagen', error.message, 'error');
+            }
+        }
+
+        // Backend Management Functions
+        async function loadBackendInfo() {
+            const statusDisplay = document.getElementById('backend-status-display');
+
+            try {
+                const response = await fetch('/caldav/backend/info', {
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch backend info: ${response.status}`);
+                }
+
+                const backendInfo = await response.json();
+
+                statusDisplay.innerHTML = `
+                    <div class="status-indicator success">
+                        <span class="status-icon">✅</span>
+                        <span class="status-text">
+                            Aktiv: ${backendInfo.backend_type || 'Unbekannt'}
+                            ${backendInfo.status ? `(${backendInfo.status})` : ''}
+                        </span>
+                    </div>
+                `;
+
+                // Update select dropdown with current backend
+                const backendSelect = document.getElementById('backend-select');
+                if (backendInfo.backend_type) {
+                    backendSelect.value = backendInfo.backend_type.toLowerCase();
+                }
+
+            } catch (error) {
+                console.error('Failed to load backend info:', error);
+                statusDisplay.innerHTML = `
+                    <div class="status-indicator error">
+                        <span class="status-icon">❌</span>
+                        <span class="status-text">Backend-Info konnte nicht geladen werden</span>
+                    </div>
+                `;
+            }
+        }
+
+        async function handleBackendSwitch(newBackend) {
+            if (!newBackend) return;
+
+            const statusDisplay = document.getElementById('backend-status-display');
+            const backendSelect = document.getElementById('backend-select');
+
+            if (!confirm(`Möchtest du wirklich zum ${newBackend.toUpperCase()}-Backend wechseln? Dies kann die Synchronisation beeinflussen.`)) {
+                // Reset selection if user cancels
+                loadBackendInfo();
+                return;
+            }
+
+            try {
+                statusDisplay.innerHTML = `
+                    <div class="status-indicator processing">
+                        <span class="status-icon">⏳</span>
+                        <span class="status-text">Wechsle zu ${newBackend.toUpperCase()}...</span>
+                    </div>
+                `;
+
+                const response = await fetch('/caldav/backend/switch', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${window.CHRONOS_CONFIG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        backend_type: newBackend,
+                        preserve_data: true
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `Backend-Wechsel fehlgeschlagen: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                statusDisplay.innerHTML = `
+                    <div class="status-indicator success">
+                        <span class="status-icon">✅</span>
+                        <span class="status-text">
+                            Erfolgreich gewechselt zu ${newBackend.toUpperCase()}
+                        </span>
+                    </div>
+                `;
+
+                showToast('Backend gewechselt', `Erfolgreich zu ${newBackend.toUpperCase()} gewechselt`, 'success');
+
+                // Reload backend info after switch
+                setTimeout(() => loadBackendInfo(), 2000);
+
+            } catch (error) {
+                console.error('Backend switch failed:', error);
+                statusDisplay.innerHTML = `
+                    <div class="status-indicator error">
+                        <span class="status-icon">❌</span>
+                        <span class="status-text">Backend-Wechsel fehlgeschlagen</span>
+                    </div>
+                `;
+                showToast('Backend-Wechsel fehlgeschlagen', error.message, 'error');
+
+                // Reset selection on error
+                setTimeout(() => loadBackendInfo(), 2000);
             }
         }
 

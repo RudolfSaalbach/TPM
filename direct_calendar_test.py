@@ -9,6 +9,7 @@ import aiohttp
 from datetime import datetime, timedelta
 from pathlib import Path
 import uuid
+import pytest
 
 def create_test_db_entries():
     """Create test entries directly in the database"""
@@ -136,6 +137,7 @@ def create_test_db_entries():
 
     conn.close()
 
+@pytest.mark.asyncio
 async def test_caldav_connection():
     """Test CalDAV server connectivity"""
 
